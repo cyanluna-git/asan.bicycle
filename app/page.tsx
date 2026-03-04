@@ -3,7 +3,7 @@ import KakaoMap from '@/components/map/kakao-map'
 import { BottomSheet } from '@/components/layout/bottom-sheet'
 import { supabase } from '@/lib/supabase'
 import { parseFilterParams, countActiveFilters } from '@/lib/filter'
-import type { CourseListItem } from '@/types/course'
+import type { CourseListItem, CourseMapItem, RouteGeoJSON } from '@/types/course'
 
 export default async function Home({
   searchParams,
@@ -46,7 +46,7 @@ export default async function Home({
   // Build filtered courses query
   let query = supabase
     .from('courses')
-    .select('id, title, difficulty, distance_km, elevation_gain_m, theme, tags')
+    .select('id, title, difficulty, distance_km, elevation_gain_m, theme, tags, route_geojson')
     .order('created_at', { ascending: false })
 
   if (filters.startPoint) {
@@ -74,7 +74,21 @@ export default async function Home({
   const { data: courses, error: coursesError } = await query
   if (coursesError) console.error('[page] supabase error:', coursesError)
 
-  const courseList: CourseListItem[] = courses ?? []
+  const courseList: CourseListItem[] = (courses ?? []).map(
+    ({ id, title, difficulty, distance_km, elevation_gain_m, theme, tags }) => ({
+      id, title, difficulty, distance_km, elevation_gain_m, theme, tags,
+    }),
+  )
+
+  // Build lightweight route data for the map component
+  const courseRoutes: CourseMapItem[] = (courses ?? []).map((c) => ({
+    id: c.id,
+    route_geojson: (c.route_geojson as RouteGeoJSON) ?? null,
+  }))
+
+  // Selected course from URL ?courseId= param
+  const selectedCourseId =
+    typeof params.courseId === 'string' ? params.courseId : null
 
   return (
     <div className="flex h-[calc(100vh-64px)]">
@@ -85,7 +99,7 @@ export default async function Home({
         hasActiveFilters={hasActiveFilters}
       />
       <main className="flex-1 relative flex">
-        <KakaoMap />
+        <KakaoMap courses={courseRoutes} selectedCourseId={selectedCourseId} />
         <BottomSheet
           courses={courseList}
           startPoints={startPointList}

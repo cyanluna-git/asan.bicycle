@@ -58,6 +58,7 @@ export type Database = {
           created_by: string | null
           created_at: string
           updated_at: string
+          route_geojson: Json | null
           download_count: number
         }
         Insert: {
@@ -77,6 +78,7 @@ export type Database = {
           created_by?: string | null
           created_at?: string
           updated_at?: string
+          route_geojson?: Json | null
           download_count?: number
         }
         Update: {
@@ -96,6 +98,7 @@ export type Database = {
           created_by?: string | null
           created_at?: string
           updated_at?: string
+          route_geojson?: Json | null
           download_count?: number
         }
         Relationships: [
