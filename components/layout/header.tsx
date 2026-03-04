@@ -6,7 +6,7 @@ import { Search, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const navLinks = [
-  { label: "코스 찾기", href: "/", active: true },
+  { label: "코스 찾기", href: "/explore", active: false },
   { label: "코스 올리기", href: "/courses/new", active: false },
 ] as const;
 
