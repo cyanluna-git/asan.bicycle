@@ -3,7 +3,7 @@ import KakaoMap from '@/components/map/kakao-map'
 import { BottomSheet } from '@/components/layout/bottom-sheet'
 import { supabase } from '@/lib/supabase'
 import { parseFilterParams, countActiveFilters } from '@/lib/filter'
-import type { CourseListItem, CourseDetail, CourseMapItem, RouteGeoJSON } from '@/types/course'
+import type { CourseListItem, CourseDetail, CourseMapItem, RouteGeoJSON, PoiMapItem } from '@/types/course'
 
 export default async function Home({
   searchParams,
@@ -100,6 +100,17 @@ export default async function Home({
 
   const selectedCourse: CourseDetail | null = selectedCourseData ?? null
 
+  // Fetch POIs for all currently visible courses
+  const visibleCourseIds = (courses ?? []).map((c) => c.id)
+  const { data: poisRaw } = visibleCourseIds.length > 0
+    ? await supabase
+        .from('pois_with_coords')
+        .select('id, course_id, name, category, description, lat, lng')
+        .in('course_id', visibleCourseIds)
+    : { data: [] }
+
+  const pois: PoiMapItem[] = (poisRaw ?? []) as PoiMapItem[]
+
   return (
     <div className="flex h-[calc(100vh-64px)]">
       <Sidebar
@@ -110,7 +121,7 @@ export default async function Home({
         selectedCourse={selectedCourse}
       />
       <main className="flex-1 relative flex">
-        <KakaoMap courses={courseRoutes} selectedCourseId={selectedCourseId} />
+        <KakaoMap courses={courseRoutes} selectedCourseId={selectedCourseId} pois={pois} />
         <BottomSheet
           courses={courseList}
           startPoints={startPointList}

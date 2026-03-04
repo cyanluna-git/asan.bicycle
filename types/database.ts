@@ -161,7 +161,28 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      pois_with_coords: {
+        Row: {
+          id: string
+          course_id: string
+          name: string
+          category: Database['public']['Enums']['poi_category']
+          description: string | null
+          photo_url: string | null
+          created_at: string
+          lat: number
+          lng: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'pois_course_id_fkey'
+            columns: ['course_id']
+            isOneToOne: false
+            referencedRelation: 'courses'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Functions: {
       [_ in never]: never
