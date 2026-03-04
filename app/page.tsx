@@ -1,6 +1,7 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { Bebas_Neue, Noto_Sans_KR } from 'next/font/google'
-import { ArrowRight, Map, Mountain, Coffee, Download, MapPin, ChevronRight } from 'lucide-react'
+import { ArrowRight, Map, Mountain, Coffee, Download, MapPin, ChevronRight, Sparkles } from 'lucide-react'
 
 const bebas = Bebas_Neue({ weight: '400', subsets: ['latin'], variable: '--font-bebas' })
 const notoKr = Noto_Sans_KR({ weight: ['400', '500', '700'], subsets: ['latin'], variable: '--font-noto' })
@@ -80,6 +81,37 @@ const POIS = [
   { emoji: '🏪', label: '편의점', desc: 'GS25, CU 등 코스 길목 보급소', count: '18곳' },
   { emoji: '☕', label: '카페', desc: '뷰 좋은 카페부터 라이더 단골까지', count: '16곳' },
   { emoji: '🍽️', label: '맛집·식당', desc: '예당 매운탕, 천북 굴구이, 공주국밥', count: '14곳' },
+]
+
+const TOURISM_SPOTS = [
+  {
+    name: '현충사',
+    category: '역사 유적',
+    desc: '이순신 장군의 충의를 기리는 성역. 벚꽃 시즌 라이딩의 명소.',
+    emoji: '⛩️',
+    color: '#DC2626',
+  },
+  {
+    name: '은행나무길',
+    category: '자연 경관',
+    desc: '수백 년 된 은행나무가 줄지어 선 가을 황금빛 드라이브 코스.',
+    emoji: '🍂',
+    color: '#D97706',
+  },
+  {
+    name: '공세리 성당',
+    category: '종교 문화',
+    desc: '100년 넘은 고딕 성당. 드라마 촬영지로도 유명한 아산의 보물.',
+    emoji: '⛪',
+    color: '#7C3AED',
+  },
+  {
+    name: '삽교유원지',
+    category: '자연 휴양',
+    desc: '삽교천변 휴양지. 라이딩 후 자전거를 세우고 쉬어가기 좋은 곳.',
+    emoji: '🌊',
+    color: '#0284C7',
+  },
 ]
 
 // ---------------------------------------------------------------------------
@@ -457,6 +489,105 @@ export default function LandingPage() {
               ))}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ── TOURISM SPOTS ─────────────────────────────────────────────── */}
+      <section
+        className="py-20 px-6 md:px-16 lg:px-24 relative overflow-hidden"
+        style={{ background: '#0A1F12' }}
+      >
+        {/* Dot pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage: 'radial-gradient(circle, #C8E63A 1px, transparent 1px)',
+            backgroundSize: '32px 32px',
+          }}
+        />
+
+        <div className="relative max-w-6xl mx-auto">
+          {/* Header row */}
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+            <div>
+              <div
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 mb-4 text-xs font-bold tracking-wider uppercase"
+                style={{ background: 'rgba(200,230,58,0.15)', color: '#C8E63A', border: '1px solid rgba(200,230,58,0.3)' }}
+              >
+                <Sparkles className="w-3 h-3" />
+                준비중
+              </div>
+              <h2
+                style={{ fontFamily: 'var(--font-bebas)', fontSize: 'clamp(36px, 5vw, 60px)', color: 'white', lineHeight: 1.05 }}
+              >
+                아산 문화 관광 명소도<br />코스 위에 표시됩니다
+              </h2>
+              <p className="mt-3 text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)', maxWidth: 460 }}>
+                자전거 코스 경로 위에 역사 유적, 자연 경관, 종교 문화 명소가 지도 마커로 추가될 예정입니다.
+                아산시의 모든 관광 자원을 라이딩 경험과 함께 연결합니다.
+              </p>
+            </div>
+
+            {/* 아산시 로고 */}
+            <div
+              className="shrink-0 flex items-center gap-3 rounded-2xl px-6 py-4"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+            >
+              <Image
+                src="/asan-logo.svg"
+                alt="아산시 로고"
+                width={80}
+                height={48}
+                className="object-contain"
+              />
+              <div>
+                <p className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.9)' }}>공식 문화관광 데이터</p>
+                <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>아산시 관광 자원 연계 예정</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Spot cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {TOURISM_SPOTS.map((spot) => (
+              <div
+                key={spot.name}
+                className="rounded-2xl p-6 flex flex-col gap-4 relative"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+              >
+                <div
+                  className="absolute top-4 right-4 text-xs font-bold px-2 py-0.5 rounded-full"
+                  style={{ background: 'rgba(200,230,58,0.15)', color: '#C8E63A', fontSize: 10 }}
+                >
+                  예정
+                </div>
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+                  style={{ background: spot.color + '22' }}
+                >
+                  {spot.emoji}
+                </div>
+                <div>
+                  <span
+                    className="inline-block text-xs font-semibold mb-1.5 px-2 py-0.5 rounded"
+                    style={{ background: spot.color + '22', color: spot.color }}
+                  >
+                    {spot.category}
+                  </span>
+                  <h3 className="font-bold text-base mb-2" style={{ color: 'white' }}>
+                    {spot.name}
+                  </h3>
+                  <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                    {spot.desc}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p className="mt-8 text-center text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            아산시 문화관광 지도와 연계하여 더 풍부한 라이딩 경험을 제공할 예정입니다
+          </p>
         </div>
       </section>
 
