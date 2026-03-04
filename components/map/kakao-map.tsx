@@ -9,7 +9,8 @@ import {
   useKakaoLoader,
   useMap,
 } from "react-kakao-maps-sdk"
-import type { CourseMapItem, RouteGeoJSON } from "@/types/course"
+import type { CourseMapItem, RouteGeoJSON, PoiMapItem } from "@/types/course"
+import type { Enums } from "@/types/database"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -89,16 +90,41 @@ function computeBounds(coords: LatLng[]) {
 // Props
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// POI category config
+// ---------------------------------------------------------------------------
+
+const POI_CONFIG: Record<
+  Enums<'poi_category'>,
+  { emoji: string; label: string; color: string }
+> = {
+  cafe:              { emoji: "☕", label: "카페",   color: "#6F4E37" },
+  restaurant:        { emoji: "🍽️", label: "식당",   color: "#E85D2E" },
+  convenience_store: { emoji: "🏪", label: "편의점", color: "#2563EB" },
+  rest_area:         { emoji: "🛖", label: "쉼터",   color: "#16A34A" },
+  repair_shop:       { emoji: "🔧", label: "수리점", color: "#7C3AED" },
+  photo_spot:        { emoji: "📸", label: "포토스팟", color: "#DB2777" },
+  parking:           { emoji: "🅿️", label: "주차",   color: "#475569" },
+  restroom:          { emoji: "🚻", label: "화장실", color: "#0891B2" },
+  water_fountain:    { emoji: "💧", label: "음수대", color: "#0284C7" },
+  other:             { emoji: "📍", label: "기타",   color: "#64748B" },
+}
+
+// ---------------------------------------------------------------------------
+// Props
+// ---------------------------------------------------------------------------
+
 interface KakaoMapProps {
   courses?: CourseMapItem[]
   selectedCourseId?: string | null
+  pois?: PoiMapItem[]
 }
 
 // ---------------------------------------------------------------------------
 // Public component
 // ---------------------------------------------------------------------------
 
-export default function KakaoMap({ courses, selectedCourseId }: KakaoMapProps) {
+export default function KakaoMap({ courses, selectedCourseId, pois }: KakaoMapProps) {
   const appkey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY
   if (!appkey) {
     return (
@@ -111,6 +137,7 @@ export default function KakaoMap({ courses, selectedCourseId }: KakaoMapProps) {
       appkey={appkey}
       courses={courses}
       selectedCourseId={selectedCourseId}
+      pois={pois}
     />
   )
 }
@@ -123,6 +150,7 @@ function KakaoMapInner({
   appkey,
   courses,
   selectedCourseId,
+  pois,
 }: { appkey: string } & KakaoMapProps) {
   const [loading, error] = useKakaoLoader({
     appkey,
@@ -144,6 +172,11 @@ function KakaoMapInner({
     : [{ id: SAMPLE_COURSE_ID, route_geojson: SAMPLE_ROUTE }]
   const effectiveSelectedId = hasAnyRoute ? selectedCourseId : SAMPLE_COURSE_ID
 
+  // Show POIs for selected course, or all POIs if none selected
+  const visiblePois = (pois ?? []).filter(
+    (p) => !selectedCourseId || p.course_id === selectedCourseId
+  )
+
   return (
     <Map center={ASAN_CENTER} style={{ width: "100%", height: "100%" }} level={8}>
       <ZoomControl position="RIGHT" />
@@ -151,6 +184,7 @@ function KakaoMapInner({
         courses={effectiveCourses}
         selectedCourseId={effectiveSelectedId ?? null}
       />
+      <PoiMarkers pois={visiblePois} />
     </Map>
   )
 }
@@ -293,6 +327,155 @@ function BoundsController({
   }, [selectedCourseId])
 
   return null
+}
+
+// ---------------------------------------------------------------------------
+// PoiMarkers — renders POI pins + click popup inside <Map>
+// ---------------------------------------------------------------------------
+
+function PoiMarkers({ pois }: { pois: PoiMapItem[] }) {
+  const [openId, setOpenId] = useState<string | null>(null)
+
+  if (pois.length === 0) return null
+
+  return (
+    <>
+      {pois.map((poi) => {
+        const cfg = POI_CONFIG[poi.category]
+        const pos = { lat: poi.lat, lng: poi.lng }
+        const isOpen = openId === poi.id
+
+        return (
+          <CustomOverlayMap
+            key={poi.id}
+            position={pos}
+            yAnchor={1.1}
+            xAnchor={0.5}
+            zIndex={4}
+          >
+            <div style={{ position: "relative" }}>
+              {/* Pin button */}
+              <button
+                onClick={() => setOpenId(isOpen ? null : poi.id)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  backgroundColor: cfg.color,
+                  border: "2px solid white",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  lineHeight: 1,
+                }}
+                aria-label={poi.name}
+              >
+                {cfg.emoji}
+              </button>
+
+              {/* Popup */}
+              {isOpen && (
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: 36,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    backgroundColor: "white",
+                    borderRadius: 10,
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
+                    padding: "10px 12px",
+                    minWidth: 180,
+                    maxWidth: 240,
+                    zIndex: 10,
+                    whiteSpace: "normal",
+                  }}
+                >
+                  {/* Close button */}
+                  <button
+                    onClick={() => setOpenId(null)}
+                    style={{
+                      position: "absolute",
+                      top: 6,
+                      right: 8,
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: 14,
+                      color: "#94a3b8",
+                      lineHeight: 1,
+                    }}
+                    aria-label="닫기"
+                  >
+                    ✕
+                  </button>
+                  {/* Category badge */}
+                  <div style={{ marginBottom: 4 }}>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: cfg.color,
+                        backgroundColor: cfg.color + "18",
+                        borderRadius: 4,
+                        padding: "1px 6px",
+                      }}
+                    >
+                      {cfg.emoji} {cfg.label}
+                    </span>
+                  </div>
+                  {/* Name */}
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: "#1e293b",
+                      lineHeight: 1.4,
+                      paddingRight: 16,
+                    }}
+                  >
+                    {poi.name}
+                  </p>
+                  {/* Description */}
+                  {poi.description && (
+                    <p
+                      style={{
+                        margin: "5px 0 0",
+                        fontSize: 12,
+                        color: "#64748b",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {poi.description}
+                    </p>
+                  )}
+                  {/* Arrow */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      bottom: -7,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      width: 0,
+                      height: 0,
+                      borderLeft: "7px solid transparent",
+                      borderRight: "7px solid transparent",
+                      borderTop: "7px solid white",
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          </CustomOverlayMap>
+        )
+      })}
+    </>
+  )
 }
 
 // ---------------------------------------------------------------------------
