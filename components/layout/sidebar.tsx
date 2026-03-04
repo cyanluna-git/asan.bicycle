@@ -1,13 +1,15 @@
 import { Suspense } from 'react'
 import { CourseFilter } from '@/components/filter/course-filter'
 import { CourseListClient } from '@/components/courses/course-list-client'
-import type { CourseListItem } from '@/types/course'
+import { CourseDetailPanel } from '@/components/courses/course-detail-panel'
+import type { CourseListItem, CourseDetail } from '@/types/course'
 
 interface SidebarProps {
   courses: CourseListItem[]
   startPoints: { id: string; name: string }[]
   themes: string[]
   hasActiveFilters: boolean
+  selectedCourse?: CourseDetail | null
 }
 
 export function Sidebar({
@@ -15,27 +17,34 @@ export function Sidebar({
   startPoints,
   themes,
   hasActiveFilters,
+  selectedCourse,
 }: SidebarProps) {
   return (
     <aside className="hidden md:flex flex-col w-[280px] border-r bg-background">
       <div className="overflow-y-auto h-full p-4">
-        {/* Filter section */}
-        <Suspense fallback={<FilterSkeleton />}>
-          <CourseFilter startPoints={startPoints} themes={themes} />
-        </Suspense>
+        {selectedCourse ? (
+          <CourseDetailPanel course={selectedCourse} />
+        ) : (
+          <>
+            {/* Filter section */}
+            <Suspense fallback={<FilterSkeleton />}>
+              <CourseFilter startPoints={startPoints} themes={themes} />
+            </Suspense>
 
-        {/* Course list */}
-        <div>
-          <h2 className="mb-3 text-sm font-semibold text-foreground">
-            코스 목록
-          </h2>
-          <Suspense fallback={<CourseListSkeleton />}>
-            <CourseListClient
-              courses={courses}
-              hasActiveFilters={hasActiveFilters}
-            />
-          </Suspense>
-        </div>
+            {/* Course list */}
+            <div>
+              <h2 className="mb-3 text-sm font-semibold text-foreground">
+                코스 목록
+              </h2>
+              <Suspense fallback={<CourseListSkeleton />}>
+                <CourseListClient
+                  courses={courses}
+                  hasActiveFilters={hasActiveFilters}
+                />
+              </Suspense>
+            </div>
+          </>
+        )}
       </div>
     </aside>
   )

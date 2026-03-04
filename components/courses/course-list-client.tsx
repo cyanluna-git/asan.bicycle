@@ -45,8 +45,13 @@ export function CourseListClient({
 
   const handleSelect = (id: string) => {
     const params = new URLSearchParams(searchParams.toString())
-    params.set('courseId', id)
-    router.push(`?${params.toString()}`, { scroll: false })
+    if (id === selectedId) {
+      params.delete('courseId')
+    } else {
+      params.set('courseId', id)
+    }
+    const qs = params.toString()
+    router.push(qs ? `?${qs}` : '/', { scroll: false })
   }
 
   if (courses.length === 0) {

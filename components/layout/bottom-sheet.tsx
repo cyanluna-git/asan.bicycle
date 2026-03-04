@@ -13,13 +13,15 @@ import {
 } from '@/components/ui/drawer'
 import { CourseFilter } from '@/components/filter/course-filter'
 import { CourseListClient } from '@/components/courses/course-list-client'
-import type { CourseListItem } from '@/types/course'
+import { CourseDetailPanel } from '@/components/courses/course-detail-panel'
+import type { CourseListItem, CourseDetail } from '@/types/course'
 
 interface BottomSheetProps {
   courses: CourseListItem[]
   startPoints: { id: string; name: string }[]
   themes: string[]
   hasActiveFilters: boolean
+  selectedCourse?: CourseDetail | null
 }
 
 export function BottomSheet({
@@ -27,6 +29,7 @@ export function BottomSheet({
   startPoints,
   themes,
   hasActiveFilters,
+  selectedCourse,
 }: BottomSheetProps) {
   return (
     <div className="md:hidden">
@@ -42,24 +45,34 @@ export function BottomSheet({
         </DrawerTrigger>
         <DrawerContent>
           <DrawerHeader>
-            <DrawerTitle>코스 목록</DrawerTitle>
+            <DrawerTitle>
+              {selectedCourse ? selectedCourse.title : '코스 목록'}
+            </DrawerTitle>
             <DrawerDescription>
-              아산시 자전거 코스를 탐색하세요
+              {selectedCourse
+                ? '코스 상세 정보'
+                : '아산시 자전거 코스를 탐색하세요'}
             </DrawerDescription>
           </DrawerHeader>
           <div className="overflow-y-auto px-4 pb-6">
-            {/* Filter section */}
-            <Suspense fallback={null}>
-              <CourseFilter startPoints={startPoints} themes={themes} />
-            </Suspense>
+            {selectedCourse ? (
+              <CourseDetailPanel course={selectedCourse} />
+            ) : (
+              <>
+                {/* Filter section */}
+                <Suspense fallback={null}>
+                  <CourseFilter startPoints={startPoints} themes={themes} />
+                </Suspense>
 
-            {/* Course list */}
-            <Suspense fallback={<CourseListSkeleton />}>
-              <CourseListClient
-                courses={courses}
-                hasActiveFilters={hasActiveFilters}
-              />
-            </Suspense>
+                {/* Course list */}
+                <Suspense fallback={<CourseListSkeleton />}>
+                  <CourseListClient
+                    courses={courses}
+                    hasActiveFilters={hasActiveFilters}
+                  />
+                </Suspense>
+              </>
+            )}
           </div>
         </DrawerContent>
       </Drawer>

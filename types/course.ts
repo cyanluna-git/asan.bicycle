@@ -5,6 +5,19 @@ export type CourseListItem = Pick<
   'id' | 'title' | 'difficulty' | 'distance_km' | 'elevation_gain_m' | 'theme' | 'tags'
 >
 
+export type CourseDetail = Pick<
+  Tables<'courses'>,
+  | 'id'
+  | 'title'
+  | 'description'
+  | 'difficulty'
+  | 'distance_km'
+  | 'elevation_gain_m'
+  | 'gpx_url'
+  | 'theme'
+  | 'tags'
+>
+
 // ---------------------------------------------------------------------------
 // GeoJSON types for route rendering
 // ---------------------------------------------------------------------------
