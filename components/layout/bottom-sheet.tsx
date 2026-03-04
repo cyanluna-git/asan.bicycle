@@ -14,7 +14,7 @@ import {
 import { CourseFilter } from '@/components/filter/course-filter'
 import { CourseListClient } from '@/components/courses/course-list-client'
 import { CourseDetailPanel } from '@/components/courses/course-detail-panel'
-import type { CourseListItem, CourseDetail } from '@/types/course'
+import type { CourseListItem, CourseDetail, PoiMapItem } from '@/types/course'
 
 interface BottomSheetProps {
   courses: CourseListItem[]
@@ -22,6 +22,7 @@ interface BottomSheetProps {
   themes: string[]
   hasActiveFilters: boolean
   selectedCourse?: CourseDetail | null
+  pois?: PoiMapItem[]
 }
 
 export function BottomSheet({
@@ -30,6 +31,7 @@ export function BottomSheet({
   themes,
   hasActiveFilters,
   selectedCourse,
+  pois,
 }: BottomSheetProps) {
   return (
     <div className="md:hidden">
@@ -56,7 +58,7 @@ export function BottomSheet({
           </DrawerHeader>
           <div className="overflow-y-auto px-4 pb-6">
             {selectedCourse ? (
-              <CourseDetailPanel course={selectedCourse} />
+              <CourseDetailPanel course={selectedCourse} pois={pois ?? []} />
             ) : (
               <>
                 {/* Filter section */}

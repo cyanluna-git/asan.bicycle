@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { CourseFilter } from '@/components/filter/course-filter'
 import { CourseListClient } from '@/components/courses/course-list-client'
 import { CourseDetailPanel } from '@/components/courses/course-detail-panel'
-import type { CourseListItem, CourseDetail } from '@/types/course'
+import type { CourseListItem, CourseDetail, PoiMapItem } from '@/types/course'
 
 interface SidebarProps {
   courses: CourseListItem[]
@@ -10,6 +10,7 @@ interface SidebarProps {
   themes: string[]
   hasActiveFilters: boolean
   selectedCourse?: CourseDetail | null
+  pois?: PoiMapItem[]
 }
 
 export function Sidebar({
@@ -18,12 +19,13 @@ export function Sidebar({
   themes,
   hasActiveFilters,
   selectedCourse,
+  pois,
 }: SidebarProps) {
   return (
     <aside className="hidden md:flex flex-col w-[280px] border-r bg-background">
       <div className="overflow-y-auto h-full p-4">
         {selectedCourse ? (
-          <CourseDetailPanel course={selectedCourse} />
+          <CourseDetailPanel course={selectedCourse} pois={pois ?? []} />
         ) : (
           <>
             {/* Filter section */}

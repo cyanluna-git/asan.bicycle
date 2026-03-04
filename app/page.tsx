@@ -100,13 +100,13 @@ export default async function Home({
 
   const selectedCourse: CourseDetail | null = selectedCourseData ?? null
 
-  // Fetch POIs for all currently visible courses
-  const visibleCourseIds = (courses ?? []).map((c) => c.id)
-  const { data: poisRaw } = visibleCourseIds.length > 0
+  // Fetch POIs only for the selected course (only needed when a course is selected)
+  const { data: poisRaw } = selectedCourseId
     ? await supabase
         .from('pois_with_coords')
         .select('id, course_id, name, category, description, lat, lng')
-        .in('course_id', visibleCourseIds)
+        .eq('course_id', selectedCourseId)
+        .order('category')
     : { data: [] }
 
   const pois: PoiMapItem[] = (poisRaw ?? []) as PoiMapItem[]
@@ -119,6 +119,7 @@ export default async function Home({
         themes={themeList}
         hasActiveFilters={hasActiveFilters}
         selectedCourse={selectedCourse}
+        pois={pois}
       />
       <main className="flex-1 relative flex">
         <KakaoMap courses={courseRoutes} selectedCourseId={selectedCourseId} pois={pois} />
@@ -128,6 +129,7 @@ export default async function Home({
           themes={themeList}
           hasActiveFilters={hasActiveFilters}
           selectedCourse={selectedCourse}
+          pois={pois}
         />
       </main>
     </div>
