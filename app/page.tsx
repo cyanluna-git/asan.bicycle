@@ -19,7 +19,7 @@ export default async function Home({
     .from('start_points')
     .select('id, name')
     .order('name')
-  if (startPointsError) console.error('[page] supabase error:', startPointsError)
+  if (startPointsError) console.error('[page] start_points error:', startPointsError.message, startPointsError.details)
 
   const startPointList = (startPoints ?? []).map((sp) => ({
     id: sp.id,
@@ -33,7 +33,7 @@ export default async function Home({
     .select('theme')
     .not('theme', 'is', null)
     .order('theme')
-  if (themesError) console.error('[page] supabase error:', themesError)
+  if (themesError) console.error('[page] themes error:', themesError.message, themesError.details)
 
   const themeList = [
     ...new Set(
@@ -72,7 +72,7 @@ export default async function Home({
   }
 
   const { data: courses, error: coursesError } = await query
-  if (coursesError) console.error('[page] supabase error:', coursesError)
+  if (coursesError) console.error('[page] courses error:', coursesError.message, coursesError.details)
 
   const courseList: CourseListItem[] = (courses ?? []).map(
     ({ id, title, difficulty, distance_km, elevation_gain_m, theme, tags }) => ({
