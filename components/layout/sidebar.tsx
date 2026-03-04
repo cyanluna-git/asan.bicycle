@@ -1,38 +1,28 @@
 import { Suspense } from 'react'
-import { Badge } from '@/components/ui/badge'
+import { CourseFilter } from '@/components/filter/course-filter'
 import { CourseListClient } from '@/components/courses/course-list-client'
 import type { CourseListItem } from '@/types/course'
 
-export function Sidebar({ courses }: { courses: CourseListItem[] }) {
+interface SidebarProps {
+  courses: CourseListItem[]
+  startPoints: { id: string; name: string }[]
+  themes: string[]
+  hasActiveFilters: boolean
+}
+
+export function Sidebar({
+  courses,
+  startPoints,
+  themes,
+  hasActiveFilters,
+}: SidebarProps) {
   return (
     <aside className="hidden md:flex flex-col w-[280px] border-r bg-background">
       <div className="overflow-y-auto h-full p-4">
         {/* Filter section */}
-        <div className="mb-6">
-          <h2 className="mb-3 text-sm font-semibold text-foreground">필터</h2>
-          <div className="flex flex-col gap-3">
-            <div>
-              <label className="text-xs text-muted-foreground">출발 기점</label>
-              <div className="mt-1 h-9 rounded-md border bg-muted/50 px-3 flex items-center text-sm text-muted-foreground">
-                전체
-              </div>
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">난이도</label>
-              <div className="mt-1 flex gap-1.5">
-                <Badge variant="secondary">초급</Badge>
-                <Badge variant="default">중급</Badge>
-                <Badge variant="destructive">상급</Badge>
-              </div>
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">거리</label>
-              <div className="mt-1 h-9 rounded-md border bg-muted/50 px-3 flex items-center text-sm text-muted-foreground">
-                전체
-              </div>
-            </div>
-          </div>
-        </div>
+        <Suspense fallback={<FilterSkeleton />}>
+          <CourseFilter startPoints={startPoints} themes={themes} />
+        </Suspense>
 
         {/* Course list */}
         <div>
@@ -40,11 +30,27 @@ export function Sidebar({ courses }: { courses: CourseListItem[] }) {
             코스 목록
           </h2>
           <Suspense fallback={<CourseListSkeleton />}>
-            <CourseListClient courses={courses} />
+            <CourseListClient
+              courses={courses}
+              hasActiveFilters={hasActiveFilters}
+            />
           </Suspense>
         </div>
       </div>
     </aside>
+  )
+}
+
+function FilterSkeleton() {
+  return (
+    <div className="mb-6">
+      <div className="h-5 w-12 rounded bg-muted/50 animate-pulse mb-3" />
+      <div className="flex flex-col gap-3">
+        <div className="h-9 rounded-md bg-muted/50 animate-pulse" />
+        <div className="h-20 rounded-md bg-muted/50 animate-pulse" />
+        <div className="h-16 rounded-md bg-muted/50 animate-pulse" />
+      </div>
+    </div>
   )
 }
 
