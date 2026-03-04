@@ -3,7 +3,7 @@ import KakaoMap from '@/components/map/kakao-map'
 import { BottomSheet } from '@/components/layout/bottom-sheet'
 import { supabase } from '@/lib/supabase'
 import { parseFilterParams, countActiveFilters } from '@/lib/filter'
-import type { CourseListItem, CourseMapItem, RouteGeoJSON } from '@/types/course'
+import type { CourseListItem, CourseDetail, CourseMapItem, RouteGeoJSON } from '@/types/course'
 
 export default async function Home({
   searchParams,
@@ -90,6 +90,16 @@ export default async function Home({
   const selectedCourseId =
     typeof params.courseId === 'string' ? params.courseId : null
 
+  const { data: selectedCourseData } = selectedCourseId
+    ? await supabase
+        .from('courses')
+        .select('id, title, description, difficulty, distance_km, elevation_gain_m, gpx_url, theme, tags')
+        .eq('id', selectedCourseId)
+        .single()
+    : { data: null }
+
+  const selectedCourse: CourseDetail | null = selectedCourseData ?? null
+
   return (
     <div className="flex h-[calc(100vh-64px)]">
       <Sidebar
@@ -97,6 +107,7 @@ export default async function Home({
         startPoints={startPointList}
         themes={themeList}
         hasActiveFilters={hasActiveFilters}
+        selectedCourse={selectedCourse}
       />
       <main className="flex-1 relative flex">
         <KakaoMap courses={courseRoutes} selectedCourseId={selectedCourseId} />
@@ -105,6 +116,7 @@ export default async function Home({
           startPoints={startPointList}
           themes={themeList}
           hasActiveFilters={hasActiveFilters}
+          selectedCourse={selectedCourse}
         />
       </main>
     </div>

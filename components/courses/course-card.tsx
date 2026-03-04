@@ -1,22 +1,7 @@
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { difficultyLabel, difficultyVariant } from '@/lib/difficulty'
 import type { CourseListItem } from '@/types/course'
-import type { Enums } from '@/types/database'
-
-const difficultyLabel: Record<Enums<'course_difficulty'>, string> = {
-  easy: '초급',
-  moderate: '중급',
-  hard: '상급',
-}
-
-const difficultyVariant: Record<
-  Enums<'course_difficulty'>,
-  'secondary' | 'default' | 'destructive'
-> = {
-  easy: 'secondary',
-  moderate: 'default',
-  hard: 'destructive',
-}
 
 interface CourseCardProps {
   course: CourseListItem
