@@ -1,7 +1,8 @@
-"use client";
+'use client'
 
-import { List } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Suspense } from 'react'
+import { List } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import {
   Drawer,
   DrawerContent,
@@ -9,10 +10,11 @@ import {
   DrawerTitle,
   DrawerDescription,
   DrawerTrigger,
-} from "@/components/ui/drawer";
-import { CourseList } from "@/components/layout/sidebar";
+} from '@/components/ui/drawer'
+import { CourseListClient } from '@/components/courses/course-list-client'
+import type { CourseListItem } from '@/types/course'
 
-export function BottomSheet() {
+export function BottomSheet({ courses }: { courses: CourseListItem[] }) {
   return (
     <div className="md:hidden">
       <Drawer>
@@ -33,10 +35,22 @@ export function BottomSheet() {
             </DrawerDescription>
           </DrawerHeader>
           <div className="overflow-y-auto px-4 pb-6">
-            <CourseList />
+            <Suspense fallback={<CourseListSkeleton />}>
+              <CourseListClient courses={courses} />
+            </Suspense>
           </div>
         </DrawerContent>
       </Drawer>
     </div>
-  );
+  )
+}
+
+function CourseListSkeleton() {
+  return (
+    <div className="flex flex-col gap-2">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="h-[72px] rounded-lg border bg-muted/50 animate-pulse" />
+      ))}
+    </div>
+  )
 }
