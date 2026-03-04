@@ -88,7 +88,7 @@ const TOURISM_SPOTS = [
     name: '현충사',
     category: '역사 유적',
     desc: '이순신 장군의 충의를 기리는 성역. 벚꽃 시즌 라이딩의 명소.',
-    emoji: '⛩️',
+    emoji: '🏯',
     color: '#DC2626',
   },
   {

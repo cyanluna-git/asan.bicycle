@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 
 const navLinks = [
   { label: "코스 찾기", href: "/explore", active: false },
-  { label: "코스 올리기", href: "/courses/new", active: false },
+  { label: "코스 올리기", href: "/upload", active: false },
 ] as const;
 
 export function Header() {
