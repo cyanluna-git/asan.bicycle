@@ -11,13 +11,41 @@ import {
   SPEED_INTERMEDIATE,
   SPEED_ADVANCED,
 } from '@/lib/calc-duration'
-import type { CourseDetail } from '@/types/course'
+import type { CourseDetail, PoiMapItem } from '@/types/course'
+import type { Enums } from '@/types/database'
+
+const POI_LABEL: Record<Enums<'poi_category'>, string> = {
+  cafe: '카페',
+  restaurant: '식당',
+  convenience_store: '편의점',
+  rest_area: '쉼터',
+  repair_shop: '자전거 수리',
+  photo_spot: '포토스팟',
+  parking: '주차',
+  restroom: '화장실',
+  water_fountain: '음수대',
+  other: '기타',
+}
+
+const POI_EMOJI: Record<Enums<'poi_category'>, string> = {
+  cafe: '☕',
+  restaurant: '🍽️',
+  convenience_store: '🏪',
+  rest_area: '🛖',
+  repair_shop: '🔧',
+  photo_spot: '📸',
+  parking: '🅿️',
+  restroom: '🚻',
+  water_fountain: '💧',
+  other: '📍',
+}
 
 interface CourseDetailPanelProps {
   course: CourseDetail
+  pois?: PoiMapItem[]
 }
 
-export function CourseDetailPanel({ course }: CourseDetailPanelProps) {
+export function CourseDetailPanel({ course, pois = [] }: CourseDetailPanelProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -110,6 +138,35 @@ export function CourseDetailPanel({ course }: CourseDetailPanelProps) {
               {tag}
             </Badge>
           ))}
+        </div>
+      )}
+
+      {/* 들릴만한 곳 */}
+      {pois.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-xs font-medium text-muted-foreground">
+            들릴만한 곳
+          </h3>
+          <div className="flex flex-col gap-1">
+            {pois.map((poi) => (
+              <div
+                key={poi.id}
+                className="flex items-start gap-2 rounded-md p-2 hover:bg-muted/50 transition-colors"
+              >
+                <span className="text-base leading-none mt-0.5" aria-hidden>
+                  {POI_EMOJI[poi.category]}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium leading-tight truncate">
+                    {poi.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {POI_LABEL[poi.category]}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

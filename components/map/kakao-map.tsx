@@ -172,10 +172,11 @@ function KakaoMapInner({
     : [{ id: SAMPLE_COURSE_ID, route_geojson: SAMPLE_ROUTE }]
   const effectiveSelectedId = hasAnyRoute ? selectedCourseId : SAMPLE_COURSE_ID
 
-  // Show POIs for selected course, or all POIs if none selected
-  const visiblePois = (pois ?? []).filter(
-    (p) => !selectedCourseId || p.course_id === selectedCourseId
-  )
+  // Only show POIs when a course is selected
+  const visiblePois =
+    selectedCourseId
+      ? (pois ?? []).filter((p) => p.course_id === selectedCourseId)
+      : []
 
   return (
     <Map center={ASAN_CENTER} style={{ width: "100%", height: "100%" }} level={8}>
