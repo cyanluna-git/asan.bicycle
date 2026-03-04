@@ -1,5 +1,5 @@
 import { Sidebar } from "@/components/layout/sidebar";
-import { MapPlaceholder } from "@/components/layout/map-placeholder";
+import KakaoMap from "@/components/map/kakao-map";
 import { BottomSheet } from "@/components/layout/bottom-sheet";
 
 export default function Home() {
@@ -7,7 +7,7 @@ export default function Home() {
     <div className="flex h-[calc(100vh-64px)]">
       <Sidebar />
       <main className="flex-1 relative flex">
-        <MapPlaceholder />
+        <KakaoMap />
         <BottomSheet />
       </main>
     </div>
