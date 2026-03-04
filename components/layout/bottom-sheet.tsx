@@ -11,10 +11,23 @@ import {
   DrawerDescription,
   DrawerTrigger,
 } from '@/components/ui/drawer'
+import { CourseFilter } from '@/components/filter/course-filter'
 import { CourseListClient } from '@/components/courses/course-list-client'
 import type { CourseListItem } from '@/types/course'
 
-export function BottomSheet({ courses }: { courses: CourseListItem[] }) {
+interface BottomSheetProps {
+  courses: CourseListItem[]
+  startPoints: { id: string; name: string }[]
+  themes: string[]
+  hasActiveFilters: boolean
+}
+
+export function BottomSheet({
+  courses,
+  startPoints,
+  themes,
+  hasActiveFilters,
+}: BottomSheetProps) {
   return (
     <div className="md:hidden">
       <Drawer>
@@ -35,8 +48,17 @@ export function BottomSheet({ courses }: { courses: CourseListItem[] }) {
             </DrawerDescription>
           </DrawerHeader>
           <div className="overflow-y-auto px-4 pb-6">
+            {/* Filter section */}
+            <Suspense fallback={null}>
+              <CourseFilter startPoints={startPoints} themes={themes} />
+            </Suspense>
+
+            {/* Course list */}
             <Suspense fallback={<CourseListSkeleton />}>
-              <CourseListClient courses={courses} />
+              <CourseListClient
+                courses={courses}
+                hasActiveFilters={hasActiveFilters}
+              />
             </Suspense>
           </div>
         </DrawerContent>
