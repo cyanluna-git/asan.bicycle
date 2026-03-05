@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label"
 import { supabase } from "@/lib/supabase"
 import { parseGpxToGeoJSON, type ParsedGpx } from "@/lib/gpx-parser"
 import { isWithinAsan, ASAN_CENTER } from "@/lib/validation"
+import { detectUphillSegments, type UphillSegmentDraft } from "@/lib/uphill-detection"
+import { UphillEditor } from "@/components/upload/uphill-editor"
 import type { RouteGeoJSON } from "@/types/course"
 import type { User } from "@supabase/supabase-js"
 
@@ -55,6 +57,9 @@ export default function UploadPage() {
     tags: "",
   })
 
+  // Uphill segments state
+  const [uphillSegments, setUphillSegments] = useState<UphillSegmentDraft[]>([])
+
   // Submit state
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -86,6 +91,7 @@ export default function UploadPage() {
     setParseError(null)
     setValidationError(null)
     setSubmitError(null)
+    setUphillSegments([])
 
     try {
       const result = await parseGpxToGeoJSON(f)
@@ -95,6 +101,12 @@ export default function UploadPage() {
         )
       }
       setParsed(result)
+
+      // Auto-detect uphill segments from elevation profile
+      if (result.elevationProfile.length > 0) {
+        const detected = detectUphillSegments(result.elevationProfile)
+        setUphillSegments(detected)
+      }
     } catch (err) {
       setParseError(err instanceof Error ? err.message : "GPX 파싱 오류가 발생했습니다.")
     }
@@ -184,6 +196,24 @@ export default function UploadPage() {
 
       if (insertError) {
         throw new Error(`코스 저장 실패: ${insertError.message}`)
+      }
+
+      // Insert uphill segments (if any)
+      const validSegments = uphillSegments.filter((s) => s.start_km < s.end_km)
+      if (validSegments.length > 0) {
+        const { error: segError } = await supabase
+          .from("uphill_segments")
+          .insert(
+            validSegments.map((s) => ({
+              course_id: course.id,
+              name: s.name || null,
+              start_km: s.start_km,
+              end_km: s.end_km,
+            })),
+          )
+        if (segError) {
+          console.error("업힐 구간 저장 실패:", segError.message)
+        }
       }
 
       router.push(`/explore?courseId=${course.id}`)
@@ -305,6 +335,17 @@ export default function UploadPage() {
       {parsed && (
         <div className="mb-8 overflow-hidden rounded-xl border" style={{ height: 400 }}>
           <RoutePreviewMap geojson={parsed.geojson} />
+        </div>
+      )}
+
+      {/* ── Elevation / Uphill editor ────────────────────────────────── */}
+      {parsed && parsed.elevationProfile.length > 0 && (
+        <div className="mb-8 rounded-xl border p-4">
+          <UphillEditor
+            profile={parsed.elevationProfile}
+            segments={uphillSegments}
+            onChange={setUphillSegments}
+          />
         </div>
       )}
 
@@ -465,12 +506,12 @@ function RoutePreviewMapInner({
     )
   }
 
-  // Extract coordinates
+  // Extract coordinates (handle 2D and 3D coords)
   const coords: { lat: number; lng: number }[] = []
   for (const feature of geojson.features) {
     if (feature.geometry?.type === "LineString") {
-      for (const [lng, lat] of feature.geometry.coordinates) {
-        coords.push({ lat, lng })
+      for (const coord of feature.geometry.coordinates) {
+        coords.push({ lat: coord[1], lng: coord[0] })
       }
     }
   }

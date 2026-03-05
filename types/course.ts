@@ -16,7 +16,28 @@ export type CourseDetail = Pick<
   | 'gpx_url'
   | 'theme'
   | 'tags'
->
+> & {
+  route_geojson?: RouteGeoJSON | null
+  uphill_segments?: UphillSegment[]
+}
+
+// ---------------------------------------------------------------------------
+// Elevation / Uphill types
+// ---------------------------------------------------------------------------
+
+export type ElevationPoint = {
+  distanceKm: number
+  elevationM: number
+}
+
+export type UphillSegment = {
+  id: string
+  course_id: string
+  name: string | null
+  start_km: number
+  end_km: number
+  created_at: string
+}
 
 // ---------------------------------------------------------------------------
 // GeoJSON types for route rendering
@@ -27,7 +48,7 @@ export type RouteFeature = {
   properties?: Record<string, unknown>
   geometry: {
     type: 'LineString'
-    coordinates: Array<[number, number]> // [lng, lat]
+    coordinates: Array<[number, number] | [number, number, number]> // [lng, lat] or [lng, lat, ele]
   }
 }
 
