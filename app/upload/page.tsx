@@ -7,6 +7,7 @@ import {
   Polyline,
   CustomOverlayMap,
   useKakaoLoader,
+  useMap,
 } from "react-kakao-maps-sdk"
 import { Upload, FileUp, Loader2, AlertCircle, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -70,8 +71,11 @@ export default function UploadPage() {
 
   // ── Auth check ──────────────────────────────────────────────────────────
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user)
+    // Use getSession (no network request) for initial check, then verify with getUser
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      setAuthLoading(false)
+    }).catch(() => {
       setAuthLoading(false)
     })
 
@@ -157,8 +161,9 @@ export default function UploadPage() {
         return
       }
 
-      // Upload GPX file to storage
-      const filePath = `${authData.user.id}/${Date.now()}_${file.name}`
+      // Upload GPX file to storage (sanitize filename: remove non-ASCII chars)
+      const safeName = file.name.replace(/[^\w\-_.]/g, '_')
+      const filePath = `${authData.user.id}/${Date.now()}_${safeName}`
       const { error: uploadError } = await supabase.storage
         .from("gpx-files")
         .upload(filePath, file, { contentType: "application/gpx+xml" })
@@ -581,9 +586,6 @@ function RoutePreviewMapInner({
 // ---------------------------------------------------------------------------
 
 function BoundsAdjuster({ coords }: { coords: { lat: number; lng: number }[] }) {
-  // We use a dynamic import approach to avoid issues — useMap must be inside <Map>
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useMap } = require("react-kakao-maps-sdk") as typeof import("react-kakao-maps-sdk")
   const map = useMap()
 
   useEffect(() => {

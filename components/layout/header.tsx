@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, Menu, X } from "lucide-react";
+import { Search, Menu, X, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase";
+import type { User } from "@supabase/supabase-js";
 
 const navLinks = [
   { label: "코스 찾기", href: "/explore", active: false },
@@ -12,6 +14,17 @@ const navLinks = [
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 flex h-16 items-center border-b bg-background px-4 md:px-6">
@@ -52,6 +65,25 @@ export function Header() {
         />
       </div>
 
+      {/* User info (desktop) */}
+      {user && (
+        <div className="hidden items-center gap-2 ml-3 md:flex">
+          <span className="text-xs text-muted-foreground truncate max-w-[140px]">
+            {user.user_metadata?.full_name ?? user.email}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={() => supabase.auth.signOut()}
+            aria-label="로그아웃"
+            title="로그아웃"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       {/* Mobile menu toggle */}
       <Button
         variant="ghost"
@@ -89,6 +121,22 @@ export function Header() {
               </Link>
             ))}
           </nav>
+          {user && (
+            <div className="mt-3 flex items-center justify-between border-t pt-3">
+              <span className="text-xs text-muted-foreground truncate">
+                {user.user_metadata?.full_name ?? user.email}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1.5 text-xs"
+                onClick={() => supabase.auth.signOut()}
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                로그아웃
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </header>
