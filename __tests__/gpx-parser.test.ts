@@ -101,11 +101,11 @@ describe('parseGpxToGeoJSON — 2D coordinates (no elevation)', () => {
     expect(result.geojson.features.length).toBeGreaterThan(0)
   })
 
-  it('geometry coordinates are 2D [lng, lat] tuples', async () => {
+  it('geometry coordinates are 2D [lng, lat] tuples when no elevation', async () => {
     const file = makeFile(buildGpx(points2D))
     const result = await parseGpxToGeoJSON(file)
     const coords = result.geojson.features[0].geometry.coordinates
-    // Each coordinate should have exactly 2 elements
+    // Each coordinate should have exactly 2 elements (no elevation)
     coords.forEach((c) => {
       expect(c).toHaveLength(2)
     })
@@ -160,12 +160,13 @@ describe('parseGpxToGeoJSON — 3D coordinates (with elevation)', () => {
     expect(result.elevationGainM).toBe(50)
   })
 
-  it('geometry coordinates are stripped to 2D even from 3D input', async () => {
+  it('geometry coordinates preserve 3D when elevation is present', async () => {
     const file = makeFile(buildGpx(points3D))
     const result = await parseGpxToGeoJSON(file)
     const coords = result.geojson.features[0].geometry.coordinates
     coords.forEach((c) => {
-      expect(c).toHaveLength(2)
+      expect(c).toHaveLength(3)
+      expect(c[2]).toBeDefined()
     })
   })
 
@@ -225,5 +226,89 @@ describe('parseGpxToGeoJSON — edge cases', () => {
     const result = await parseGpxToGeoJSON(file)
     expect(result.distanceKm).toBeGreaterThan(0)
     expect(result.elevationGainM).toBe(50)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Elevation profile
+// ---------------------------------------------------------------------------
+
+describe('parseGpxToGeoJSON — elevation profile', () => {
+  it('returns elevation profile for 3D coordinates', async () => {
+    const points = [
+      { lat: 36.7897, lon: 127.002, ele: 100 },
+      { lat: 36.7910, lon: 127.005, ele: 130 },
+      { lat: 36.7920, lon: 127.007, ele: 150 },
+    ]
+    const file = makeFile(buildGpx(points))
+    const result = await parseGpxToGeoJSON(file)
+    expect(result.elevationProfile.length).toBe(3)
+    expect(result.elevationProfile[0].distanceKm).toBe(0)
+    expect(result.elevationProfile[0].elevationM).toBe(100)
+    expect(result.elevationProfile[1].distanceKm).toBeGreaterThan(0)
+    expect(result.elevationProfile[2].elevationM).toBe(150)
+  })
+
+  it('returns empty elevation profile for 2D coordinates (no elevation data)', async () => {
+    const points = [
+      { lat: 36.7897, lon: 127.002 },
+      { lat: 36.7910, lon: 127.005 },
+    ]
+    const file = makeFile(buildGpx(points))
+    const result = await parseGpxToGeoJSON(file)
+    expect(result.elevationProfile).toEqual([])
+  })
+
+  it('elevation profile distances are monotonically increasing', async () => {
+    const points = [
+      { lat: 36.7897, lon: 127.002, ele: 100 },
+      { lat: 36.7910, lon: 127.005, ele: 130 },
+      { lat: 36.7920, lon: 127.007, ele: 150 },
+      { lat: 36.7930, lon: 127.008, ele: 120 },
+    ]
+    const file = makeFile(buildGpx(points))
+    const result = await parseGpxToGeoJSON(file)
+    for (let i = 1; i < result.elevationProfile.length; i++) {
+      expect(result.elevationProfile[i].distanceKm).toBeGreaterThanOrEqual(
+        result.elevationProfile[i - 1].distanceKm,
+      )
+    }
+  })
+
+  it('first profile point always has distanceKm of 0', async () => {
+    const points = [
+      { lat: 36.7897, lon: 127.002, ele: 200 },
+      { lat: 36.7910, lon: 127.005, ele: 250 },
+      { lat: 36.7920, lon: 127.007, ele: 300 },
+    ]
+    const file = makeFile(buildGpx(points))
+    const result = await parseGpxToGeoJSON(file)
+    expect(result.elevationProfile[0].distanceKm).toBe(0)
+  })
+
+  it('elevation values are rounded to 1 decimal place', async () => {
+    const points = [
+      { lat: 36.7897, lon: 127.002, ele: 100.567 },
+      { lat: 36.7910, lon: 127.005, ele: 130.333 },
+    ]
+    const file = makeFile(buildGpx(points))
+    const result = await parseGpxToGeoJSON(file)
+    result.elevationProfile.forEach((pt) => {
+      const rounded = Math.round(pt.elevationM * 10) / 10
+      expect(pt.elevationM).toBe(rounded)
+    })
+  })
+
+  it('profile point count matches input track point count for 3D tracks', async () => {
+    const points = [
+      { lat: 36.7897, lon: 127.002, ele: 100 },
+      { lat: 36.7905, lon: 127.003, ele: 110 },
+      { lat: 36.7910, lon: 127.005, ele: 130 },
+      { lat: 36.7920, lon: 127.007, ele: 150 },
+      { lat: 36.7930, lon: 127.008, ele: 120 },
+    ]
+    const file = makeFile(buildGpx(points))
+    const result = await parseGpxToGeoJSON(file)
+    expect(result.elevationProfile.length).toBe(points.length)
   })
 })

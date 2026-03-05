@@ -59,8 +59,8 @@ function extractCoordinates(geojson: RouteGeoJSON): LatLng[] {
   const coords: LatLng[] = []
   for (const feature of geojson.features) {
     if (feature.geometry?.type === "LineString") {
-      for (const [lng, lat] of feature.geometry.coordinates) {
-        coords.push({ lat, lng })
+      for (const coord of feature.geometry.coordinates) {
+        coords.push({ lat: coord[1], lng: coord[0] })
       }
     }
   }

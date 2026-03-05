@@ -6,7 +6,7 @@
  */
 
 import { gpx } from '@tmcw/togeojson'
-import type { RouteGeoJSON } from '@/types/course'
+import type { RouteGeoJSON, ElevationPoint } from '@/types/course'
 import { haversineKm } from '@/lib/validation'
 
 export interface ParsedGpx {
@@ -15,6 +15,7 @@ export interface ParsedGpx {
   startLng: number
   distanceKm: number
   elevationGainM: number
+  elevationProfile: ElevationPoint[]
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
@@ -49,7 +50,7 @@ export async function parseGpxToGeoJSON(file: File): Promise<ParsedGpx> {
   }
 
   // Build RouteGeoJSON — coordinates may be 3D [lng, lat, ele]
-  // We keep only [lng, lat] for the RouteGeoJSON type but use elevation for stats
+  // We preserve elevation in the GeoJSON for downstream use (elevation chart etc.)
   const rawCoords: number[][] = []
   const routeFeatures: RouteGeoJSON['features'] = []
 
@@ -61,7 +62,11 @@ export async function parseGpxToGeoJSON(file: File): Promise<ParsedGpx> {
       properties: {},
       geometry: {
         type: 'LineString',
-        coordinates: coords3d.map((c) => [c[0], c[1]]),
+        coordinates: coords3d.map((c) =>
+          c.length >= 3 && c[2] != null
+            ? [c[0], c[1], c[2]] as [number, number, number]
+            : [c[0], c[1]] as [number, number],
+        ),
       },
     })
   }
@@ -80,8 +85,9 @@ export async function parseGpxToGeoJSON(file: File): Promise<ParsedGpx> {
 
   const distanceKm = calculateDistanceKm(rawCoords)
   const elevationGainM = calculateElevationGain(rawCoords)
+  const elevationProfile = buildElevationProfile(rawCoords)
 
-  return { geojson, startLat, startLng, distanceKm, elevationGainM }
+  return { geojson, startLat, startLng, distanceKm, elevationGainM, elevationProfile }
 }
 
 /** Sum haversine distances between consecutive coordinates. */
@@ -104,4 +110,32 @@ function calculateElevationGain(coords: number[][]): number {
     }
   }
   return Math.round(gain)
+}
+
+/** Build elevation profile: array of { distanceKm, elevationM } for each coordinate. */
+function buildElevationProfile(coords: number[][]): ElevationPoint[] {
+  // Only build profile if elevation data exists
+  const hasElevation = coords.some((c) => c[2] != null)
+  if (!hasElevation) return []
+
+  const profile: ElevationPoint[] = []
+  let cumulativeKm = 0
+
+  for (let i = 0; i < coords.length; i++) {
+    if (i > 0) {
+      cumulativeKm += haversineKm(
+        coords[i - 1][1], coords[i - 1][0],
+        coords[i][1], coords[i][0],
+      )
+    }
+    const ele = coords[i][2]
+    if (ele != null) {
+      profile.push({
+        distanceKm: Math.round(cumulativeKm * 100) / 100,
+        elevationM: Math.round(ele * 10) / 10,
+      })
+    }
+  }
+
+  return profile
 }

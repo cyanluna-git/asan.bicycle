@@ -14,7 +14,7 @@ import {
 import { CourseFilter } from '@/components/filter/course-filter'
 import { CourseListClient } from '@/components/courses/course-list-client'
 import { CourseDetailPanel } from '@/components/courses/course-detail-panel'
-import type { CourseListItem, CourseDetail, PoiMapItem } from '@/types/course'
+import type { CourseListItem, CourseDetail, PoiMapItem, UphillSegment } from '@/types/course'
 
 interface BottomSheetProps {
   courses: CourseListItem[]
@@ -23,6 +23,7 @@ interface BottomSheetProps {
   hasActiveFilters: boolean
   selectedCourse?: CourseDetail | null
   pois?: PoiMapItem[]
+  uphillSegments?: UphillSegment[]
 }
 
 export function BottomSheet({
@@ -32,6 +33,7 @@ export function BottomSheet({
   hasActiveFilters,
   selectedCourse,
   pois,
+  uphillSegments,
 }: BottomSheetProps) {
   return (
     <div className="md:hidden">
@@ -58,7 +60,7 @@ export function BottomSheet({
           </DrawerHeader>
           <div className="overflow-y-auto px-4 pb-6">
             {selectedCourse ? (
-              <CourseDetailPanel course={selectedCourse} pois={pois ?? []} />
+              <CourseDetailPanel course={selectedCourse} pois={pois ?? []} uphillSegments={uphillSegments ?? []} />
             ) : (
               <>
                 {/* Filter section */}

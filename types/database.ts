@@ -118,6 +118,41 @@ export type Database = {
           },
         ]
       }
+      uphill_segments: {
+        Row: {
+          id: string
+          course_id: string
+          name: string | null
+          start_km: number
+          end_km: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          course_id: string
+          name?: string | null
+          start_km: number
+          end_km: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          course_id?: string
+          name?: string | null
+          start_km?: number
+          end_km?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'uphill_segments_course_id_fkey'
+            columns: ['course_id']
+            isOneToOne: false
+            referencedRelation: 'courses'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       pois: {
         Row: {
           id: string

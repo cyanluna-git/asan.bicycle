@@ -3,7 +3,7 @@ import KakaoMap from '@/components/map/kakao-map'
 import { BottomSheet } from '@/components/layout/bottom-sheet'
 import { supabase } from '@/lib/supabase'
 import { parseFilterParams, countActiveFilters } from '@/lib/filter'
-import type { CourseListItem, CourseDetail, CourseMapItem, RouteGeoJSON, PoiMapItem } from '@/types/course'
+import type { CourseListItem, CourseDetail, CourseMapItem, RouteGeoJSON, PoiMapItem, UphillSegment } from '@/types/course'
 
 export default async function Home({
   searchParams,
@@ -93,12 +93,28 @@ export default async function Home({
   const { data: selectedCourseData } = selectedCourseId
     ? await supabase
         .from('courses')
-        .select('id, title, description, difficulty, distance_km, elevation_gain_m, gpx_url, theme, tags')
+        .select('id, title, description, difficulty, distance_km, elevation_gain_m, gpx_url, theme, tags, route_geojson')
         .eq('id', selectedCourseId)
         .single()
     : { data: null }
 
-  const selectedCourse: CourseDetail | null = selectedCourseData ?? null
+  const selectedCourse: CourseDetail | null = selectedCourseData
+    ? {
+        ...selectedCourseData,
+        route_geojson: (selectedCourseData.route_geojson as RouteGeoJSON) ?? null,
+      }
+    : null
+
+  // Fetch uphill segments for the selected course
+  const { data: uphillRaw } = selectedCourseId
+    ? await supabase
+        .from('uphill_segments')
+        .select('id, course_id, name, start_km, end_km, created_at')
+        .eq('course_id', selectedCourseId)
+        .order('start_km')
+    : { data: [] }
+
+  const uphillSegments: UphillSegment[] = (uphillRaw ?? []) as UphillSegment[]
 
   // Fetch POIs only for the selected course (only needed when a course is selected)
   const { data: poisRaw } = selectedCourseId
@@ -120,6 +136,7 @@ export default async function Home({
         hasActiveFilters={hasActiveFilters}
         selectedCourse={selectedCourse}
         pois={pois}
+        uphillSegments={uphillSegments}
       />
       <main className="flex-1 relative flex">
         <KakaoMap courses={courseRoutes} selectedCourseId={selectedCourseId} pois={pois} />
@@ -130,6 +147,7 @@ export default async function Home({
           hasActiveFilters={hasActiveFilters}
           selectedCourse={selectedCourse}
           pois={pois}
+          uphillSegments={uphillSegments}
         />
       </main>
     </div>
