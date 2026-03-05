@@ -1,7 +1,5 @@
 'use client'
 
-import { useMemo } from 'react'
-import dynamic from 'next/dynamic'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { X, Download } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -13,16 +11,8 @@ import {
   SPEED_INTERMEDIATE,
   SPEED_ADVANCED,
 } from '@/lib/calc-duration'
-import type { CourseDetail, PoiMapItem, UphillSegment, ElevationPoint } from '@/types/course'
+import type { CourseDetail, PoiMapItem, UphillSegment } from '@/types/course'
 import type { Enums } from '@/types/database'
-
-const ElevationChart = dynamic(
-  () =>
-    import('@/components/courses/elevation-chart').then(
-      (mod) => mod.ElevationChart,
-    ),
-  { ssr: false },
-)
 
 const POI_LABEL: Record<Enums<'poi_category'>, string> = {
   cafe: '카페',
@@ -59,43 +49,6 @@ interface CourseDetailPanelProps {
 export function CourseDetailPanel({ course, pois = [], uphillSegments = [] }: CourseDetailPanelProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-
-  // Extract elevation profile from route_geojson 3D coordinates
-  const elevationProfile = useMemo<ElevationPoint[]>(() => {
-    if (!course.route_geojson) return []
-    const points: ElevationPoint[] = []
-    let cumulativeKm = 0
-
-    for (const feature of course.route_geojson.features) {
-      if (feature.geometry?.type !== 'LineString') continue
-      const coords = feature.geometry.coordinates
-
-      for (let i = 0; i < coords.length; i++) {
-        const c = coords[i]
-        if (c.length < 3 || c[2] == null) continue
-
-        if (i > 0) {
-          const prev = coords[i - 1]
-          const R = 6371
-          const dLat = ((c[1] - prev[1]) * Math.PI) / 180
-          const dLng = ((c[0] - prev[0]) * Math.PI) / 180
-          const a =
-            Math.sin(dLat / 2) ** 2 +
-            Math.cos((prev[1] * Math.PI) / 180) *
-              Math.cos((c[1] * Math.PI) / 180) *
-              Math.sin(dLng / 2) ** 2
-          cumulativeKm += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-        }
-
-        points.push({
-          distanceKm: Math.round(cumulativeKm * 100) / 100,
-          elevationM: Math.round(c[2] * 10) / 10,
-        })
-      }
-    }
-
-    return points
-  }, [course.route_geojson])
 
   const handleClose = () => {
     const params = new URLSearchParams(searchParams.toString())
@@ -215,19 +168,6 @@ export function CourseDetailPanel({ course, pois = [], uphillSegments = [] }: Co
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Elevation chart (read-only) */}
-      {elevationProfile.length > 0 && (
-        <div>
-          <h3 className="mb-2 text-xs font-medium text-muted-foreground">
-            고도 프로필
-          </h3>
-          <ElevationChart
-            data={elevationProfile}
-            segments={uphillSegments}
-          />
         </div>
       )}
 
