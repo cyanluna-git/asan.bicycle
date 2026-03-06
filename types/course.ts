@@ -10,7 +10,10 @@ export type CourseListItem = Pick<
   | 'theme'
   | 'tags'
   | 'uploader_name'
->
+  | 'created_by'
+> & {
+  uploader_emoji?: string | null
+}
 
 export type CourseDetail = Pick<
   Tables<'courses'>,
@@ -27,6 +30,7 @@ export type CourseDetail = Pick<
   | 'created_by'
   | 'start_point_id'
 > & {
+  uploader_emoji?: string | null
   route_geojson?: RouteGeoJSON | null
   uphill_segments?: UphillSegment[]
 }

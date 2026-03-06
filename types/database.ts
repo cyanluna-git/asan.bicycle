@@ -57,6 +57,7 @@ export type Database = {
           tags: string[]
           created_by: string | null
           uploader_name: string | null
+          uploader_emoji: string | null
           created_at: string
           updated_at: string
           route_geojson: Json | null
@@ -79,6 +80,7 @@ export type Database = {
           tags?: string[]
           created_by?: string | null
           uploader_name?: string | null
+          uploader_emoji?: string | null
           created_at?: string
           updated_at?: string
           route_geojson?: Json | null
@@ -101,6 +103,7 @@ export type Database = {
           tags?: string[]
           created_by?: string | null
           uploader_name?: string | null
+          uploader_emoji?: string | null
           created_at?: string
           updated_at?: string
           route_geojson?: Json | null

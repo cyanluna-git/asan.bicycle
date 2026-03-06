@@ -23,6 +23,10 @@ export const PROFILE_EMOJI_OPTIONS = [
   '🔥',
 ] as const
 
+export const PROFILE_EMOJI_CHANGE_INTERVAL_DAYS = 30
+const PROFILE_EMOJI_CHANGE_INTERVAL_MS =
+  PROFILE_EMOJI_CHANGE_INTERVAL_DAYS * 24 * 60 * 60 * 1000
+
 function hashSeed(seed: string) {
   let hash = 0
 
@@ -60,6 +64,21 @@ export function getProfileAvatarEmoji(
   return avatarEmoji || null
 }
 
+export function getProfileAvatarUpdatedAt(
+  user: Pick<User, 'user_metadata'> | null | undefined,
+) {
+  const rawValue = typeof user?.user_metadata?.avatar_emoji_updated_at === 'string'
+    ? user.user_metadata.avatar_emoji_updated_at
+    : ''
+
+  if (!rawValue) {
+    return null
+  }
+
+  const parsedDate = new Date(rawValue)
+  return Number.isNaN(parsedDate.getTime()) ? null : parsedDate
+}
+
 export function getDefaultProfileEmoji(
   user: Pick<User, 'id' | 'email'> | null | undefined,
 ) {
@@ -82,13 +101,48 @@ export function isProfileComplete(
   return Boolean(getProfileName(user) && getProfileAvatarEmoji(user))
 }
 
+export function canChangeProfileEmoji(
+  user: Pick<User, 'id' | 'email' | 'user_metadata'> | null | undefined,
+  nextEmoji: string | null | undefined,
+  now = new Date(),
+) {
+  const currentEmoji = getProfileAvatarEmoji(user)
+  const normalizedNextEmoji = nextEmoji?.trim() || null
+  const updatedAt = getProfileAvatarUpdatedAt(user)
+
+  if (!normalizedNextEmoji || !currentEmoji || currentEmoji === normalizedNextEmoji || !updatedAt) {
+    return {
+      allowed: true,
+      nextAllowedAt: null,
+    }
+  }
+
+  const nextAllowedAt = new Date(updatedAt.getTime() + PROFILE_EMOJI_CHANGE_INTERVAL_MS)
+
+  return {
+    allowed: now.getTime() >= nextAllowedAt.getTime(),
+    nextAllowedAt,
+  }
+}
+
 export function buildProfileUpdate(
-  user: Pick<User, 'id' | 'email'> | null | undefined,
+  user: Pick<User, 'id' | 'email' | 'user_metadata'> | null | undefined,
   profileName: string,
   avatarEmoji?: string | null,
+  now = new Date(),
 ) {
+  const nextAvatarEmoji = avatarEmoji?.trim() || getDefaultProfileEmoji(user)
+  const currentAvatarEmoji = getProfileAvatarEmoji(user)
+  const currentUpdatedAt = typeof user?.user_metadata?.avatar_emoji_updated_at === 'string'
+    ? user.user_metadata.avatar_emoji_updated_at
+    : null
+
   return {
     full_name: normalizeProfileName(profileName),
-    avatar_emoji: avatarEmoji?.trim() || getDefaultProfileEmoji(user),
+    avatar_emoji: nextAvatarEmoji,
+    avatar_emoji_updated_at:
+      currentAvatarEmoji === nextAvatarEmoji && currentUpdatedAt
+        ? currentUpdatedAt
+        : now.toISOString(),
   }
 }

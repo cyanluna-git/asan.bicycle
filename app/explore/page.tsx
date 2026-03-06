@@ -5,9 +5,9 @@ import { parseFilterParams, countActiveFilters } from '@/lib/filter'
 import type { CourseListItem, CourseDetail, CourseMapItem, RouteGeoJSON, PoiMapItem, UphillSegment } from '@/types/course'
 
 const COURSE_LIST_FIELDS = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, route_geojson, created_by'
-const COURSE_LIST_FIELDS_WITH_UPLOADER = `${COURSE_LIST_FIELDS}, uploader_name`
+const COURSE_LIST_FIELDS_WITH_UPLOADER = `${COURSE_LIST_FIELDS}, uploader_name, uploader_emoji`
 const COURSE_DETAIL_FIELDS = 'id, title, description, difficulty, distance_km, elevation_gain_m, gpx_url, theme, tags, route_geojson, created_by, start_point_id'
-const COURSE_DETAIL_FIELDS_WITH_UPLOADER = `${COURSE_DETAIL_FIELDS}, uploader_name`
+const COURSE_DETAIL_FIELDS_WITH_UPLOADER = `${COURSE_DETAIL_FIELDS}, uploader_name, uploader_emoji`
 
 type CourseListRow = {
   id: string
@@ -20,6 +20,7 @@ type CourseListRow = {
   route_geojson: RouteGeoJSON | null
   created_by: string | null
   uploader_name?: string | null
+  uploader_emoji?: string | null
 }
 
 type CourseDetailRow = {
@@ -36,6 +37,7 @@ type CourseDetailRow = {
   created_by: string | null
   start_point_id: string | null
   uploader_name?: string | null
+  uploader_emoji?: string | null
 }
 
 function buildCoursesQuery(
@@ -111,7 +113,7 @@ export default async function Home({
     filters,
     COURSE_LIST_FIELDS_WITH_UPLOADER,
   )
-  if (coursesError && /uploader_name/i.test(coursesError.message)) {
+  if (coursesError && /(uploader_name|uploader_emoji)/i.test(coursesError.message)) {
     const fallback = await buildCoursesQuery(filters, COURSE_LIST_FIELDS)
     courses = fallback.data
     coursesError = fallback.error
@@ -123,8 +125,17 @@ export default async function Home({
   )
 
   const courseList: CourseListItem[] = courseRows.map(
-    ({ id, title, difficulty, distance_km, elevation_gain_m, theme, tags, uploader_name }) => ({
-      id, title, difficulty, distance_km, elevation_gain_m, theme, tags, uploader_name: uploader_name ?? null,
+    ({ id, title, difficulty, distance_km, elevation_gain_m, theme, tags, created_by, uploader_name, uploader_emoji }) => ({
+      id,
+      title,
+      difficulty,
+      distance_km,
+      elevation_gain_m,
+      theme,
+      tags,
+      created_by,
+      uploader_name: uploader_name ?? null,
+      uploader_emoji: uploader_emoji ?? null,
     }),
   )
 
@@ -145,7 +156,7 @@ export default async function Home({
         .select(COURSE_DETAIL_FIELDS_WITH_UPLOADER)
         .eq('id', selectedCourseId)
         .single()
-    if (selectedCourseQuery.error && /uploader_name/i.test(selectedCourseQuery.error.message)) {
+    if (selectedCourseQuery.error && /(uploader_name|uploader_emoji)/i.test(selectedCourseQuery.error.message)) {
       selectedCourseQuery = await supabase
         .from('courses')
         .select(COURSE_DETAIL_FIELDS)
@@ -158,6 +169,7 @@ export default async function Home({
       ? {
           ...rawSelectedCourse,
           uploader_name: rawSelectedCourse.uploader_name ?? null,
+          uploader_emoji: rawSelectedCourse.uploader_emoji ?? null,
         }
       : null
 
@@ -170,6 +182,7 @@ export default async function Home({
     ? {
         ...selectedCourseData,
         uploader_name: selectedCourseData.uploader_name ?? null,
+        uploader_emoji: selectedCourseData.uploader_emoji ?? null,
         route_geojson: (selectedCourseData.route_geojson as RouteGeoJSON) ?? null,
       }
     : null

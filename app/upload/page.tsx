@@ -20,6 +20,7 @@ import {
   type UploadMetadataFormData,
 } from '@/lib/course-upload'
 import { normalizePoiCategory } from '@/lib/poi'
+import { resolveProfileEmoji } from '@/lib/profile'
 import { parseGpxToGeoJSON, type ParsedGpx } from '@/lib/gpx-parser'
 import { supabase } from '@/lib/supabase'
 import { getUploaderDisplayName } from '@/lib/user-display-name'
@@ -363,6 +364,7 @@ export default function UploadPage() {
         .insert({
           ...baseCourseInsert,
           uploader_name: currentUploaderName,
+          uploader_emoji: resolveProfileEmoji(authData.user),
           metadata_history: metadataHistory,
         })
         .select('id')
@@ -370,7 +372,7 @@ export default function UploadPage() {
 
       if (
         insertResponse.error
-        && /(uploader_name|metadata_history)/i.test(insertResponse.error.message)
+        && /(uploader_name|uploader_emoji|metadata_history)/i.test(insertResponse.error.message)
       ) {
         insertResponse = await supabase
           .from('courses')

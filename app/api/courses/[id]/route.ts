@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { appendMetadataHistoryEntry, buildMetadataHistoryEntry } from '@/lib/course-upload'
 import { canEditCourse, isAdminUser } from '@/lib/admin'
 import { normalizePoiCategory } from '@/lib/poi'
+import { resolveProfileEmoji } from '@/lib/profile'
 import { createAnonServerClient, createServiceRoleClient } from '@/lib/supabase-server'
 import { getUploaderDisplayName } from '@/lib/user-display-name'
 import type { Json } from '@/types/database'
@@ -37,6 +38,7 @@ type ExistingCourseRow = {
   id: string
   created_by: string | null
   uploader_name?: string | null
+  uploader_emoji?: string | null
   metadata_history?: Json | null
 }
 
@@ -99,13 +101,13 @@ export async function PATCH(request: Request, context: PatchContext) {
 
   let courseQuery = await authClient
     .from('courses')
-    .select('id, created_by, uploader_name, metadata_history')
+    .select('id, created_by, uploader_name, uploader_emoji, metadata_history')
     .eq('id', id)
     .single()
 
   if (
     courseQuery.error
-    && /(uploader_name|metadata_history)/i.test(courseQuery.error.message)
+    && /(uploader_name|uploader_emoji|metadata_history)/i.test(courseQuery.error.message)
   ) {
     courseQuery = await authClient
       .from('courses')
@@ -156,12 +158,15 @@ export async function PATCH(request: Request, context: PatchContext) {
 
   const uploaderName = existingCourse.uploader_name
     ?? (existingCourse.created_by === user.id ? actorDisplayName : null)
+  const uploaderEmoji = existingCourse.uploader_emoji
+    ?? (existingCourse.created_by === user.id ? resolveProfileEmoji(user) : null)
 
   let updateResponse = await writeClient
     .from('courses')
     .update({
       ...baseUpdate,
       uploader_name: uploaderName,
+      uploader_emoji: uploaderEmoji,
       metadata_history: appendMetadataHistoryEntry(
         existingCourse.metadata_history,
         buildMetadataHistoryEntry({
@@ -186,7 +191,7 @@ export async function PATCH(request: Request, context: PatchContext) {
 
   if (
     updateResponse.error
-    && /(uploader_name|metadata_history)/i.test(updateResponse.error.message)
+    && /(uploader_name|uploader_emoji|metadata_history)/i.test(updateResponse.error.message)
   ) {
     updateResponse = await writeClient
       .from('courses')

@@ -6,10 +6,13 @@ import type { User } from '@supabase/supabase-js'
 import { Button } from '@/components/ui/button'
 import {
   buildProfileUpdate,
+  canChangeProfileEmoji,
   getDefaultProfileEmoji,
+  getProfileAvatarUpdatedAt,
   getProfileName,
   getProfileAvatarEmoji,
   pickRandomProfileEmoji,
+  PROFILE_EMOJI_CHANGE_INTERVAL_DAYS,
   PROFILE_EMOJI_OPTIONS,
 } from '@/lib/profile'
 import { supabase } from '@/lib/supabase'
@@ -37,6 +40,10 @@ function ProfileEditorForm({
   const [selectedEmoji, setSelectedEmoji] = useState(buildInitialEmoji)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const currentEmoji = getProfileAvatarEmoji(user)
+  const avatarUpdatedAt = getProfileAvatarUpdatedAt(user)
+  const emojiChangeState = canChangeProfileEmoji(user, selectedEmoji)
+  const emojiLocked = Boolean(currentEmoji && currentEmoji !== selectedEmoji && !emojiChangeState.allowed)
 
   useEffect(() => {
     setProfileName(getProfileName(user))
@@ -54,6 +61,11 @@ function ProfileEditorForm({
       return
     }
 
+    if (!emojiChangeState.allowed) {
+      setError(`이모지 아바타는 ${PROFILE_EMOJI_CHANGE_INTERVAL_DAYS}일에 한 번만 변경할 수 있습니다.`)
+      return
+    }
+
     setIsSaving(true)
     setError(null)
 
@@ -63,6 +75,23 @@ function ProfileEditorForm({
 
     if (updateError) {
       setError(updateError.message)
+      setIsSaving(false)
+      return
+    }
+
+    const { error: courseUpdateError } = await supabase
+      .from('courses')
+      .update({
+        uploader_name: nextName.trim(),
+        uploader_emoji: selectedEmoji,
+      })
+      .eq('created_by', user.id)
+
+    if (
+      courseUpdateError
+      && !/(uploader_name|uploader_emoji)/i.test(courseUpdateError.message)
+    ) {
+      setError(courseUpdateError.message)
       setIsSaving(false)
       return
     }
@@ -113,6 +142,7 @@ function ProfileEditorForm({
               variant="ghost"
               size="sm"
               className="h-8 px-2 text-xs"
+              disabled={emojiLocked}
               onClick={() => setSelectedEmoji(pickRandomProfileEmoji())}
             >
               랜덤 다시 뽑기
@@ -127,12 +157,13 @@ function ProfileEditorForm({
                 <button
                   key={emoji}
                   type="button"
+                  disabled={emojiLocked}
                   onClick={() => setSelectedEmoji(emoji)}
                   className={`flex h-12 items-center justify-center rounded-2xl border text-2xl transition ${
                     isActive
                       ? 'border-orange-500 bg-orange-50 shadow-sm'
                       : 'border-border bg-background hover:border-orange-300 hover:bg-orange-50/60'
-                  }`}
+                  } ${emojiLocked ? 'cursor-not-allowed opacity-55' : ''}`}
                   aria-pressed={isActive}
                 >
                   <span aria-hidden>{emoji}</span>
@@ -140,6 +171,15 @@ function ProfileEditorForm({
               )
             })}
           </div>
+
+          {avatarUpdatedAt && (
+            <p className="text-xs text-muted-foreground">
+              이모지 변경은 {PROFILE_EMOJI_CHANGE_INTERVAL_DAYS}일에 1번 가능합니다.
+              {emojiChangeState.nextAllowedAt && currentEmoji !== selectedEmoji
+                ? ` 다음 변경 가능일: ${emojiChangeState.nextAllowedAt.toLocaleDateString('ko-KR')}`
+                : ''}
+            </p>
+          )}
         </div>
 
         {error && (
