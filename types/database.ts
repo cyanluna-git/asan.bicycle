@@ -226,7 +226,12 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      increment_course_download_count: {
+        Args: {
+          p_course_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       course_difficulty: 'easy' | 'moderate' | 'hard'
