@@ -2,9 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, Menu, X, LogOut } from "lucide-react";
+import { Search, Menu, X, LogOut, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ProfileEditor } from "@/components/profile/profile-editor";
+import { resolveProfileEmoji } from "@/lib/profile";
 import { supabase } from "@/lib/supabase";
+import { getUploaderDisplayName } from "@/lib/user-display-name";
 import type { User } from "@supabase/supabase-js";
 
 const navLinks = [
@@ -14,6 +17,7 @@ const navLinks = [
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -72,9 +76,26 @@ export function Header() {
       {/* User info (desktop) */}
       {user && (
         <div className="hidden items-center gap-2 ml-3 md:flex">
-          <span className="text-xs text-muted-foreground truncate max-w-[140px]">
-            {user.user_metadata?.full_name ?? user.email}
-          </span>
+          <button
+            type="button"
+            onClick={() => setProfileOpen(true)}
+            className="flex items-center gap-2 rounded-full border px-2.5 py-1.5 transition hover:bg-accent"
+          >
+            <span className="text-lg leading-none">{resolveProfileEmoji(user)}</span>
+            <span className="text-xs text-muted-foreground truncate max-w-[140px]">
+              {getUploaderDisplayName(user)}
+            </span>
+          </button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={() => setProfileOpen(true)}
+            aria-label="프로필 설정"
+            title="프로필 설정"
+          >
+            <Settings2 className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -127,21 +148,47 @@ export function Header() {
           </nav>
           {user && (
             <div className="mt-3 flex items-center justify-between border-t pt-3">
-              <span className="text-xs text-muted-foreground truncate">
-                {user.user_metadata?.full_name ?? user.email}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 gap-1.5 text-xs"
-                onClick={() => supabase.auth.signOut()}
-              >
-                <LogOut className="h-3.5 w-3.5" />
-                로그아웃
-              </Button>
+              <div className="flex items-center gap-2">
+                <span className="text-base leading-none">{resolveProfileEmoji(user)}</span>
+                <span className="text-xs text-muted-foreground truncate">
+                  {getUploaderDisplayName(user)}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1.5 text-xs"
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    setProfileOpen(true)
+                  }}
+                >
+                  <Settings2 className="h-3.5 w-3.5" />
+                  프로필
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1.5 text-xs"
+                  onClick={() => supabase.auth.signOut()}
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  로그아웃
+                </Button>
+              </div>
             </div>
           )}
         </div>
+      )}
+
+      {user && (
+        <ProfileEditor
+          user={user}
+          mode="modal"
+          open={profileOpen}
+          onOpenChange={setProfileOpen}
+        />
       )}
     </header>
   );

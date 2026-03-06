@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ProfileGate } from "@/components/profile/profile-gate";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
 
@@ -29,7 +30,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Header />
-        <div className="pt-16">{children}</div>
+        <ProfileGate>
+          <div className="pt-16">{children}</div>
+        </ProfileGate>
       </body>
     </html>
   );
