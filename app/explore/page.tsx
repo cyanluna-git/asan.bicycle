@@ -1,9 +1,10 @@
 import { ExploreShell } from '@/components/explore/explore-shell'
+import { hydrateUploaderNames } from '@/lib/course-uploader'
 import { supabase } from '@/lib/supabase'
 import { parseFilterParams, countActiveFilters } from '@/lib/filter'
 import type { CourseListItem, CourseDetail, CourseMapItem, RouteGeoJSON, PoiMapItem, UphillSegment } from '@/types/course'
 
-const COURSE_LIST_FIELDS = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, route_geojson'
+const COURSE_LIST_FIELDS = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, route_geojson, created_by'
 const COURSE_LIST_FIELDS_WITH_UPLOADER = `${COURSE_LIST_FIELDS}, uploader_name`
 const COURSE_DETAIL_FIELDS = 'id, title, description, difficulty, distance_km, elevation_gain_m, gpx_url, theme, tags, route_geojson, created_by, start_point_id'
 const COURSE_DETAIL_FIELDS_WITH_UPLOADER = `${COURSE_DETAIL_FIELDS}, uploader_name`
@@ -17,6 +18,7 @@ type CourseListRow = {
   theme: string | null
   tags: string[]
   route_geojson: RouteGeoJSON | null
+  created_by: string | null
   uploader_name?: string | null
 }
 
@@ -116,7 +118,9 @@ export default async function Home({
   }
   if (coursesError) console.error('[page] courses error:', coursesError.message, coursesError.details)
 
-  const courseRows = ((courses ?? []) as unknown) as CourseListRow[]
+  const courseRows = await hydrateUploaderNames(
+    ((courses ?? []) as unknown) as CourseListRow[],
+  )
 
   const courseList: CourseListItem[] = courseRows.map(
     ({ id, title, difficulty, distance_km, elevation_gain_m, theme, tags, uploader_name }) => ({
@@ -156,6 +160,10 @@ export default async function Home({
           uploader_name: rawSelectedCourse.uploader_name ?? null,
         }
       : null
+
+    if (selectedCourseData) {
+      ;[selectedCourseData] = await hydrateUploaderNames([selectedCourseData])
+    }
   }
 
   const selectedCourse: CourseDetail | null = selectedCourseData
