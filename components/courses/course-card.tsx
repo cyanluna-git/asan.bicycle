@@ -40,6 +40,12 @@ export function CourseCard({ course, isSelected, onClick }: CourseCardProps) {
           </Badge>
         )}
       </div>
+
+      {course.uploader_name && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          업로더 {course.uploader_name}
+        </p>
+      )}
     </button>
   )
 }

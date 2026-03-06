@@ -2,7 +2,14 @@ import type { Tables } from '@/types/database'
 
 export type CourseListItem = Pick<
   Tables<'courses'>,
-  'id' | 'title' | 'difficulty' | 'distance_km' | 'elevation_gain_m' | 'theme' | 'tags'
+  | 'id'
+  | 'title'
+  | 'difficulty'
+  | 'distance_km'
+  | 'elevation_gain_m'
+  | 'theme'
+  | 'tags'
+  | 'uploader_name'
 >
 
 export type CourseDetail = Pick<
@@ -16,6 +23,9 @@ export type CourseDetail = Pick<
   | 'gpx_url'
   | 'theme'
   | 'tags'
+  | 'uploader_name'
+  | 'created_by'
+  | 'start_point_id'
 > & {
   route_geojson?: RouteGeoJSON | null
   uphill_segments?: UphillSegment[]
@@ -68,8 +78,9 @@ export type PoiMapItem = {
   id: string
   course_id: string
   name: string
-  category: import('@/types/database').Enums<'poi_category'>
+  category: string | null
   description: string | null
+  photo_url: string | null
   lat: number
   lng: number
 }

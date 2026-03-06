@@ -11,7 +11,10 @@ interface SidebarProps {
   hasActiveFilters: boolean
   selectedCourse?: CourseDetail | null
   pois?: PoiMapItem[]
+  selectedPoiId?: string | null
+  onSelectPoi?: (id: string | null) => void
   uphillSegments?: UphillSegment[]
+  canEditSelectedCourse?: boolean
 }
 
 export function Sidebar({
@@ -21,13 +24,23 @@ export function Sidebar({
   hasActiveFilters,
   selectedCourse,
   pois,
+  selectedPoiId,
+  onSelectPoi,
   uphillSegments,
+  canEditSelectedCourse = false,
 }: SidebarProps) {
   return (
     <aside className="hidden md:flex flex-col w-[280px] border-r bg-background">
       <div className="overflow-y-auto h-full p-4">
         {selectedCourse ? (
-          <CourseDetailPanel course={selectedCourse} pois={pois ?? []} uphillSegments={uphillSegments ?? []} />
+          <CourseDetailPanel
+            course={selectedCourse}
+            pois={pois ?? []}
+            selectedPoiId={selectedPoiId}
+            onSelectPoi={onSelectPoi}
+            uphillSegments={uphillSegments ?? []}
+            canEditCourse={canEditSelectedCourse}
+          />
         ) : (
           <>
             {/* Filter section */}
