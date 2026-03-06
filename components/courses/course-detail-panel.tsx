@@ -242,7 +242,7 @@ export function CourseDetailPanel({
       {/* GPX download */}
       {course.gpx_url ? (
         <Button asChild className="w-full">
-          <a href={course.gpx_url} download>
+          <a href={`/api/courses/${course.id}/download`}>
             <Download className="mr-2 h-4 w-4" />
             GPX 다운로드
           </a>
