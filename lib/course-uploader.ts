@@ -1,13 +1,15 @@
 import type { User } from '@supabase/supabase-js'
+import { resolveProfileEmoji } from '@/lib/profile'
 import { createServiceRoleClient } from '@/lib/supabase-server'
 import { getUploaderDisplayName } from '@/lib/user-display-name'
 
 type CourseWithUploader = {
   created_by: string | null
   uploader_name?: string | null
+  uploader_emoji?: string | null
 }
 
-async function getDisplayNameByUserId(userId: string) {
+async function getProfileIdentityByUserId(userId: string) {
   const supabase = createServiceRoleClient()
 
   if (!supabase) {
@@ -24,7 +26,12 @@ async function getDisplayNameByUserId(userId: string) {
     return null
   }
 
-  return getUploaderDisplayName(data.user as Pick<User, 'email' | 'user_metadata'>)
+  const user = data.user as Pick<User, 'id' | 'email' | 'user_metadata'>
+
+  return {
+    name: getUploaderDisplayName(user),
+    emoji: resolveProfileEmoji(user),
+  }
 }
 
 export async function hydrateUploaderNames<T extends CourseWithUploader>(courses: T[]) {
@@ -40,15 +47,16 @@ export async function hydrateUploaderNames<T extends CourseWithUploader>(courses
   }
 
   const resolvedEntries = await Promise.all(
-    missingOwnerIds.map(async (ownerId) => [ownerId, await getDisplayNameByUserId(ownerId)] as const),
+    missingOwnerIds.map(async (ownerId) => [ownerId, await getProfileIdentityByUserId(ownerId)] as const),
   )
 
-  const resolvedNames = new Map(
-    resolvedEntries.filter((entry): entry is readonly [string, string] => Boolean(entry[1])),
+  const resolvedProfiles = new Map(
+    resolvedEntries.filter((entry): entry is readonly [string, { name: string; emoji: string }] => Boolean(entry[1])),
   )
 
   return courses.map((course) => ({
     ...course,
-    uploader_name: course.uploader_name ?? resolvedNames.get(course.created_by ?? '') ?? null,
+    uploader_name: course.uploader_name ?? resolvedProfiles.get(course.created_by ?? '')?.name ?? null,
+    uploader_emoji: course.uploader_emoji ?? resolvedProfiles.get(course.created_by ?? '')?.emoji ?? null,
   }))
 }

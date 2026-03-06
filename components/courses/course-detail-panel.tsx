@@ -83,9 +83,10 @@ export function CourseDetailPanel({
             {course.title}
           </h2>
           {course.uploader_name && (
-            <p className="text-xs text-muted-foreground">
-              업로더 {course.uploader_name}
-            </p>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span aria-hidden>{course.uploader_emoji ?? '🙂'}</span>
+              <span>{course.uploader_name}</span>
+            </div>
           )}
         </div>
         <Button

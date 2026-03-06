@@ -14,8 +14,8 @@ type MyCourseRow = CourseListItem & {
   created_at: string
 }
 
-const COURSE_FIELDS = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, uploader_name, created_at'
-const COURSE_FIELDS_FALLBACK = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, created_at'
+const COURSE_FIELDS = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, uploader_name, uploader_emoji, created_by, created_at'
+const COURSE_FIELDS_FALLBACK = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, created_by, created_at'
 
 export function MyCoursesPageClient() {
   const [user, setUser] = useState<User | null>(null)
@@ -64,7 +64,7 @@ export function MyCoursesPageClient() {
       data = (query.data as MyCourseRow[] | null) ?? null
       error = query.error ? { message: query.error.message } : null
 
-      if (error && /uploader_name/i.test(error.message)) {
+      if (error && /(uploader_name|uploader_emoji)/i.test(error.message)) {
         const fallback = await supabase
           .from('courses')
           .select(COURSE_FIELDS_FALLBACK)
@@ -85,6 +85,7 @@ export function MyCoursesPageClient() {
       setCourses(((data ?? []) as MyCourseRow[]).map((course) => ({
         ...course,
         uploader_name: course.uploader_name ?? null,
+        uploader_emoji: course.uploader_emoji ?? null,
       })))
       setLoading(false)
     }
@@ -165,9 +166,10 @@ export function MyCoursesPageClient() {
                 <div>
                   <h2 className="text-lg font-semibold">{course.title}</h2>
                   {course.uploader_name && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      업로더 {course.uploader_name}
-                    </p>
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span aria-hidden>{course.uploader_emoji ?? '🙂'}</span>
+                      <span>{course.uploader_name}</span>
+                    </div>
                   )}
                 </div>
                 <Badge variant={difficultyVariant[course.difficulty]}>

@@ -44,6 +44,7 @@ type EditableCourseRow = {
   route_geojson: RouteGeoJSON | null
   created_by: string | null
   uploader_name?: string | null
+  uploader_emoji?: string | null
 }
 
 type EditablePoiRow = {
@@ -72,7 +73,7 @@ const EMPTY_FORM: UploadMetadataFormData = {
   startPointId: '',
 }
 
-const COURSE_FIELDS = 'id, title, description, difficulty, distance_km, elevation_gain_m, theme, tags, start_point_id, route_geojson, created_by, uploader_name'
+const COURSE_FIELDS = 'id, title, description, difficulty, distance_km, elevation_gain_m, theme, tags, start_point_id, route_geojson, created_by, uploader_name, uploader_emoji'
 const COURSE_FIELDS_FALLBACK = 'id, title, description, difficulty, distance_km, elevation_gain_m, theme, tags, start_point_id, route_geojson, created_by'
 
 function haversineKm(
@@ -233,7 +234,7 @@ export function CourseEditPageClient({
       courseData = (courseQuery.data as EditableCourseRow | null) ?? null
       courseError = courseQuery.error ? { message: courseQuery.error.message } : null
 
-      if (courseError && /uploader_name/i.test(courseError.message)) {
+      if (courseError && /(uploader_name|uploader_emoji)/i.test(courseError.message)) {
         const fallback = await supabase
           .from('courses')
           .select(COURSE_FIELDS_FALLBACK)
@@ -272,6 +273,7 @@ export function CourseEditPageClient({
       const loadedCourse = {
         ...courseData,
         uploader_name: courseData.uploader_name ?? null,
+        uploader_emoji: courseData.uploader_emoji ?? null,
       }
       const nextStartPoints = buildStartPointOptions(
         (startPointResponse.data ?? []) as StartPointRow[],
