@@ -1,77 +1,71 @@
-"use client"
+'use client'
 
-import { useEffect, useState, useCallback, useRef } from "react"
-import { useRouter } from "next/navigation"
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Upload, FileUp, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { CourseMetadataForm } from '@/components/upload/course-metadata-form'
+import { CourseRoutePreviewMap } from '@/components/upload/course-route-preview-map'
+import { UphillEditor } from '@/components/upload/uphill-editor'
 import {
-  Map,
-  Polyline,
-  CustomOverlayMap,
-  useKakaoLoader,
-  useMap,
-} from "react-kakao-maps-sdk"
-import { Upload, FileUp, Loader2, AlertCircle, CheckCircle2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { supabase } from "@/lib/supabase"
-import { parseGpxToGeoJSON, type ParsedGpx } from "@/lib/gpx-parser"
-import { isWithinAsan, ASAN_CENTER } from "@/lib/validation"
-import { detectUphillSegments, type UphillSegmentDraft } from "@/lib/uphill-detection"
-import { UphillEditor } from "@/components/upload/uphill-editor"
-import type { RouteGeoJSON } from "@/types/course"
-import type { User } from "@supabase/supabase-js"
+  buildMetadataHistoryEntry,
+  buildStartPointOptions,
+  createEmptyPoiDraft,
+  isObjectUrl,
+  recommendStartPoint,
+  toMetadataHistoryJson,
+  type PoiDraft,
+  type StartPointOption,
+  type StartPointRow,
+  type UploadMetadataFormData,
+} from '@/lib/course-upload'
+import { normalizePoiCategory } from '@/lib/poi'
+import { parseGpxToGeoJSON, type ParsedGpx } from '@/lib/gpx-parser'
+import { supabase } from '@/lib/supabase'
+import { getUploaderDisplayName } from '@/lib/user-display-name'
+import { isWithinAsan } from '@/lib/validation'
+import { detectUphillSegments, type UphillSegmentDraft } from '@/lib/uphill-detection'
+import type { Json } from '@/types/database'
+import type { User } from '@supabase/supabase-js'
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-type Difficulty = "easy" | "moderate" | "hard"
-
-interface FormData {
-  title: string
-  description: string
-  difficulty: Difficulty
-  theme: string
-  tags: string
+const EMPTY_FORM: UploadMetadataFormData = {
+  title: '',
+  description: '',
+  difficulty: 'moderate',
+  theme: '',
+  tags: '',
+  startPointId: '',
 }
-
-// ---------------------------------------------------------------------------
-// Page component
-// ---------------------------------------------------------------------------
 
 export default function UploadPage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [startPoints, setStartPoints] = useState<StartPointOption[]>([])
+  const [recommendedStartPoint, setRecommendedStartPoint] = useState<{
+    id: string
+    name: string
+    distanceKm: number
+  } | null>(null)
 
-  // GPX state
   const [file, setFile] = useState<File | null>(null)
   const [parsed, setParsed] = useState<ParsedGpx | null>(null)
   const [parseError, setParseError] = useState<string | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
 
-  // Form state
-  const [form, setForm] = useState<FormData>({
-    title: "",
-    description: "",
-    difficulty: "moderate",
-    theme: "",
-    tags: "",
-  })
-
-  // Uphill segments state
+  const [form, setForm] = useState<UploadMetadataFormData>(EMPTY_FORM)
+  const [formErrors, setFormErrors] = useState<{ title?: string; startPointId?: string }>({})
   const [uphillSegments, setUphillSegments] = useState<UphillSegmentDraft[]>([])
+  const [poiDrafts, setPoiDrafts] = useState<PoiDraft[]>([])
+  const [activePoiDraftId, setActivePoiDraftId] = useState<string | null>(null)
 
-  // Submit state
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-
-  // Drag state
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const latestPoiDraftsRef = useRef<PoiDraft[]>([])
 
-  // ── Auth check ──────────────────────────────────────────────────────────
   useEffect(() => {
-    // Use getSession (no network request) for initial check, then verify with getUser
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       setAuthLoading(false)
@@ -88,85 +82,245 @@ export default function UploadPage() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // ── Handle file selection / drop ────────────────────────────────────────
-  const handleFile = useCallback(async (f: File) => {
-    setFile(f)
+  useEffect(() => {
+    let cancelled = false
+
+    const loadStartPoints = async () => {
+      const { data, error } = await supabase
+        .from('start_points')
+        .select('id, name, location')
+        .order('name')
+
+      if (cancelled) return
+
+      if (error) {
+        console.error('[upload] start_points error:', error.message, error.details)
+        return
+      }
+
+      setStartPoints(buildStartPointOptions((data ?? []) as StartPointRow[]))
+    }
+
+    void loadStartPoints()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!parsed) {
+      setRecommendedStartPoint(null)
+      return
+    }
+
+    const nextRecommendation = recommendStartPoint(
+      parsed.startLat,
+      parsed.startLng,
+      startPoints,
+    )
+    setRecommendedStartPoint(nextRecommendation)
+
+    setForm((prev) => {
+      if (prev.startPointId || !nextRecommendation) {
+        return prev
+      }
+
+      return { ...prev, startPointId: nextRecommendation.id }
+    })
+  }, [parsed, startPoints])
+
+  useEffect(() => {
+    latestPoiDraftsRef.current = poiDrafts
+  }, [poiDrafts])
+
+  useEffect(() => {
+    return () => {
+      for (const draft of latestPoiDraftsRef.current) {
+        const previewUrl = draft.photoPreviewUrl
+        if (isObjectUrl(previewUrl)) {
+          URL.revokeObjectURL(previewUrl)
+        }
+      }
+    }
+  }, [])
+
+  const uploaderName = user ? getUploaderDisplayName(user) : '익명'
+
+  const handleFile = useCallback(async (nextFile: File) => {
+    setFile(nextFile)
     setParsed(null)
     setParseError(null)
     setValidationError(null)
     setSubmitError(null)
-    setUphillSegments([])
+    setUpillAndPoiState()
+
+    const inferredTitle = nextFile.name
+      .replace(/\.gpx$/i, '')
+      .replace(/[_-]+/g, ' ')
+      .trim()
+
+    setForm({
+      ...EMPTY_FORM,
+      title: inferredTitle,
+    })
+    setFormErrors({})
 
     try {
-      const result = await parseGpxToGeoJSON(f)
+      const result = await parseGpxToGeoJSON(nextFile)
       if (!isWithinAsan(result.startLat, result.startLng)) {
         setValidationError(
-          "출발점이 아산시 범위(20km) 밖입니다. 아산시 출발 코스만 업로드할 수 있습니다.",
+          '출발점이 아산시 범위(20km) 밖입니다. 아산시 출발 코스만 업로드할 수 있습니다.',
         )
       }
       setParsed(result)
 
-      // Auto-detect uphill segments from elevation profile
       if (result.elevationProfile.length > 0) {
-        const detected = detectUphillSegments(result.elevationProfile)
-        setUphillSegments(detected)
+        setUphillSegments(detectUphillSegments(result.elevationProfile))
       }
-    } catch (err) {
-      setParseError(err instanceof Error ? err.message : "GPX 파싱 오류가 발생했습니다.")
+    } catch (error) {
+      setParseError(error instanceof Error ? error.message : 'GPX 파싱 오류가 발생했습니다.')
     }
   }, [])
 
-  const onDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      setIsDragging(false)
-      const f = e.dataTransfer.files[0]
-      if (f && f.name.toLowerCase().endsWith(".gpx")) {
-        handleFile(f)
-      } else {
-        setParseError(".gpx 파일만 업로드할 수 있습니다.")
-      }
-    },
-    [handleFile],
-  )
-
-  const onFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const f = e.target.files?.[0]
-      if (f) handleFile(f)
-    },
-    [handleFile],
-  )
-
-  // ── Form helpers ────────────────────────────────────────────────────────
-  const updateForm = <K extends keyof FormData>(key: K, value: FormData[K]) => {
-    setForm((prev) => ({ ...prev, [key]: value }))
+  const setUpillAndPoiState = () => {
+    setUphillSegments([])
+    setPoiDrafts([])
+    setActivePoiDraftId(null)
   }
 
-  // ── Submit ──────────────────────────────────────────────────────────────
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const onDrop = useCallback((event: React.DragEvent) => {
+    event.preventDefault()
+    setIsDragging(false)
+    const nextFile = event.dataTransfer.files[0]
+    if (nextFile && nextFile.name.toLowerCase().endsWith('.gpx')) {
+      void handleFile(nextFile)
+      return
+    }
+
+    setParseError('.gpx 파일만 업로드할 수 있습니다.')
+  }, [handleFile])
+
+  const onFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextFile = event.target.files?.[0]
+    if (nextFile) {
+      void handleFile(nextFile)
+    }
+  }, [handleFile])
+
+  const updateForm = <K extends keyof UploadMetadataFormData>(
+    key: K,
+    value: UploadMetadataFormData[K],
+  ) => {
+    setForm((prev) => ({ ...prev, [key]: value }))
+    setFormErrors((prev) => ({ ...prev, [key]: undefined }))
+  }
+
+  const updatePoiDraft = <K extends keyof PoiDraft>(
+    id: string,
+    key: K,
+    value: PoiDraft[K],
+  ) => {
+    setPoiDrafts((prev) => prev.map((draft) => {
+      if (draft.id !== id) return draft
+
+      if (
+        key === 'photoPreviewUrl'
+        && isObjectUrl(draft.photoPreviewUrl)
+        && draft.photoPreviewUrl !== value
+      ) {
+        const previewUrl = draft.photoPreviewUrl
+        URL.revokeObjectURL(previewUrl)
+      }
+
+      return { ...draft, [key]: value }
+    }))
+  }
+
+  const addPoiDraft = () => {
+    const nextDraft = createEmptyPoiDraft()
+    setPoiDrafts((prev) => [...prev, nextDraft])
+    setActivePoiDraftId(nextDraft.id)
+  }
+
+  const removePoiDraft = (id: string) => {
+    setPoiDrafts((prev) => {
+      const target = prev.find((draft) => draft.id === id)
+      const previewUrl = target?.photoPreviewUrl
+      if (isObjectUrl(previewUrl)) {
+        URL.revokeObjectURL(previewUrl)
+      }
+
+      return prev.filter((draft) => draft.id !== id)
+    })
+
+    setActivePoiDraftId((prev) => (prev === id ? null : prev))
+  }
+
+  const handlePoiLocationPick = (draftId: string, lat: number, lng: number) => {
+    updatePoiDraft(draftId, 'lat', lat)
+    updatePoiDraft(draftId, 'lng', lng)
+  }
+
+  const validateBeforeSubmit = () => {
+    const nextErrors: { title?: string; startPointId?: string } = {}
+
+    if (!form.title.trim()) {
+      nextErrors.title = '코스 이름은 필수입니다.'
+    }
+
+    if (startPoints.length > 0 && !form.startPointId) {
+      nextErrors.startPointId = '출발 기점을 선택해주세요.'
+    }
+
+    const hasInvalidPoi = poiDrafts.some((draft) => {
+      const hasAnyInput = Boolean(
+        draft.name.trim()
+        || draft.description.trim()
+        || draft.photoFile
+        || draft.lat != null
+        || draft.lng != null,
+      )
+
+      if (!hasAnyInput) {
+        return false
+      }
+
+      return !draft.name.trim() || draft.lat == null || draft.lng == null
+    })
+
+    setFormErrors(nextErrors)
+
+    if (hasInvalidPoi) {
+      setSubmitError('POI를 추가하려면 이름과 지도 위치를 함께 입력해주세요.')
+      return false
+    }
+
+    return Object.keys(nextErrors).length === 0
+  }
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
     if (!user || !file || !parsed || validationError) return
-    if (!form.title.trim()) return
+    if (!validateBeforeSubmit()) return
 
     setIsSubmitting(true)
     setSubmitError(null)
 
     try {
-      // Re-check auth
       const { data: authData } = await supabase.auth.getUser()
       if (!authData.user) {
-        setSubmitError("세션이 만료되었습니다. 다시 로그인해주세요.")
+        setSubmitError('세션이 만료되었습니다. 다시 로그인해주세요.')
         setIsSubmitting(false)
         return
       }
 
-      // Upload GPX file to storage (sanitize filename: remove non-ASCII chars)
+      const currentUploaderName = getUploaderDisplayName(authData.user)
       const safeName = file.name.replace(/[^\w\-_.]/g, '_')
       const filePath = `${authData.user.id}/${Date.now()}_${safeName}`
       const { error: uploadError } = await supabase.storage
-        .from("gpx-files")
-        .upload(filePath, file, { contentType: "application/gpx+xml" })
+        .from('gpx-files')
+        .upload(filePath, file, { contentType: 'application/gpx+xml' })
 
       if (uploadError) {
         throw new Error(`파일 업로드 실패: ${uploadError.message}`)
@@ -174,62 +328,132 @@ export default function UploadPage() {
 
       const {
         data: { publicUrl },
-      } = supabase.storage.from("gpx-files").getPublicUrl(filePath)
+      } = supabase.storage.from('gpx-files').getPublicUrl(filePath)
 
-      // Insert course record
       const tags = form.tags
-        .split(",")
-        .map((t) => t.trim())
+        .split(',')
+        .map((tag) => tag.trim())
         .filter(Boolean)
 
-      const { data: course, error: insertError } = await supabase
-        .from("courses")
-        .insert({
-          title: form.title.trim(),
-          description: form.description.trim() || null,
-          difficulty: form.difficulty,
-          distance_km: parsed.distanceKm,
-          elevation_gain_m: parsed.elevationGainM,
-          gpx_url: publicUrl,
-          route_geojson: parsed.geojson as unknown as import("@/types/database").Json,
-          created_by: authData.user.id,
-          theme: form.theme.trim() || null,
-          tags,
-        })
-        .select("id")
-        .single()
-
-      if (insertError) {
-        throw new Error(`코스 저장 실패: ${insertError.message}`)
+      const baseCourseInsert = {
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        difficulty: form.difficulty,
+        distance_km: parsed.distanceKm,
+        elevation_gain_m: parsed.elevationGainM,
+        gpx_url: publicUrl,
+        route_geojson: parsed.geojson as unknown as Json,
+        created_by: authData.user.id,
+        theme: form.theme.trim() || null,
+        tags,
+        start_point_id: form.startPointId || null,
       }
 
-      // Insert uphill segments (if any)
-      const validSegments = uphillSegments.filter((s) => s.start_km < s.end_km)
+      const metadataHistory = toMetadataHistoryJson(
+        buildMetadataHistoryEntry({
+          actorDisplayName: currentUploaderName,
+          actorUserId: authData.user.id,
+          form,
+          tags,
+        }),
+      )
+
+      let insertResponse = await supabase
+        .from('courses')
+        .insert({
+          ...baseCourseInsert,
+          uploader_name: currentUploaderName,
+          metadata_history: metadataHistory,
+        })
+        .select('id')
+        .single()
+
+      if (
+        insertResponse.error
+        && /(uploader_name|metadata_history)/i.test(insertResponse.error.message)
+      ) {
+        insertResponse = await supabase
+          .from('courses')
+          .insert(baseCourseInsert)
+          .select('id')
+          .single()
+      }
+
+      if (insertResponse.error || !insertResponse.data) {
+        throw new Error(`코스 저장 실패: ${insertResponse.error?.message ?? '알 수 없는 오류'}`)
+      }
+
+      const courseId = insertResponse.data.id
+      const validSegments = uphillSegments.filter((segment) => segment.start_km < segment.end_km)
       if (validSegments.length > 0) {
-        const { error: segError } = await supabase
-          .from("uphill_segments")
+        const { error: segmentError } = await supabase
+          .from('uphill_segments')
           .insert(
-            validSegments.map((s) => ({
-              course_id: course.id,
-              name: s.name || null,
-              start_km: s.start_km,
-              end_km: s.end_km,
+            validSegments.map((segment) => ({
+              course_id: courseId,
+              name: segment.name || null,
+              start_km: segment.start_km,
+              end_km: segment.end_km,
             })),
           )
-        if (segError) {
-          console.error("업힐 구간 저장 실패:", segError.message)
+
+        if (segmentError) {
+          console.error('업힐 구간 저장 실패:', segmentError.message)
         }
       }
 
-      router.push(`/explore?courseId=${course.id}`)
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.")
+      const completePoiDrafts = poiDrafts.filter(
+        (draft) => draft.name.trim() && draft.lat != null && draft.lng != null,
+      )
+
+      if (completePoiDrafts.length > 0) {
+        const poiRows = []
+
+        for (const draft of completePoiDrafts) {
+          let photoUrl: string | null = null
+
+          if (draft.photoFile) {
+            const photoPath = `${authData.user.id}/${courseId}/${draft.id}_${draft.photoFile.name.replace(/[^\w\-_.]/g, '_')}`
+            const { error: photoError } = await supabase.storage
+              .from('poi-photos')
+              .upload(photoPath, draft.photoFile, {
+                contentType: draft.photoFile.type || 'image/jpeg',
+              })
+
+            if (photoError) {
+              throw new Error(`POI 사진 업로드 실패: ${photoError.message}`)
+            }
+
+            photoUrl = supabase.storage.from('poi-photos').getPublicUrl(photoPath).data.publicUrl
+          }
+
+          poiRows.push({
+            course_id: courseId,
+            name: draft.name.trim(),
+            category: normalizePoiCategory(draft.category),
+            description: draft.description.trim() || null,
+            photo_url: photoUrl,
+            location: `SRID=4326;POINT(${draft.lng} ${draft.lat})`,
+          })
+        }
+
+        const { error: poiError } = await supabase
+          .from('pois')
+          .insert(poiRows)
+
+        if (poiError) {
+          throw new Error(`POI 저장 실패: ${poiError.message}`)
+        }
+      }
+
+      router.push(`/explore?courseId=${courseId}`)
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.')
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  // ── Auth loading / guard ────────────────────────────────────────────────
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center pt-16">
@@ -243,14 +467,14 @@ export default function UploadPage() {
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 pt-16">
         <Upload className="h-12 w-12 text-muted-foreground" />
         <h1 className="text-xl font-bold">로그인이 필요합니다</h1>
-        <p className="text-sm text-muted-foreground text-center max-w-md">
+        <p className="max-w-md text-center text-sm text-muted-foreground">
           코스를 업로드하려면 먼저 로그인해주세요.
           Supabase Auth를 통해 이메일 또는 소셜 로그인이 가능합니다.
         </p>
         <Button
           onClick={async () => {
             await supabase.auth.signInWithOAuth({
-              provider: "google",
+              provider: 'google',
               options: { redirectTo: window.location.href },
             })
           }}
@@ -261,18 +485,16 @@ export default function UploadPage() {
     )
   }
 
-  // ── Main upload UI ──────────────────────────────────────────────────────
   return (
     <div className="mx-auto max-w-3xl px-4 pb-16 pt-24">
       <h1 className="mb-1 text-2xl font-bold">코스 업로드</h1>
       <p className="mb-8 text-sm text-muted-foreground">
-        GPX 파일을 업로드하여 새로운 자전거 코스를 등록하세요.
+        GPX 파일을 업로드하고 메타데이터를 입력해 새로운 자전거 코스를 등록하세요.
       </p>
 
-      {/* ── Drop zone ─────────────────────────────────────────────────── */}
       <div
-        onDragOver={(e) => {
-          e.preventDefault()
+        onDragOver={(event) => {
+          event.preventDefault()
           setIsDragging(true)
         }}
         onDragLeave={() => setIsDragging(false)}
@@ -280,10 +502,10 @@ export default function UploadPage() {
         onClick={() => fileInputRef.current?.click()}
         className={`mb-6 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-10 transition-colors ${
           isDragging
-            ? "border-blue-500 bg-blue-50"
+            ? 'border-blue-500 bg-blue-50'
             : file
-              ? "border-green-400 bg-green-50"
-              : "border-muted-foreground/25 hover:border-muted-foreground/50"
+              ? 'border-green-400 bg-green-50'
+              : 'border-muted-foreground/25 hover:border-muted-foreground/50'
         }`}
       >
         <input
@@ -310,7 +532,6 @@ export default function UploadPage() {
         )}
       </div>
 
-      {/* Parse / validation errors */}
       {parseError && (
         <div className="mb-6 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -324,7 +545,6 @@ export default function UploadPage() {
         </div>
       )}
 
-      {/* ── Route stats ──────────────────────────────────────────────── */}
       {parsed && (
         <div className="mb-6 grid grid-cols-3 gap-4">
           <StatCard label="거리" value={`${parsed.distanceKm} km`} />
@@ -336,14 +556,17 @@ export default function UploadPage() {
         </div>
       )}
 
-      {/* ── Map preview ──────────────────────────────────────────────── */}
       {parsed && (
         <div className="mb-8 overflow-hidden rounded-xl border" style={{ height: 400 }}>
-          <RoutePreviewMap geojson={parsed.geojson} />
+          <CourseRoutePreviewMap
+            geojson={parsed.geojson}
+            poiDrafts={poiDrafts}
+            activePoiDraftId={activePoiDraftId}
+            onPickPoiLocation={handlePoiLocationPick}
+          />
         </div>
       )}
 
-      {/* ── Elevation / Uphill editor ────────────────────────────────── */}
       {parsed && parsed.elevationProfile.length > 0 && (
         <div className="mb-8 rounded-xl border p-4">
           <UphillEditor
@@ -354,110 +577,30 @@ export default function UploadPage() {
         </div>
       )}
 
-      {/* ── Form ─────────────────────────────────────────────────────── */}
       {parsed && !validationError && (
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Title */}
-          <div>
-            <Label htmlFor="title">
-              코스 이름 <span className="text-red-500">*</span>
-            </Label>
-            <input
-              id="title"
-              type="text"
-              required
-              value={form.title}
-              onChange={(e) => updateForm("title", e.target.value)}
-              placeholder="예: 아산 신정호 순환 코스"
-              className="mt-1.5 h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
-
-          {/* Description */}
-          <div>
-            <Label htmlFor="description">설명</Label>
-            <textarea
-              id="description"
-              rows={3}
-              value={form.description}
-              onChange={(e) => updateForm("description", e.target.value)}
-              placeholder="코스에 대한 간단한 설명을 작성하세요"
-              className="mt-1.5 w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
-
-          {/* Difficulty */}
-          <div>
-            <Label htmlFor="difficulty">난이도</Label>
-            <select
-              id="difficulty"
-              value={form.difficulty}
-              onChange={(e) => updateForm("difficulty", e.target.value as Difficulty)}
-              className="mt-1.5 h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="easy">초급 (Easy)</option>
-              <option value="moderate">중급 (Moderate)</option>
-              <option value="hard">고급 (Hard)</option>
-            </select>
-          </div>
-
-          {/* Theme */}
-          <div>
-            <Label htmlFor="theme">테마</Label>
-            <input
-              id="theme"
-              type="text"
-              value={form.theme}
-              onChange={(e) => updateForm("theme", e.target.value)}
-              placeholder="예: 벚꽃 라이딩, 카페 투어"
-              className="mt-1.5 h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
-
-          {/* Tags */}
-          <div>
-            <Label htmlFor="tags">태그</Label>
-            <input
-              id="tags"
-              type="text"
-              value={form.tags}
-              onChange={(e) => updateForm("tags", e.target.value)}
-              placeholder="쉼표로 구분 (예: 평지, 자전거길, 가족)"
-              className="mt-1.5 h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
-
-          {/* Submit error */}
-          {submitError && (
-            <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              {submitError}
-            </div>
-          )}
-
-          {/* Submit */}
-          <Button type="submit" disabled={isSubmitting || !form.title.trim()} className="w-full">
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                업로드 중...
-              </>
-            ) : (
-              <>
-                <Upload className="mr-2 h-4 w-4" />
-                코스 업로드
-              </>
-            )}
-          </Button>
-        </form>
+        <CourseMetadataForm
+          form={form}
+          startPoints={startPoints}
+          recommendedStartPoint={recommendedStartPoint}
+          uploaderName={uploaderName}
+          submitError={submitError}
+          validationErrors={formErrors}
+          isSubmitting={isSubmitting}
+          submitLabel="코스 업로드"
+          submittingLabel="업로드 중..."
+          poiDrafts={poiDrafts}
+          activePoiDraftId={activePoiDraftId}
+          onSubmit={handleSubmit}
+          onChangeForm={updateForm}
+          onAddPoiDraft={addPoiDraft}
+          onRemovePoiDraft={removePoiDraft}
+          onChangePoiDraft={updatePoiDraft}
+          onSelectPoiDraftForMap={setActivePoiDraftId}
+        />
       )}
     </div>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Stat card
-// ---------------------------------------------------------------------------
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
@@ -466,136 +609,4 @@ function StatCard({ label, value }: { label: string; value: string }) {
       <p className="mt-0.5 text-sm font-semibold">{value}</p>
     </div>
   )
-}
-
-// ---------------------------------------------------------------------------
-// Route preview map
-// ---------------------------------------------------------------------------
-
-function RoutePreviewMap({ geojson }: { geojson: RouteGeoJSON }) {
-  const appkey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY
-  if (!appkey) {
-    return (
-      <div className="flex h-full items-center justify-center bg-muted">
-        <p className="text-sm text-muted-foreground">카카오맵 API 키가 설정되지 않았습니다.</p>
-      </div>
-    )
-  }
-  return <RoutePreviewMapInner appkey={appkey} geojson={geojson} />
-}
-
-function RoutePreviewMapInner({
-  appkey,
-  geojson,
-}: {
-  appkey: string
-  geojson: RouteGeoJSON
-}) {
-  const [loading, error] = useKakaoLoader({
-    appkey,
-    libraries: ["services"],
-  })
-
-  if (error) {
-    return (
-      <div className="flex h-full items-center justify-center bg-muted">
-        <p className="text-sm text-destructive">지도 로드 오류</p>
-      </div>
-    )
-  }
-  if (loading) {
-    return (
-      <div className="flex h-full animate-pulse items-center justify-center bg-muted">
-        <p className="text-sm text-muted-foreground">지도 로딩 중...</p>
-      </div>
-    )
-  }
-
-  // Extract coordinates (handle 2D and 3D coords)
-  const coords: { lat: number; lng: number }[] = []
-  for (const feature of geojson.features) {
-    if (feature.geometry?.type === "LineString") {
-      for (const coord of feature.geometry.coordinates) {
-        coords.push({ lat: coord[1], lng: coord[0] })
-      }
-    }
-  }
-
-  // Compute center (simple average)
-  const center =
-    coords.length > 0
-      ? {
-          lat: coords.reduce((s, c) => s + c.lat, 0) / coords.length,
-          lng: coords.reduce((s, c) => s + c.lng, 0) / coords.length,
-        }
-      : ASAN_CENTER
-
-  return (
-    <Map center={center} style={{ width: "100%", height: "100%" }} level={8}>
-      {coords.length >= 2 && (
-        <Polyline
-          path={coords}
-          strokeWeight={4}
-          strokeColor="#3B82F6"
-          strokeOpacity={0.9}
-          strokeStyle="solid"
-        />
-      )}
-      {/* Start marker */}
-      {coords.length > 0 && (
-        <CustomOverlayMap position={coords[0]} yAnchor={0.5} xAnchor={0.5} zIndex={3}>
-          <div
-            style={{
-              width: 14,
-              height: 14,
-              borderRadius: "50%",
-              backgroundColor: "#22C55E",
-              border: "2px solid white",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
-            }}
-          />
-        </CustomOverlayMap>
-      )}
-      {/* End marker */}
-      {coords.length > 1 && (
-        <CustomOverlayMap
-          position={coords[coords.length - 1]}
-          yAnchor={0.5}
-          xAnchor={0.5}
-          zIndex={3}
-        >
-          <div
-            style={{
-              width: 14,
-              height: 14,
-              borderRadius: "50%",
-              backgroundColor: "#EF4444",
-              border: "2px solid white",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
-            }}
-          />
-        </CustomOverlayMap>
-      )}
-      <BoundsAdjuster coords={coords} />
-    </Map>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Auto-fit bounds helper (runs inside Map context)
-// ---------------------------------------------------------------------------
-
-function BoundsAdjuster({ coords }: { coords: { lat: number; lng: number }[] }) {
-  const map = useMap()
-
-  useEffect(() => {
-    if (coords.length < 2) return
-    const bounds = new kakao.maps.LatLngBounds()
-    for (const c of coords) {
-      bounds.extend(new kakao.maps.LatLng(c.lat, c.lng))
-    }
-    map.setBounds(bounds, 50)
-  }, [map, coords])
-
-  return null
 }

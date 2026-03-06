@@ -56,9 +56,11 @@ export type Database = {
           theme: string | null
           tags: string[]
           created_by: string | null
+          uploader_name: string | null
           created_at: string
           updated_at: string
           route_geojson: Json | null
+          metadata_history: Json
           download_count: number
         }
         Insert: {
@@ -76,9 +78,11 @@ export type Database = {
           theme?: string | null
           tags?: string[]
           created_by?: string | null
+          uploader_name?: string | null
           created_at?: string
           updated_at?: string
           route_geojson?: Json | null
+          metadata_history?: Json
           download_count?: number
         }
         Update: {
@@ -96,9 +100,11 @@ export type Database = {
           theme?: string | null
           tags?: string[]
           created_by?: string | null
+          uploader_name?: string | null
           created_at?: string
           updated_at?: string
           route_geojson?: Json | null
+          metadata_history?: Json
           download_count?: number
         }
         Relationships: [
