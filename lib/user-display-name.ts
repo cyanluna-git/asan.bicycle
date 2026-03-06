@@ -1,4 +1,5 @@
 import type { User } from '@supabase/supabase-js'
+import { getProfileName } from '@/lib/profile'
 
 function getEmailPrefix(email: string | null | undefined) {
   if (!email) return '익명'
@@ -8,9 +9,5 @@ function getEmailPrefix(email: string | null | undefined) {
 }
 
 export function getUploaderDisplayName(user: Pick<User, 'email' | 'user_metadata'>) {
-  const fullName = typeof user.user_metadata?.full_name === 'string'
-    ? user.user_metadata.full_name.trim()
-    : ''
-
-  return fullName || getEmailPrefix(user.email)
+  return getProfileName(user) || getEmailPrefix(user.email)
 }
