@@ -23,7 +23,10 @@ interface BottomSheetProps {
   hasActiveFilters: boolean
   selectedCourse?: CourseDetail | null
   pois?: PoiMapItem[]
+  selectedPoiId?: string | null
+  onSelectPoi?: (id: string | null) => void
   uphillSegments?: UphillSegment[]
+  canEditSelectedCourse?: boolean
 }
 
 export function BottomSheet({
@@ -33,7 +36,10 @@ export function BottomSheet({
   hasActiveFilters,
   selectedCourse,
   pois,
+  selectedPoiId,
+  onSelectPoi,
   uphillSegments,
+  canEditSelectedCourse = false,
 }: BottomSheetProps) {
   return (
     <div className="md:hidden">
@@ -60,7 +66,14 @@ export function BottomSheet({
           </DrawerHeader>
           <div className="overflow-y-auto px-4 pb-6">
             {selectedCourse ? (
-              <CourseDetailPanel course={selectedCourse} pois={pois ?? []} uphillSegments={uphillSegments ?? []} />
+              <CourseDetailPanel
+                course={selectedCourse}
+                pois={pois ?? []}
+                selectedPoiId={selectedPoiId}
+                onSelectPoi={onSelectPoi}
+                uphillSegments={uphillSegments ?? []}
+                canEditCourse={canEditSelectedCourse}
+              />
             ) : (
               <>
                 {/* Filter section */}

@@ -10,7 +10,7 @@ import {
   useMap,
 } from "react-kakao-maps-sdk"
 import type { CourseMapItem, RouteGeoJSON, PoiMapItem } from "@/types/course"
-import type { Enums } from "@/types/database"
+import { getPoiMeta } from '@/lib/poi'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -94,37 +94,25 @@ function computeBounds(coords: LatLng[]) {
 // POI category config
 // ---------------------------------------------------------------------------
 
-const POI_CONFIG: Record<
-  Enums<'poi_category'>,
-  { emoji: string; label: string; color: string }
-> = {
-  cafe:              { emoji: "☕", label: "카페",   color: "#6F4E37" },
-  restaurant:        { emoji: "🍽️", label: "식당",   color: "#E85D2E" },
-  convenience_store: { emoji: "🏪", label: "편의점", color: "#2563EB" },
-  rest_area:         { emoji: "🛖", label: "쉼터",   color: "#16A34A" },
-  repair_shop:       { emoji: "🔧", label: "수리점", color: "#7C3AED" },
-  photo_spot:        { emoji: "📸", label: "포토스팟", color: "#DB2777" },
-  parking:           { emoji: "🅿️", label: "주차",   color: "#475569" },
-  restroom:          { emoji: "🚻", label: "화장실", color: "#0891B2" },
-  water_fountain:    { emoji: "💧", label: "음수대", color: "#0284C7" },
-  other:             { emoji: "📍", label: "기타",   color: "#64748B" },
-}
-
-// ---------------------------------------------------------------------------
-// Props
-// ---------------------------------------------------------------------------
-
 interface KakaoMapProps {
   courses?: CourseMapItem[]
   selectedCourseId?: string | null
   pois?: PoiMapItem[]
+  selectedPoiId?: string | null
+  onSelectPoi?: (id: string | null) => void
 }
 
 // ---------------------------------------------------------------------------
 // Public component
 // ---------------------------------------------------------------------------
 
-export default function KakaoMap({ courses, selectedCourseId, pois }: KakaoMapProps) {
+export default function KakaoMap({
+  courses,
+  selectedCourseId,
+  pois,
+  selectedPoiId,
+  onSelectPoi,
+}: KakaoMapProps) {
   const appkey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY
   if (!appkey) {
     return (
@@ -138,6 +126,8 @@ export default function KakaoMap({ courses, selectedCourseId, pois }: KakaoMapPr
       courses={courses}
       selectedCourseId={selectedCourseId}
       pois={pois}
+      selectedPoiId={selectedPoiId}
+      onSelectPoi={onSelectPoi}
     />
   )
 }
@@ -151,6 +141,8 @@ function KakaoMapInner({
   courses,
   selectedCourseId,
   pois,
+  selectedPoiId,
+  onSelectPoi,
 }: { appkey: string } & KakaoMapProps) {
   const [loading, error] = useKakaoLoader({
     appkey,
@@ -185,7 +177,11 @@ function KakaoMapInner({
         courses={effectiveCourses}
         selectedCourseId={effectiveSelectedId ?? null}
       />
-      <PoiMarkers pois={visiblePois} />
+      <PoiMarkers
+        pois={visiblePois}
+        selectedPoiId={selectedPoiId}
+        onSelectPoi={onSelectPoi}
+      />
     </Map>
   )
 }
@@ -334,15 +330,44 @@ function BoundsController({
 // PoiMarkers — renders POI pins + click popup inside <Map>
 // ---------------------------------------------------------------------------
 
-function PoiMarkers({ pois }: { pois: PoiMapItem[] }) {
-  const [openId, setOpenId] = useState<string | null>(null)
+function PoiMarkers({
+  pois,
+  selectedPoiId,
+  onSelectPoi,
+}: {
+  pois: PoiMapItem[]
+  selectedPoiId?: string | null
+  onSelectPoi?: (id: string | null) => void
+}) {
+  const map = useMap()
+  const [openId, setOpenId] = useState<string | null>(selectedPoiId ?? null)
+
+  useEffect(() => {
+    setOpenId(selectedPoiId ?? null)
+  }, [selectedPoiId])
+
+  useEffect(() => {
+    if (!openId) return
+
+    const activePoi = pois.find((poi) => poi.id === openId)
+    if (!activePoi) return
+
+    map.panTo(new kakao.maps.LatLng(activePoi.lat, activePoi.lng))
+  }, [map, openId, pois])
+
+  useEffect(() => {
+    if (openId && !pois.some((poi) => poi.id === openId)) {
+      setOpenId(null)
+      onSelectPoi?.(null)
+    }
+  }, [onSelectPoi, openId, pois])
 
   if (pois.length === 0) return null
 
   return (
     <>
       {pois.map((poi) => {
-        const cfg = POI_CONFIG[poi.category]
+        const cfg = getPoiMeta(poi.category)
         const pos = { lat: poi.lat, lng: poi.lng }
         const isOpen = openId === poi.id
 
@@ -357,20 +382,28 @@ function PoiMarkers({ pois }: { pois: PoiMapItem[] }) {
             <div style={{ position: "relative" }}>
               {/* Pin button */}
               <button
-                onClick={() => setOpenId(isOpen ? null : poi.id)}
+                onClick={() => {
+                  const nextId = isOpen ? null : poi.id
+                  setOpenId(nextId)
+                  onSelectPoi?.(nextId)
+                }}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  width: 28,
-                  height: 28,
+                  width: isOpen ? 34 : 28,
+                  height: isOpen ? 34 : 28,
                   borderRadius: "50%",
                   backgroundColor: cfg.color,
-                  border: "2px solid white",
-                  boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
+                  border: isOpen ? "3px solid #0f172a" : "2px solid white",
+                  boxShadow: isOpen
+                    ? "0 0 0 6px rgba(15,23,42,0.18), 0 6px 18px rgba(0,0,0,0.28)"
+                    : "0 2px 6px rgba(0,0,0,0.35)",
                   cursor: "pointer",
                   fontSize: 13,
                   lineHeight: 1,
+                  transform: isOpen ? "translateY(-2px)" : "none",
+                  transition: "all 160ms ease",
                 }}
                 aria-label={poi.name}
               >
