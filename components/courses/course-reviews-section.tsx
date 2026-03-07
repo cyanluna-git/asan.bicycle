@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, Loader2, MessageSquarePlus, Pencil, Star, Trash2 } from 'lucide-react'
+import { AlertCircle, Loader2, LogIn, MessageSquarePlus, Pencil, Star, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { supabase } from '@/lib/supabase'
@@ -315,9 +315,23 @@ export function CourseReviewsSection({
         </div>
 
         {!user ? (
-          <p className="mt-3 text-sm text-muted-foreground">
-            로그인한 사용자만 후기를 작성할 수 있습니다. 지금은 후기 목록만 볼 수 있습니다.
-          </p>
+          <div className="mt-3 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              로그인한 사용자만 후기를 작성할 수 있습니다. 지금은 후기 목록만 볼 수 있습니다.
+            </p>
+            <Button
+              onClick={async () => {
+                await supabase.auth.signInWithOAuth({
+                  provider: 'google',
+                  options: { redirectTo: window.location.href },
+                })
+              }}
+              className="w-full"
+            >
+              <LogIn className="mr-2 h-4 w-4" />
+              Google로 로그인
+            </Button>
+          </div>
         ) : hasOwnReview && editingReviewId !== ownReview?.id ? (
           <p className="mt-3 text-sm text-muted-foreground">
             이미 이 코스에 후기를 남겼습니다. 아래 목록에서 수정하거나 삭제할 수 있습니다.
