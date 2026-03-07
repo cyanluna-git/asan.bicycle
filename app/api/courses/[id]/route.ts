@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { appendMetadataHistoryEntry, buildMetadataHistoryEntry } from '@/lib/course-upload'
+import { buildCoursePoiDiffPlan } from '@/lib/course-poi-diff'
 import { canEditCourse, isAdminUser } from '@/lib/admin'
 import { normalizePoiCategory } from '@/lib/poi'
 import { resolveProfileEmoji } from '@/lib/profile'
@@ -40,6 +41,10 @@ type ExistingCourseRow = {
   uploader_name?: string | null
   uploader_emoji?: string | null
   metadata_history?: Json | null
+}
+
+type ExistingPoiRow = {
+  id: string
 }
 
 function jsonError(message: string, status: number) {
@@ -205,13 +210,13 @@ export async function PATCH(request: Request, context: PatchContext) {
     return jsonError(`코스 저장 실패: ${updateResponse.error.message}`, 400)
   }
 
-  const deletePoiResponse = await writeClient
+  const existingPoiResponse = await authClient
     .from('pois')
-    .delete()
+    .select('id')
     .eq('course_id', id)
 
-  if (deletePoiResponse.error) {
-    return jsonError(`기존 POI 정리 실패: ${deletePoiResponse.error.message}`, 400)
+  if (existingPoiResponse.error) {
+    return jsonError(`기존 POI 조회 실패: ${existingPoiResponse.error.message}`, 400)
   }
 
   const completePois = (body.pois ?? []).filter(
@@ -224,13 +229,52 @@ export async function PATCH(request: Request, context: PatchContext) {
       && Number.isFinite(poi.lng),
   )
 
-  if (completePois.length > 0) {
+  const poiDiff = buildCoursePoiDiffPlan(
+    (existingPoiResponse.data ?? []) as ExistingPoiRow[],
+    completePois.map((poi) => ({
+      id: poi.id ?? null,
+      name: poi.name!.trim(),
+      category: normalizePoiCategory(poi.category),
+      description: poi.description?.trim() || null,
+      photo_url: poi.photo_url ?? null,
+      lat: poi.lat!,
+      lng: poi.lng!,
+    })),
+  )
+
+  if (poiDiff.invalidIds.length > 0) {
+    return jsonError('유효하지 않은 POI 식별자가 포함되어 있습니다.', 400)
+  }
+
+  if (poiDiff.duplicateIds.length > 0) {
+    return jsonError('중복된 POI 식별자가 포함되어 있습니다.', 400)
+  }
+
+  for (const poi of poiDiff.toUpdate) {
+    const updatePoiResponse = await writeClient
+      .from('pois')
+      .update({
+        name: poi.name,
+        category: normalizePoiCategory(poi.category),
+        description: poi.description?.trim() || null,
+        photo_url: poi.photo_url ?? null,
+        location: `SRID=4326;POINT(${poi.lng} ${poi.lat})`,
+      })
+      .eq('id', poi.id)
+      .eq('course_id', id)
+
+    if (updatePoiResponse.error) {
+      return jsonError(`POI 수정 실패: ${updatePoiResponse.error.message}`, 400)
+    }
+  }
+
+  if (poiDiff.toInsert.length > 0) {
     const insertPoiResponse = await writeClient
       .from('pois')
       .insert(
-        completePois.map((poi) => ({
+        poiDiff.toInsert.map((poi) => ({
           course_id: id,
-          name: poi.name!.trim(),
+          name: poi.name,
           category: normalizePoiCategory(poi.category),
           description: poi.description?.trim() || null,
           photo_url: poi.photo_url ?? null,
@@ -240,6 +284,18 @@ export async function PATCH(request: Request, context: PatchContext) {
 
     if (insertPoiResponse.error) {
       return jsonError(`POI 저장 실패: ${insertPoiResponse.error.message}`, 400)
+    }
+  }
+
+  if (poiDiff.toDeleteIds.length > 0) {
+    const deletePoiResponse = await writeClient
+      .from('pois')
+      .delete()
+      .eq('course_id', id)
+      .in('id', poiDiff.toDeleteIds)
+
+    if (deletePoiResponse.error) {
+      return jsonError(`기존 POI 정리 실패: ${deletePoiResponse.error.message}`, 400)
     }
   }
 
