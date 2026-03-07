@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { X, Download, Pencil } from 'lucide-react'
+import { CourseReviewsSection } from '@/components/courses/course-reviews-section'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { difficultyLabel, difficultyVariant } from '@/lib/difficulty'
@@ -20,7 +21,13 @@ import {
   SPEED_INTERMEDIATE,
   SPEED_ADVANCED,
 } from '@/lib/calc-duration'
-import type { CourseDetail, PoiMapItem, UphillSegment } from '@/types/course'
+import type {
+  CourseDetail,
+  CourseReview,
+  CourseReviewStats,
+  PoiMapItem,
+  UphillSegment,
+} from '@/types/course'
 
 interface CourseDetailPanelProps {
   course: CourseDetail
@@ -29,6 +36,8 @@ interface CourseDetailPanelProps {
   onSelectPoi?: (id: string | null) => void
   uphillSegments?: UphillSegment[]
   canEditCourse?: boolean
+  reviews?: CourseReview[]
+  reviewStats?: CourseReviewStats | null
 }
 
 export function CourseDetailPanel({
@@ -38,6 +47,8 @@ export function CourseDetailPanel({
   onSelectPoi,
   uphillSegments = [],
   canEditCourse = false,
+  reviews = [],
+  reviewStats = null,
 }: CourseDetailPanelProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -206,6 +217,12 @@ export function CourseDetailPanel({
           </div>
         )}
       </div>
+
+      <CourseReviewsSection
+        courseId={course.id}
+        reviews={reviews}
+        stats={reviewStats}
+      />
 
       {/* Uphill segments list */}
       {uphillSegments.length > 0 && (
