@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, Loader2, MessageSquarePlus, Star } from 'lucide-react'
+import { AlertCircle, Loader2, MessageSquarePlus, Pencil, Star, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { supabase } from '@/lib/supabase'
+import { sortCourseReviews, type ReviewSortOrder } from '@/lib/course-reviews-ui'
 import type { CourseReview, CourseReviewStats } from '@/types/course'
 import type { User } from '@supabase/supabase-js'
 
@@ -52,14 +53,17 @@ export function CourseReviewsSection({
 }: CourseReviewsSectionProps) {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
+  const [sortOrder, setSortOrder] = useState<ReviewSortOrder>('latest')
   const [content, setContent] = useState('')
   const [riddenAt, setRiddenAt] = useState('')
   const [rating, setRating] = useState(5)
   const [perceivedDifficulty, setPerceivedDifficulty] = useState<'easy' | 'moderate' | 'hard'>('moderate')
   const [conditionNote, setConditionNote] = useState('')
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null)
   const [isSubmitting, startSubmitTransition] = useTransition()
+  const [isDeleting, startDeleteTransition] = useTransition()
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -75,10 +79,58 @@ export function CourseReviewsSection({
     return () => subscription.unsubscribe()
   }, [])
 
-  const hasOwnReview = useMemo(
-    () => Boolean(user && reviews.some((review) => review.user_id === user.id)),
+  const ownReview = useMemo(
+    () => (user ? reviews.find((review) => review.user_id === user.id) ?? null : null),
     [reviews, user],
   )
+  const hasOwnReview = Boolean(ownReview)
+  const sortedReviews = useMemo(
+    () => sortCourseReviews(reviews, sortOrder),
+    [reviews, sortOrder],
+  )
+
+  useEffect(() => {
+    if (!ownReview) {
+      setEditingReviewId(null)
+      return
+    }
+
+    if (editingReviewId === ownReview.id) {
+      setContent(ownReview.content)
+      setRiddenAt(ownReview.ridden_at ?? '')
+      setRating(ownReview.rating)
+      setPerceivedDifficulty(ownReview.perceived_difficulty ?? 'moderate')
+      setConditionNote(ownReview.condition_note ?? '')
+    }
+  }, [editingReviewId, ownReview])
+
+  const resetForm = () => {
+    setContent('')
+    setRiddenAt('')
+    setRating(5)
+    setPerceivedDifficulty('moderate')
+    setConditionNote('')
+  }
+
+  const startEditOwnReview = () => {
+    if (!ownReview) return
+
+    setEditingReviewId(ownReview.id)
+    setSubmitError(null)
+    setSubmitSuccess(null)
+    setContent(ownReview.content)
+    setRiddenAt(ownReview.ridden_at ?? '')
+    setRating(ownReview.rating)
+    setPerceivedDifficulty(ownReview.perceived_difficulty ?? 'moderate')
+    setConditionNote(ownReview.condition_note ?? '')
+  }
+
+  const cancelEdit = () => {
+    setEditingReviewId(null)
+    setSubmitError(null)
+    setSubmitSuccess(null)
+    resetForm()
+  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -90,8 +142,8 @@ export function CourseReviewsSection({
       return
     }
 
-    if (hasOwnReview) {
-      setSubmitError('이미 이 코스에 후기를 남겼습니다. 수정/삭제는 다음 단계에서 지원됩니다.')
+    if (hasOwnReview && editingReviewId !== ownReview?.id) {
+      setSubmitError('이미 이 코스에 후기를 남겼습니다. 기존 후기를 수정하거나 삭제해주세요.')
       return
     }
 
@@ -102,29 +154,64 @@ export function CourseReviewsSection({
 
     startSubmitTransition(() => {
       void (async () => {
+        const payload = {
+          rating,
+          content: content.trim(),
+          ridden_at: riddenAt || null,
+          perceived_difficulty: perceivedDifficulty,
+          condition_note: conditionNote.trim() || null,
+        }
+        const response = editingReviewId
+          ? await supabase
+              .from('course_reviews')
+              .update(payload)
+              .eq('id', editingReviewId)
+              .eq('user_id', user.id)
+          : await supabase
+              .from('course_reviews')
+              .insert({
+                course_id: courseId,
+                user_id: user.id,
+                ...payload,
+              })
+
+        if (response.error) {
+          setSubmitError(response.error.message)
+          return
+        }
+
+        setSubmitSuccess(editingReviewId ? '후기가 수정되었습니다.' : '후기가 등록되었습니다.')
+        setEditingReviewId(null)
+        resetForm()
+        router.refresh()
+      })()
+    })
+  }
+
+  const handleDelete = () => {
+    if (!ownReview || !user) return
+
+    setSubmitError(null)
+    setSubmitSuccess(null)
+
+    startDeleteTransition(() => {
+      void (async () => {
         const { error } = await supabase
           .from('course_reviews')
-          .insert({
-            course_id: courseId,
-            user_id: user.id,
-            rating,
-            content: content.trim(),
-            ridden_at: riddenAt || null,
-            perceived_difficulty: perceivedDifficulty,
-            condition_note: conditionNote.trim() || null,
+          .update({
+            deleted_at: new Date().toISOString(),
           })
+          .eq('id', ownReview.id)
+          .eq('user_id', user.id)
 
         if (error) {
           setSubmitError(error.message)
           return
         }
 
-        setSubmitSuccess('후기가 등록되었습니다.')
-        setContent('')
-        setRiddenAt('')
-        setRating(5)
-        setPerceivedDifficulty('moderate')
-        setConditionNote('')
+        setEditingReviewId(null)
+        resetForm()
+        setSubmitSuccess('후기가 삭제되었습니다.')
         router.refresh()
       })()
     })
@@ -141,11 +228,22 @@ export function CourseReviewsSection({
               : '아직 등록된 후기가 없습니다.'}
           </p>
         </div>
+        <div className="w-28">
+          <select
+            aria-label="후기 정렬"
+            value={sortOrder}
+            onChange={(event) => setSortOrder(event.target.value as ReviewSortOrder)}
+            className="h-9 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <option value="latest">최신순</option>
+            <option value="oldest">오래된순</option>
+          </select>
+        </div>
       </div>
 
-      {reviews.length > 0 ? (
+      {sortedReviews.length > 0 ? (
         <div className="space-y-3">
-          {reviews.map((review) => (
+          {sortedReviews.map((review) => (
             <article key={review.id} className="rounded-xl border p-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -173,6 +271,34 @@ export function CourseReviewsSection({
                   노면/위험구간 메모: {review.condition_note}
                 </div>
               )}
+
+              {user?.id === review.user_id && (
+                <div className="mt-3 flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={startEditOwnReview}
+                  >
+                    <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                    수정
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                    )}
+                    삭제
+                  </Button>
+                </div>
+              )}
             </article>
           ))}
         </div>
@@ -192,9 +318,9 @@ export function CourseReviewsSection({
           <p className="mt-3 text-sm text-muted-foreground">
             로그인한 사용자만 후기를 작성할 수 있습니다. 지금은 후기 목록만 볼 수 있습니다.
           </p>
-        ) : hasOwnReview ? (
+        ) : hasOwnReview && editingReviewId !== ownReview?.id ? (
           <p className="mt-3 text-sm text-muted-foreground">
-            이미 이 코스에 후기를 남겼습니다. 후기 수정/삭제는 다음 작업에서 지원됩니다.
+            이미 이 코스에 후기를 남겼습니다. 아래 목록에서 수정하거나 삭제할 수 있습니다.
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="mt-4 space-y-4">
@@ -287,14 +413,25 @@ export function CourseReviewsSection({
               </div>
             )}
 
-            <Button type="submit" disabled={isSubmitting || !content.trim()} className="w-full">
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  등록 중...
-                </>
-              ) : '후기 등록'}
-            </Button>
+            <div className="flex gap-2">
+              {editingReviewId && (
+                <Button type="button" variant="outline" onClick={cancelEdit} className="flex-1">
+                  취소
+                </Button>
+              )}
+              <Button
+                type="submit"
+                disabled={isSubmitting || !content.trim()}
+                className="flex-1"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {editingReviewId ? '수정 중...' : '등록 중...'}
+                  </>
+                ) : editingReviewId ? '후기 수정' : '후기 등록'}
+              </Button>
+            </div>
           </form>
         )}
       </div>
