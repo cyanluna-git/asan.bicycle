@@ -19,7 +19,6 @@ import type {
   CourseReview,
   CourseReviewStats,
   CourseListItem,
-  CourseMapItem,
   PoiMapItem,
   UphillSegment,
 } from '@/types/course'
@@ -27,7 +26,7 @@ import type { User } from '@supabase/supabase-js'
 
 interface ExploreShellProps {
   courses: CourseListItem[]
-  courseRoutes: CourseMapItem[]
+  routeQueryString: string
   startPoints: { id: string; name: string }[]
   themes: string[]
   hasActiveFilters: boolean
@@ -41,7 +40,7 @@ interface ExploreShellProps {
 
 export function ExploreShell({
   courses,
-  courseRoutes,
+  routeQueryString,
   startPoints,
   themes,
   hasActiveFilters,
@@ -183,7 +182,7 @@ export function ExploreShell({
       <main className="flex-1 flex flex-col min-h-0">
         <div className="relative flex-1 min-h-0">
           <KakaoMap
-            courses={courseRoutes}
+            routeQueryString={routeQueryString}
             selectedCourseId={selectedCourseId}
             pois={pois}
             selectedPoiId={selectedPoiId}

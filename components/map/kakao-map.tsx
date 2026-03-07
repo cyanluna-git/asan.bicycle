@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useMemo, useState, useCallback } from "react"
 import {
   Map,
   ZoomControl,
@@ -95,7 +95,7 @@ function computeBounds(coords: LatLng[]) {
 // ---------------------------------------------------------------------------
 
 interface KakaoMapProps {
-  courses?: CourseMapItem[]
+  routeQueryString?: string
   selectedCourseId?: string | null
   pois?: PoiMapItem[]
   selectedPoiId?: string | null
@@ -107,7 +107,7 @@ interface KakaoMapProps {
 // ---------------------------------------------------------------------------
 
 export default function KakaoMap({
-  courses,
+  routeQueryString,
   selectedCourseId,
   pois,
   selectedPoiId,
@@ -123,7 +123,7 @@ export default function KakaoMap({
   return (
     <KakaoMapInner
       appkey={appkey}
-      courses={courses}
+      routeQueryString={routeQueryString}
       selectedCourseId={selectedCourseId}
       pois={pois}
       selectedPoiId={selectedPoiId}
@@ -138,7 +138,7 @@ export default function KakaoMap({
 
 function KakaoMapInner({
   appkey,
-  courses,
+  routeQueryString,
   selectedCourseId,
   pois,
   selectedPoiId,
@@ -148,6 +148,43 @@ function KakaoMapInner({
     appkey,
     libraries: ["services", "clusterer"],
   })
+  const [courses, setCourses] = useState<CourseMapItem[]>([])
+  const [isRoutesLoading, setIsRoutesLoading] = useState(true)
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    async function loadRoutes() {
+      setIsRoutesLoading(true)
+
+      try {
+        const queryString = routeQueryString ? `?${routeQueryString}` : ''
+        const response = await fetch(`/api/courses/routes${queryString}`, {
+          signal: controller.signal,
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch course routes: ${response.status}`)
+        }
+
+        const payload = await response.json() as { routes?: CourseMapItem[] }
+        setCourses(payload.routes ?? [])
+      } catch (fetchError) {
+        if ((fetchError as Error).name !== 'AbortError') {
+          console.error('[kakao-map] failed to fetch routes', fetchError)
+          setCourses([])
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsRoutesLoading(false)
+        }
+      }
+    }
+
+    void loadRoutes()
+
+    return () => controller.abort()
+  }, [routeQueryString])
 
   if (error) {
     return <MapError message="지도를 불러오는 중 오류가 발생했습니다." />
@@ -156,13 +193,13 @@ function KakaoMapInner({
     return <MapSkeleton />
   }
 
-  // Determine if we should show the sample fallback:
-  // all courses either have no route_geojson or the courses array is empty
-  const hasAnyRoute = (courses ?? []).some((c) => c.route_geojson != null)
+  const hasAnyRoute = courses.some((course) => course.route_geojson != null)
   const effectiveCourses: CourseMapItem[] = hasAnyRoute
-    ? (courses ?? [])
-    : [{ id: SAMPLE_COURSE_ID, route_geojson: SAMPLE_ROUTE }]
-  const effectiveSelectedId = hasAnyRoute ? selectedCourseId : SAMPLE_COURSE_ID
+    ? courses
+    : isRoutesLoading
+      ? []
+      : [{ id: SAMPLE_COURSE_ID, route_geojson: SAMPLE_ROUTE }]
+  const effectiveSelectedId = hasAnyRoute ? selectedCourseId : isRoutesLoading ? null : SAMPLE_COURSE_ID
 
   // Only show POIs when a course is selected
   const visiblePois =
@@ -171,18 +208,25 @@ function KakaoMapInner({
       : []
 
   return (
-    <Map center={ASAN_CENTER} style={{ width: "100%", height: "100%" }} level={8}>
-      <ZoomControl position="RIGHT" />
-      <RoutePolylines
-        courses={effectiveCourses}
-        selectedCourseId={effectiveSelectedId ?? null}
-      />
-      <PoiMarkers
-        pois={visiblePois}
-        selectedPoiId={selectedPoiId}
-        onSelectPoi={onSelectPoi}
-      />
-    </Map>
+    <div className="relative h-full w-full">
+      <Map center={ASAN_CENTER} style={{ width: "100%", height: "100%" }} level={8}>
+        <ZoomControl position="RIGHT" />
+        <RoutePolylines
+          courses={effectiveCourses}
+          selectedCourseId={effectiveSelectedId ?? null}
+        />
+        <PoiMarkers
+          pois={visiblePois}
+          selectedPoiId={selectedPoiId}
+          onSelectPoi={onSelectPoi}
+        />
+      </Map>
+      {isRoutesLoading ? (
+        <div className="pointer-events-none absolute right-4 top-4 rounded-full bg-background/90 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm ring-1 ring-black/5 backdrop-blur">
+          경로 불러오는 중
+        </div>
+      ) : null}
+    </div>
   )
 }
 
@@ -211,17 +255,22 @@ function RoutePolylines({
     return () => cancelAnimationFrame(raf)
   }, [selectedCourseId])
 
-  const selectedCourse = courses.find((c) => c.id === selectedCourseId)
-  const selectedCoords = selectedCourse?.route_geojson
-    ? extractCoordinates(selectedCourse.route_geojson)
-    : []
+  const routePaths = useMemo(
+    () => courses.map((course) => ({
+      id: course.id,
+      coords: course.route_geojson ? extractCoordinates(course.route_geojson) : [],
+    })),
+    [courses],
+  )
+
+  const selectedCourse = routePaths.find((course) => course.id === selectedCourseId)
+  const selectedCoords = selectedCourse?.coords ?? []
 
   return (
     <>
       {/* Background polylines: all courses with routes (gray, thin) */}
-      {courses.map((course) => {
-        if (!course.route_geojson) return null
-        const coords = extractCoordinates(course.route_geojson)
+      {routePaths.map((course) => {
+        const coords = course.coords
         if (coords.length < 2) return null
         const isSelected = course.id === selectedCourseId
         return (
