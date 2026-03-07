@@ -2,19 +2,17 @@ import { ExploreShell } from '@/components/explore/explore-shell'
 import { hydrateCourseReviews } from '@/lib/course-reviews'
 import { hydrateUploaderNames } from '@/lib/course-uploader'
 import { supabase } from '@/lib/supabase'
-import { parseFilterParams, countActiveFilters } from '@/lib/filter'
+import { buildFilterQuery, parseFilterParams, countActiveFilters } from '@/lib/filter'
 import type {
   CourseDetail,
   CourseListItem,
-  CourseMapItem,
   CourseReview,
   CourseReviewStats,
   PoiMapItem,
-  RouteGeoJSON,
   UphillSegment,
 } from '@/types/course'
 
-const COURSE_LIST_FIELDS = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, route_geojson, created_by'
+const COURSE_LIST_FIELDS = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, created_by'
 const COURSE_LIST_FIELDS_WITH_UPLOADER = `${COURSE_LIST_FIELDS}, uploader_name, uploader_emoji`
 const COURSE_DETAIL_FIELDS = 'id, title, description, difficulty, distance_km, elevation_gain_m, gpx_url, theme, tags, route_geojson, created_by, start_point_id'
 const COURSE_DETAIL_FIELDS_WITH_UPLOADER = `${COURSE_DETAIL_FIELDS}, uploader_name, uploader_emoji`
@@ -27,7 +25,6 @@ type CourseListRow = {
   elevation_gain_m: number
   theme: string | null
   tags: string[]
-  route_geojson: RouteGeoJSON | null
   created_by: string | null
   uploader_name?: string | null
   uploader_emoji?: string | null
@@ -43,7 +40,7 @@ type CourseDetailRow = {
   gpx_url: string | null
   theme: string | null
   tags: string[]
-  route_geojson: RouteGeoJSON | null
+  route_geojson: CourseDetail['route_geojson']
   created_by: string | null
   start_point_id: string | null
   uploader_name?: string | null
@@ -104,12 +101,26 @@ export default async function Home({
   const params = await searchParams
   const filters = parseFilterParams(params)
   const hasActiveFilters = countActiveFilters(filters) > 0
+  const routeQueryString = buildFilterQuery(filters)
 
-  // Fetch start_points for the dropdown
-  const { data: startPoints, error: startPointsError } = await supabase
-    .from('start_points')
-    .select('id, name')
-    .order('name')
+  const [
+    startPointsResult,
+    themesResult,
+    coursesResult,
+  ] = await Promise.all([
+    supabase
+      .from('start_points')
+      .select('id, name')
+      .order('name'),
+    supabase
+      .from('courses')
+      .select('theme')
+      .not('theme', 'is', null)
+      .order('theme'),
+    buildCoursesQuery(filters, COURSE_LIST_FIELDS_WITH_UPLOADER),
+  ])
+
+  const { data: startPoints, error: startPointsError } = startPointsResult
   if (startPointsError) console.error('[page] start_points error:', startPointsError.message, startPointsError.details)
 
   const startPointList = (startPoints ?? []).map((sp) => ({
@@ -117,13 +128,7 @@ export default async function Home({
     name: sp.name,
   }))
 
-  // Fetch unique theme values from courses
-  // Supabase JS v2 doesn't support SELECT DISTINCT; deduplication done in JS
-  const { data: themesRaw, error: themesError } = await supabase
-    .from('courses')
-    .select('theme')
-    .not('theme', 'is', null)
-    .order('theme')
+  const { data: themesRaw, error: themesError } = themesResult
   if (themesError) console.error('[page] themes error:', themesError.message, themesError.details)
 
   const themeList = [
@@ -134,10 +139,7 @@ export default async function Home({
     ),
   ]
 
-  let { data: courses, error: coursesError } = await buildCoursesQuery(
-    filters,
-    COURSE_LIST_FIELDS_WITH_UPLOADER,
-  )
+  let { data: courses, error: coursesError } = coursesResult
   if (coursesError && /(uploader_name|uploader_emoji)/i.test(coursesError.message)) {
     const fallback = await buildCoursesQuery(filters, COURSE_LIST_FIELDS)
     courses = fallback.data
@@ -163,12 +165,6 @@ export default async function Home({
       uploader_emoji: uploader_emoji ?? null,
     }),
   )
-
-  // Build lightweight route data for the map component
-  const courseRoutes: CourseMapItem[] = courseRows.map((c) => ({
-    id: c.id,
-    route_geojson: (c.route_geojson as RouteGeoJSON) ?? null,
-  }))
 
   // Selected course from URL ?courseId= param
   const selectedCourseId =
@@ -208,7 +204,7 @@ export default async function Home({
         ...selectedCourseData,
         uploader_name: selectedCourseData.uploader_name ?? null,
         uploader_emoji: selectedCourseData.uploader_emoji ?? null,
-        route_geojson: (selectedCourseData.route_geojson as RouteGeoJSON) ?? null,
+        route_geojson: selectedCourseData.route_geojson ?? null,
       }
     : null
 
@@ -274,7 +270,7 @@ export default async function Home({
   return (
     <ExploreShell
       courses={courseList}
-      courseRoutes={courseRoutes}
+      routeQueryString={routeQueryString}
       startPoints={startPointList}
       themes={themeList}
       hasActiveFilters={hasActiveFilters}
