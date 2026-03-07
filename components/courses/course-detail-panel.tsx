@@ -37,7 +37,8 @@ interface CourseDetailPanelProps {
   canEditCourse?: boolean
   reviews?: CourseReview[]
   reviewStats?: CourseReviewStats | null
-  onOpenReviews?: () => void
+  onOpenReviews?: (triggerEl?: HTMLButtonElement | null) => void
+  reviewTriggerId?: string
 }
 
 export function CourseDetailPanel({
@@ -50,6 +51,7 @@ export function CourseDetailPanel({
   reviews = [],
   reviewStats = null,
   onOpenReviews,
+  reviewTriggerId,
 }: CourseDetailPanelProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -197,9 +199,12 @@ export function CourseDetailPanel({
             type="button"
             variant="outline"
             size="sm"
-            onClick={onOpenReviews}
+            id={reviewTriggerId}
+            onClick={(event) => onOpenReviews?.(event.currentTarget)}
             disabled={!onOpenReviews}
             className="shrink-0 rounded-full"
+            aria-haspopup="dialog"
+            aria-label={`${course.title} 후기 보기`}
           >
             후기 보기
             <ArrowRight className="ml-1.5 h-3.5 w-3.5" />

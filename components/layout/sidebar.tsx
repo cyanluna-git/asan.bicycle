@@ -24,7 +24,7 @@ interface SidebarProps {
   canEditSelectedCourse?: boolean
   reviews?: CourseReview[]
   reviewStats?: CourseReviewStats | null
-  onOpenReviews?: () => void
+  onOpenReviews?: (triggerEl?: HTMLButtonElement | null) => void
 }
 
 export function Sidebar({
@@ -55,6 +55,7 @@ export function Sidebar({
             canEditCourse={canEditSelectedCourse}
             reviews={reviews ?? []}
             reviewStats={reviewStats ?? null}
+            reviewTriggerId={selectedCourse ? `sidebar-review-trigger-${selectedCourse.id}` : undefined}
             onOpenReviews={onOpenReviews}
           />
         ) : (

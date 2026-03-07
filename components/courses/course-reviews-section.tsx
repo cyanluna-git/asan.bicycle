@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { getReviewEmptyStateCopy, type ReviewSurfaceViewerState } from '@/lib/course-reviews-surface-ui'
 import { supabase } from '@/lib/supabase'
 import { sortCourseReviews, type ReviewSortOrder } from '@/lib/course-reviews-ui'
 import type { CourseReview, CourseReviewStats } from '@/types/course'
@@ -25,6 +26,7 @@ interface CourseReviewsSectionProps {
   courseId: string
   reviews: CourseReview[]
   stats: CourseReviewStats | null
+  viewerState: ReviewSurfaceViewerState
 }
 
 const DIFFICULTY_OPTIONS = [
@@ -61,6 +63,7 @@ export function CourseReviewsSection({
   courseId,
   reviews,
   stats,
+  viewerState,
 }: CourseReviewsSectionProps) {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
@@ -290,7 +293,10 @@ export function CourseReviewsSection({
       </div>
 
       {submitSuccess && !showComposer && (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div
+          className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
+          aria-live="polite"
+        >
           {submitSuccess}
         </div>
       )}
@@ -597,7 +603,7 @@ export function CourseReviewsSection({
             아직 첫 라이더 후기가 없습니다.
           </p>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            노면 상태, 체감 난이도, 쉬어가기 좋은 포인트를 남기면 다음 라이더에게 큰 도움이 됩니다.
+            {getReviewEmptyStateCopy(viewerState)}
           </p>
         </div>
       )}
