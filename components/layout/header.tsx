@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, Menu, X, LogOut, Settings2 } from "lucide-react";
+import { Search, Menu, X, LogOut, Settings2, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProfileEditor } from "@/components/profile/profile-editor";
 import { resolveProfileEmoji } from "@/lib/profile";
@@ -73,8 +73,8 @@ export function Header() {
         />
       </div>
 
-      {/* User info (desktop) */}
-      {user && (
+      {/* User actions (desktop) */}
+      {user ? (
         <div className="hidden items-center gap-2 ml-3 md:flex">
           <button
             type="button"
@@ -105,6 +105,20 @@ export function Header() {
             title="로그아웃"
           >
             <LogOut className="h-4 w-4" />
+          </Button>
+        </div>
+      ) : (
+        <div className="hidden items-center gap-2 ml-3 md:flex">
+          <Button
+            onClick={async () => {
+              await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: { redirectTo: window.location.href },
+              })
+            }}
+          >
+            <LogIn className="mr-2 h-4 w-4" />
+            로그인
           </Button>
         </div>
       )}
@@ -146,7 +160,7 @@ export function Header() {
               </Link>
             ))}
           </nav>
-          {user && (
+          {user ? (
             <div className="mt-3 flex items-center justify-between border-t pt-3">
               <div className="flex items-center gap-2">
                 <span className="text-base leading-none">{resolveProfileEmoji(user)}</span>
@@ -177,6 +191,21 @@ export function Header() {
                   로그아웃
                 </Button>
               </div>
+            </div>
+          ) : (
+            <div className="mt-3 border-t pt-3">
+              <Button
+                className="w-full"
+                onClick={async () => {
+                  await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: { redirectTo: window.location.href },
+                  })
+                }}
+              >
+                <LogIn className="mr-2 h-4 w-4" />
+                Google로 로그인
+              </Button>
             </div>
           )}
         </div>
