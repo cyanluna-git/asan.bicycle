@@ -155,6 +155,8 @@ export type Database = {
           created_at: string
           updated_at: string
           deleted_at: string | null
+          author_name: string | null
+          author_emoji: string | null
         }
         Insert: {
           id?: string
@@ -168,6 +170,8 @@ export type Database = {
           created_at?: string
           updated_at?: string
           deleted_at?: string | null
+          author_name?: string | null
+          author_emoji?: string | null
         }
         Update: {
           id?: string
@@ -181,6 +185,8 @@ export type Database = {
           created_at?: string
           updated_at?: string
           deleted_at?: string | null
+          author_name?: string | null
+          author_emoji?: string | null
         }
         Relationships: [
           {
@@ -298,6 +304,8 @@ export type Database = {
           condition_note: string | null
           created_at: string | null
           updated_at: string | null
+          author_name: string | null
+          author_emoji: string | null
         }
         Relationships: [
           {

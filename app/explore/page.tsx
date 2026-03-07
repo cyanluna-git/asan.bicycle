@@ -232,9 +232,9 @@ export default async function Home({
     : { data: null }
 
   const { data: reviewRowsRaw } = selectedCourseId
-    ? await supabase
+      ? await supabase
         .from('course_reviews_public')
-        .select('id, course_id, user_id, rating, content, ridden_at, perceived_difficulty, condition_note, created_at, updated_at')
+        .select('id, course_id, user_id, rating, content, ridden_at, perceived_difficulty, condition_note, created_at, updated_at, author_name, author_emoji')
         .eq('course_id', selectedCourseId)
         .order('created_at', { ascending: false })
     : { data: [] }
