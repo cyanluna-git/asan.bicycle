@@ -14,7 +14,14 @@ import {
 import { CourseFilter } from '@/components/filter/course-filter'
 import { CourseListClient } from '@/components/courses/course-list-client'
 import { CourseDetailPanel } from '@/components/courses/course-detail-panel'
-import type { CourseListItem, CourseDetail, PoiMapItem, UphillSegment } from '@/types/course'
+import type {
+  CourseListItem,
+  CourseDetail,
+  CourseReview,
+  CourseReviewStats,
+  PoiMapItem,
+  UphillSegment,
+} from '@/types/course'
 
 interface BottomSheetProps {
   courses: CourseListItem[]
@@ -27,6 +34,8 @@ interface BottomSheetProps {
   onSelectPoi?: (id: string | null) => void
   uphillSegments?: UphillSegment[]
   canEditSelectedCourse?: boolean
+  reviews?: CourseReview[]
+  reviewStats?: CourseReviewStats | null
 }
 
 export function BottomSheet({
@@ -40,6 +49,8 @@ export function BottomSheet({
   onSelectPoi,
   uphillSegments,
   canEditSelectedCourse = false,
+  reviews,
+  reviewStats,
 }: BottomSheetProps) {
   return (
     <div className="md:hidden">
@@ -73,6 +84,8 @@ export function BottomSheet({
                 onSelectPoi={onSelectPoi}
                 uphillSegments={uphillSegments ?? []}
                 canEditCourse={canEditSelectedCourse}
+                reviews={reviews ?? []}
+                reviewStats={reviewStats ?? null}
               />
             ) : (
               <>

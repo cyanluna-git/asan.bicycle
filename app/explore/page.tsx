@@ -1,8 +1,18 @@
 import { ExploreShell } from '@/components/explore/explore-shell'
+import { hydrateCourseReviews } from '@/lib/course-reviews'
 import { hydrateUploaderNames } from '@/lib/course-uploader'
 import { supabase } from '@/lib/supabase'
 import { parseFilterParams, countActiveFilters } from '@/lib/filter'
-import type { CourseListItem, CourseDetail, CourseMapItem, RouteGeoJSON, PoiMapItem, UphillSegment } from '@/types/course'
+import type {
+  CourseDetail,
+  CourseListItem,
+  CourseMapItem,
+  CourseReview,
+  CourseReviewStats,
+  PoiMapItem,
+  RouteGeoJSON,
+  UphillSegment,
+} from '@/types/course'
 
 const COURSE_LIST_FIELDS = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, route_geojson, created_by'
 const COURSE_LIST_FIELDS_WITH_UPLOADER = `${COURSE_LIST_FIELDS}, uploader_name, uploader_emoji`
@@ -38,6 +48,21 @@ type CourseDetailRow = {
   start_point_id: string | null
   uploader_name?: string | null
   uploader_emoji?: string | null
+}
+
+type CourseReviewRow = {
+  id: string
+  course_id: string
+  user_id: string
+  rating: number
+  content: string
+  ridden_at: string | null
+  perceived_difficulty: CourseReview['perceived_difficulty']
+  condition_note: string | null
+  created_at: string
+  updated_at: string
+  author_name?: string | null
+  author_emoji?: string | null
 }
 
 function buildCoursesQuery(
@@ -198,6 +223,43 @@ export default async function Home({
 
   const uphillSegments: UphillSegment[] = (uphillRaw ?? []) as UphillSegment[]
 
+  const { data: reviewStatsRaw } = selectedCourseId
+    ? await supabase
+        .from('course_review_stats')
+        .select('course_id, review_count, avg_rating')
+        .eq('course_id', selectedCourseId)
+        .maybeSingle()
+    : { data: null }
+
+  const { data: reviewRowsRaw } = selectedCourseId
+    ? await supabase
+        .from('course_reviews_public')
+        .select('id, course_id, user_id, rating, content, ridden_at, perceived_difficulty, condition_note, created_at, updated_at')
+        .eq('course_id', selectedCourseId)
+        .order('created_at', { ascending: false })
+    : { data: [] }
+
+  const reviewRows = await hydrateCourseReviews(
+    ((reviewRowsRaw ?? []) as unknown) as CourseReviewRow[],
+  )
+
+  const reviews: CourseReview[] = reviewRows.map((review) => ({
+    ...review,
+    author_name: review.author_name ?? null,
+    author_emoji: review.author_emoji ?? null,
+  }))
+
+  const reviewStats: CourseReviewStats | null = reviewStatsRaw
+    ? {
+        review_count: Number(reviewStatsRaw.review_count ?? 0),
+        avg_rating: typeof reviewStatsRaw.avg_rating === 'number'
+          ? reviewStatsRaw.avg_rating
+          : reviewStatsRaw.avg_rating == null
+            ? null
+            : Number(reviewStatsRaw.avg_rating),
+      }
+    : null
+
   // Fetch POIs only for the selected course (only needed when a course is selected)
   const { data: poisRaw } = selectedCourseId
     ? await supabase
@@ -220,6 +282,8 @@ export default async function Home({
       selectedCourse={selectedCourse}
       pois={pois}
       uphillSegments={uphillSegments}
+      reviews={reviews}
+      reviewStats={reviewStats}
     />
   )
 }

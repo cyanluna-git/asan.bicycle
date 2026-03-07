@@ -9,6 +9,8 @@ import { canEditCourse, isAdminUser } from '@/lib/admin'
 import { supabase } from '@/lib/supabase'
 import type {
   CourseDetail,
+  CourseReview,
+  CourseReviewStats,
   CourseListItem,
   CourseMapItem,
   PoiMapItem,
@@ -26,6 +28,8 @@ interface ExploreShellProps {
   selectedCourse: CourseDetail | null
   pois: PoiMapItem[]
   uphillSegments: UphillSegment[]
+  reviews: CourseReview[]
+  reviewStats: CourseReviewStats | null
 }
 
 export function ExploreShell({
@@ -38,6 +42,8 @@ export function ExploreShell({
   selectedCourse,
   pois,
   uphillSegments,
+  reviews,
+  reviewStats,
 }: ExploreShellProps) {
   const [user, setUser] = useState<User | null>(null)
   const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null)
@@ -87,6 +93,8 @@ export function ExploreShell({
         onSelectPoi={setSelectedPoiId}
         uphillSegments={uphillSegments}
         canEditSelectedCourse={canEditSelectedCourse}
+        reviews={reviews}
+        reviewStats={reviewStats}
       />
       <main className="flex-1 flex flex-col min-h-0">
         <div className="relative flex-1 min-h-0">
@@ -108,6 +116,8 @@ export function ExploreShell({
             onSelectPoi={setSelectedPoiId}
             uphillSegments={uphillSegments}
             canEditSelectedCourse={canEditSelectedCourse}
+            reviews={reviews}
+            reviewStats={reviewStats}
           />
         </div>
         {selectedCourse && (

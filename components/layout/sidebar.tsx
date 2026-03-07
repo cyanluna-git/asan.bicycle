@@ -2,7 +2,14 @@ import { Suspense } from 'react'
 import { CourseFilter } from '@/components/filter/course-filter'
 import { CourseListClient } from '@/components/courses/course-list-client'
 import { CourseDetailPanel } from '@/components/courses/course-detail-panel'
-import type { CourseListItem, CourseDetail, PoiMapItem, UphillSegment } from '@/types/course'
+import type {
+  CourseListItem,
+  CourseDetail,
+  CourseReview,
+  CourseReviewStats,
+  PoiMapItem,
+  UphillSegment,
+} from '@/types/course'
 
 interface SidebarProps {
   courses: CourseListItem[]
@@ -15,6 +22,8 @@ interface SidebarProps {
   onSelectPoi?: (id: string | null) => void
   uphillSegments?: UphillSegment[]
   canEditSelectedCourse?: boolean
+  reviews?: CourseReview[]
+  reviewStats?: CourseReviewStats | null
 }
 
 export function Sidebar({
@@ -28,6 +37,8 @@ export function Sidebar({
   onSelectPoi,
   uphillSegments,
   canEditSelectedCourse = false,
+  reviews,
+  reviewStats,
 }: SidebarProps) {
   return (
     <aside className="hidden md:flex flex-col w-[280px] border-r bg-background">
@@ -40,6 +51,8 @@ export function Sidebar({
             onSelectPoi={onSelectPoi}
             uphillSegments={uphillSegments ?? []}
             canEditCourse={canEditSelectedCourse}
+            reviews={reviews ?? []}
+            reviewStats={reviewStats ?? null}
           />
         ) : (
           <>

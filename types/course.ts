@@ -88,3 +88,23 @@ export type PoiMapItem = {
   lat: number
   lng: number
 }
+
+export type CourseReview = {
+  id: string
+  course_id: string
+  user_id: string
+  rating: number
+  content: string
+  ridden_at: string | null
+  perceived_difficulty: 'easy' | 'moderate' | 'hard' | null
+  condition_note: string | null
+  created_at: string
+  updated_at: string
+  author_name: string | null
+  author_emoji: string | null
+}
+
+export type CourseReviewStats = {
+  review_count: number
+  avg_rating: number | null
+}
