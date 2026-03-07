@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { List } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -36,7 +36,9 @@ interface BottomSheetProps {
   canEditSelectedCourse?: boolean
   reviews?: CourseReview[]
   reviewStats?: CourseReviewStats | null
-  onOpenReviews?: () => void
+  onOpenReviews?: (triggerEl?: HTMLButtonElement | null) => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
 export function BottomSheet({
@@ -53,19 +55,31 @@ export function BottomSheet({
   reviews,
   reviewStats,
   onOpenReviews,
+  open,
+  onOpenChange,
 }: BottomSheetProps) {
-  const [open, setOpen] = useState(false)
+  const [pendingReviewOpen, setPendingReviewOpen] = useState(false)
+  const [pendingTrigger, setPendingTrigger] = useState<HTMLButtonElement | null>(null)
 
-  const handleOpenReviews = () => {
-    setOpen(false)
-    window.setTimeout(() => {
-      onOpenReviews?.()
-    }, 0)
+  useEffect(() => {
+    if (open || !pendingReviewOpen) {
+      return
+    }
+
+    onOpenReviews?.(pendingTrigger)
+    setPendingReviewOpen(false)
+    setPendingTrigger(null)
+  }, [onOpenReviews, open, pendingReviewOpen, pendingTrigger])
+
+  const handleOpenReviews = (triggerEl?: HTMLButtonElement | null) => {
+    setPendingReviewOpen(true)
+    setPendingTrigger(triggerEl ?? null)
+    onOpenChange(false)
   }
 
   return (
     <div className="md:hidden">
-      <Drawer open={open} onOpenChange={setOpen}>
+      <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerTrigger asChild>
           <Button
             className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 shadow-lg"
@@ -97,6 +111,7 @@ export function BottomSheet({
                 canEditCourse={canEditSelectedCourse}
                 reviews={reviews ?? []}
                 reviewStats={reviewStats ?? null}
+                reviewTriggerId={selectedCourse ? `bottom-sheet-review-trigger-${selectedCourse.id}` : undefined}
                 onOpenReviews={handleOpenReviews}
               />
             ) : (
