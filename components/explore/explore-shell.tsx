@@ -208,7 +208,7 @@ export function ExploreShell({
               openReviewSurface({ source: 'bottom-sheet', triggerEl })
             }
           />
-          {selectedCourse ? (
+          {selectedCourse && reviewSurfaceSource === 'bottom-sheet' ? (
             <Drawer
               open={isReviewSurfaceOpen}
               onOpenChange={(nextOpen) => {
@@ -241,7 +241,7 @@ export function ExploreShell({
           />
         )}
       </main>
-      {selectedCourse && isReviewSurfaceOpen ? (
+      {selectedCourse && isReviewSurfaceOpen && reviewSurfaceSource !== 'bottom-sheet' ? (
         <aside className="hidden md:flex w-[360px] border-l bg-background">
           <CourseReviewsSurface
             courseId={selectedCourse.id}
