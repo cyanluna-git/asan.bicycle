@@ -127,6 +127,71 @@ export type Database = {
           },
         ]
       }
+      admin_users: {
+        Row: {
+          email: string
+          created_at: string
+        }
+        Insert: {
+          email: string
+          created_at?: string
+        }
+        Update: {
+          email?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      course_reviews: {
+        Row: {
+          id: string
+          course_id: string
+          user_id: string
+          rating: number
+          content: string
+          ridden_at: string | null
+          perceived_difficulty: Database['public']['Enums']['course_difficulty'] | null
+          condition_note: string | null
+          created_at: string
+          updated_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          course_id: string
+          user_id: string
+          rating: number
+          content: string
+          ridden_at?: string | null
+          perceived_difficulty?: Database['public']['Enums']['course_difficulty'] | null
+          condition_note?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          course_id?: string
+          user_id?: string
+          rating?: number
+          content?: string
+          ridden_at?: string | null
+          perceived_difficulty?: Database['public']['Enums']['course_difficulty'] | null
+          condition_note?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'course_reviews_course_id_fkey'
+            columns: ['course_id']
+            isOneToOne: false
+            referencedRelation: 'courses'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       uphill_segments: {
         Row: {
           id: string
@@ -205,6 +270,45 @@ export type Database = {
       }
     }
     Views: {
+      course_review_stats: {
+        Row: {
+          course_id: string | null
+          review_count: number | null
+          avg_rating: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'course_reviews_course_id_fkey'
+            columns: ['course_id']
+            isOneToOne: false
+            referencedRelation: 'courses'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      course_reviews_public: {
+        Row: {
+          id: string | null
+          course_id: string | null
+          user_id: string | null
+          rating: number | null
+          content: string | null
+          ridden_at: string | null
+          perceived_difficulty: Database['public']['Enums']['course_difficulty'] | null
+          condition_note: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'course_reviews_course_id_fkey'
+            columns: ['course_id']
+            isOneToOne: false
+            referencedRelation: 'courses'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       pois_with_coords: {
         Row: {
           id: string
