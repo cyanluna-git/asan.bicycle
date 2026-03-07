@@ -1,8 +1,19 @@
 'use client'
 
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, Loader2, LogIn, MessageSquarePlus, Pencil, Star, Trash2 } from 'lucide-react'
+import {
+  AlertCircle,
+  CalendarDays,
+  ChevronDown,
+  Loader2,
+  LogIn,
+  MessageSquarePlus,
+  Pencil,
+  ShieldAlert,
+  Star,
+  Trash2,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { supabase } from '@/lib/supabase'
@@ -60,10 +71,12 @@ export function CourseReviewsSection({
   const [perceivedDifficulty, setPerceivedDifficulty] = useState<'easy' | 'moderate' | 'hard'>('moderate')
   const [conditionNote, setConditionNote] = useState('')
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null)
+  const [isComposerOpen, setIsComposerOpen] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null)
   const [isSubmitting, startSubmitTransition] = useTransition()
   const [isDeleting, startDeleteTransition] = useTransition()
+  const composerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -96,6 +109,7 @@ export function CourseReviewsSection({
     }
 
     if (editingReviewId === ownReview.id) {
+      setIsComposerOpen(true)
       setContent(ownReview.content)
       setRiddenAt(ownReview.ridden_at ?? '')
       setRating(ownReview.rating)
@@ -103,6 +117,19 @@ export function CourseReviewsSection({
       setConditionNote(ownReview.condition_note ?? '')
     }
   }, [editingReviewId, ownReview])
+
+  useEffect(() => {
+    if (!isComposerOpen || !composerRef.current) {
+      return
+    }
+
+    window.requestAnimationFrame(() => {
+      composerRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    })
+  }, [isComposerOpen])
 
   const resetForm = () => {
     setContent('')
@@ -116,6 +143,7 @@ export function CourseReviewsSection({
     if (!ownReview) return
 
     setEditingReviewId(ownReview.id)
+    setIsComposerOpen(true)
     setSubmitError(null)
     setSubmitSuccess(null)
     setContent(ownReview.content)
@@ -127,9 +155,20 @@ export function CourseReviewsSection({
 
   const cancelEdit = () => {
     setEditingReviewId(null)
+    setIsComposerOpen(false)
     setSubmitError(null)
     setSubmitSuccess(null)
     resetForm()
+  }
+
+  const openCreateComposer = () => {
+    if (!user || hasOwnReview) return
+
+    setEditingReviewId(null)
+    setSubmitError(null)
+    setSubmitSuccess(null)
+    resetForm()
+    setIsComposerOpen(true)
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -181,6 +220,7 @@ export function CourseReviewsSection({
         }
 
         setSubmitSuccess(editingReviewId ? '후기가 수정되었습니다.' : '후기가 등록되었습니다.')
+        setIsComposerOpen(false)
         setEditingReviewId(null)
         resetForm()
         router.refresh()
@@ -210,6 +250,7 @@ export function CourseReviewsSection({
         }
 
         setEditingReviewId(null)
+        setIsComposerOpen(false)
         resetForm()
         setSubmitSuccess('후기가 삭제되었습니다.')
         router.refresh()
@@ -217,23 +258,30 @@ export function CourseReviewsSection({
     })
   }
 
+  const showComposer = Boolean(
+    user && isComposerOpen && (!hasOwnReview || editingReviewId === ownReview?.id),
+  )
+
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
+    <section className="space-y-4">
+      <div className="flex items-end justify-between gap-3">
         <div>
-          <h3 className="text-xs font-medium text-muted-foreground">후기</h3>
-          <p className="mt-1 text-sm text-foreground">
+          <h3 className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+            Feed Summary
+          </h3>
+          <p className="mt-1 text-sm font-semibold text-foreground">
             {stats?.review_count
               ? `${stats.review_count}개 후기 · 평균 ${stats.avg_rating?.toFixed(1) ?? '-'}점`
               : '아직 등록된 후기가 없습니다.'}
           </p>
         </div>
-        <div className="w-28">
+        <div className="relative w-32">
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <select
             aria-label="후기 정렬"
             value={sortOrder}
             onChange={(event) => setSortOrder(event.target.value as ReviewSortOrder)}
-            className="h-9 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-10 w-full appearance-none rounded-full border bg-background px-4 pr-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <option value="latest">최신순</option>
             <option value="oldest">오래된순</option>
@@ -241,84 +289,27 @@ export function CourseReviewsSection({
         </div>
       </div>
 
-      {sortedReviews.length > 0 ? (
-        <div className="space-y-3">
-          {sortedReviews.map((review) => (
-            <article key={review.id} className="rounded-xl border p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-1.5 text-sm font-medium">
-                    <span aria-hidden>{review.author_emoji ?? '🙂'}</span>
-                    <span>{review.author_name ?? '라이더'}</span>
-                  </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                    {formatDate(review.created_at) && <span>{formatDate(review.created_at)}</span>}
-                    {review.ridden_at && <span>라이딩 {formatDate(review.ridden_at)}</span>}
-                    {review.perceived_difficulty && (
-                      <span>
-                        {DIFFICULTY_OPTIONS.find((option) => option.value === review.perceived_difficulty)?.label}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <RatingStars rating={review.rating} />
-              </div>
-
-              <p className="mt-3 text-sm leading-relaxed">{review.content}</p>
-
-              {review.condition_note && (
-                <div className="mt-3 rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                  노면/위험구간 메모: {review.condition_note}
-                </div>
-              )}
-
-              {user?.id === review.user_id && (
-                <div className="mt-3 flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={startEditOwnReview}
-                  >
-                    <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                    수정
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDelete}
-                    disabled={isDeleting}
-                  >
-                    {isDeleting ? (
-                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                    )}
-                    삭제
-                  </Button>
-                </div>
-              )}
-            </article>
-          ))}
-        </div>
-      ) : (
-        <div className="rounded-xl border border-dashed bg-muted/30 px-4 py-5 text-center text-sm text-muted-foreground">
-          아직 등록된 후기가 없습니다.
+      {submitSuccess && !showComposer && (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {submitSuccess}
         </div>
       )}
 
-      <div className="rounded-xl border p-4">
-        <div className="flex items-center gap-2">
-          <MessageSquarePlus className="h-4 w-4 text-muted-foreground" />
-          <h4 className="text-sm font-semibold">후기 남기기</h4>
-        </div>
-
-        {!user ? (
-          <div className="mt-3 space-y-3">
-            <p className="text-sm text-muted-foreground">
-              로그인한 사용자만 후기를 작성할 수 있습니다. 지금은 후기 목록만 볼 수 있습니다.
-            </p>
+      {!user ? (
+        <div className="rounded-[24px] border bg-[linear-gradient(180deg,_rgba(248,244,236,0.95),_rgba(255,255,255,0.98))] p-4 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                <MessageSquarePlus className="h-3.5 w-3.5" />
+                Write a Review
+              </div>
+              <p className="mt-2 text-sm font-semibold text-foreground">
+                직접 탄 느낌을 남기려면 로그인이 필요합니다.
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                라이딩한 날짜, 체감 난이도, 노면 상태를 남기면 다음 라이더가 코스를 더 잘 판단할 수 있습니다.
+              </p>
+            </div>
             <Button
               onClick={async () => {
                 await supabase.auth.signInWithOAuth({
@@ -326,17 +317,96 @@ export function CourseReviewsSection({
                   options: { redirectTo: window.location.href },
                 })
               }}
-              className="w-full"
+              className="shrink-0 rounded-full"
             >
               <LogIn className="mr-2 h-4 w-4" />
-              Google로 로그인
+              로그인
             </Button>
           </div>
-        ) : hasOwnReview && editingReviewId !== ownReview?.id ? (
-          <p className="mt-3 text-sm text-muted-foreground">
-            이미 이 코스에 후기를 남겼습니다. 아래 목록에서 수정하거나 삭제할 수 있습니다.
-          </p>
-        ) : (
+        </div>
+      ) : hasOwnReview && !showComposer ? (
+        <div className="rounded-[24px] border bg-card p-4 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                <MessageSquarePlus className="h-3.5 w-3.5" />
+                My Review
+              </div>
+              <p className="mt-2 text-sm font-semibold text-foreground">
+                이미 이 코스에 후기를 남겼습니다.
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                {summarizeText(ownReview?.content ?? '', 96) ?? '내 후기를 수정하거나 삭제할 수 있습니다.'}
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={startEditOwnReview}
+                className="rounded-full"
+              >
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                수정
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="rounded-full"
+              >
+                {isDeleting ? (
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                )}
+                삭제
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : !hasOwnReview && !showComposer ? (
+        <div className="rounded-[24px] border bg-card p-4 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                <MessageSquarePlus className="h-3.5 w-3.5" />
+                Write a Review
+              </div>
+              <p className="mt-2 text-sm font-semibold text-foreground">
+                직접 탄 느낌을 한 줄로 남겨보세요.
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                후기 작성은 feed를 가리지 않는 composer 카드에서 진행됩니다.
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={openCreateComposer}
+              className="shrink-0 rounded-full"
+            >
+              <MessageSquarePlus className="mr-2 h-4 w-4" />
+              후기 남기기
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {showComposer && (
+        <div
+          ref={composerRef}
+          className="rounded-[24px] border bg-card p-4 shadow-sm"
+        >
+          <div className="flex items-center gap-2">
+            <MessageSquarePlus className="h-4 w-4 text-muted-foreground" />
+            <h4 className="text-sm font-semibold">
+              {editingReviewId ? '후기 수정' : '후기 남기기'}
+            </h4>
+          </div>
+
           <form onSubmit={handleSubmit} className="mt-4 space-y-4">
             <div>
               <Label>별점</Label>
@@ -428,11 +498,14 @@ export function CourseReviewsSection({
             )}
 
             <div className="flex gap-2">
-              {editingReviewId && (
-                <Button type="button" variant="outline" onClick={cancelEdit} className="flex-1">
-                  취소
-                </Button>
-              )}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={cancelEdit}
+                className="flex-1"
+              >
+                취소
+              </Button>
               <Button
                 type="submit"
                 disabled={isSubmitting || !content.trim()}
@@ -447,8 +520,110 @@ export function CourseReviewsSection({
               </Button>
             </div>
           </form>
-        )}
-      </div>
+        </div>
+      )}
+
+      {sortedReviews.length > 0 ? (
+        <div className="space-y-3">
+          {sortedReviews.map((review) => (
+            <article
+              key={review.id}
+              className="rounded-[26px] border bg-card/95 p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,_rgba(252,238,211,0.95),_rgba(244,213,160,0.85))] text-lg shadow-sm">
+                      <span aria-hidden>{review.author_emoji ?? '🙂'}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-foreground">
+                        {review.author_name ?? '라이더'}
+                      </div>
+                      {user?.id === review.user_id ? (
+                        <div className="mt-1 inline-flex rounded-full bg-black px-2 py-0.5 text-[10px] font-medium text-white">
+                          내 후기
+                        </div>
+                      ) : null}
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                        {formatDate(review.created_at) && (
+                          <MetaChip icon={<CalendarDays className="h-3 w-3" />}>
+                            {formatDate(review.created_at)}
+                          </MetaChip>
+                        )}
+                        {review.ridden_at && (
+                          <MetaChip>라이딩 {formatDate(review.ridden_at)}</MetaChip>
+                        )}
+                        {review.perceived_difficulty && (
+                          <MetaChip>
+                            {DIFFICULTY_OPTIONS.find((option) => option.value === review.perceived_difficulty)?.label}
+                          </MetaChip>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1">
+                  <div className="flex items-center gap-1">
+                    <RatingStars rating={review.rating} />
+                    <span className="text-xs font-semibold text-amber-700">
+                      {review.rating}.0
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <p className="mt-4 text-[15px] leading-7 text-foreground">
+                {review.content}
+              </p>
+
+              {review.condition_note && (
+                <div className="mt-4 rounded-2xl border border-amber-200/70 bg-amber-50/70 px-3 py-3 text-sm text-foreground/80">
+                  <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.12em] text-amber-800/80">
+                    <ShieldAlert className="h-3.5 w-3.5" />
+                    노면 / 위험구간 메모
+                  </div>
+                  <p className="mt-2 leading-6 text-foreground/80">
+                    {review.condition_note}
+                  </p>
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-[24px] border border-dashed bg-[linear-gradient(180deg,_rgba(249,246,239,0.8),_rgba(255,255,255,0.96))] px-5 py-8 text-center">
+          <p className="text-sm font-semibold text-foreground">
+            아직 첫 라이더 후기가 없습니다.
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            노면 상태, 체감 난이도, 쉬어가기 좋은 포인트를 남기면 다음 라이더에게 큰 도움이 됩니다.
+          </p>
+        </div>
+      )}
+
     </section>
   )
+}
+
+function MetaChip({
+  children,
+  icon,
+}: {
+  children: React.ReactNode
+  icon?: React.ReactNode
+}) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-[11px] text-muted-foreground">
+      {icon}
+      {children}
+    </span>
+  )
+}
+
+function summarizeText(value: string, maxLength: number) {
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  if (!normalized) return null
+  if (normalized.length <= maxLength) return normalized
+  return `${normalized.slice(0, maxLength - 1).trimEnd()}…`
 }

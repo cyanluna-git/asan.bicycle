@@ -24,6 +24,7 @@ interface SidebarProps {
   canEditSelectedCourse?: boolean
   reviews?: CourseReview[]
   reviewStats?: CourseReviewStats | null
+  onOpenReviews?: () => void
 }
 
 export function Sidebar({
@@ -39,6 +40,7 @@ export function Sidebar({
   canEditSelectedCourse = false,
   reviews,
   reviewStats,
+  onOpenReviews,
 }: SidebarProps) {
   return (
     <aside className="hidden md:flex flex-col w-[280px] border-r bg-background">
@@ -53,6 +55,7 @@ export function Sidebar({
             canEditCourse={canEditSelectedCourse}
             reviews={reviews ?? []}
             reviewStats={reviewStats ?? null}
+            onOpenReviews={onOpenReviews}
           />
         ) : (
           <>
