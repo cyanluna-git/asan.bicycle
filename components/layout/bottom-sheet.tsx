@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useState } from 'react'
 import { List } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -36,6 +36,7 @@ interface BottomSheetProps {
   canEditSelectedCourse?: boolean
   reviews?: CourseReview[]
   reviewStats?: CourseReviewStats | null
+  onOpenReviews?: () => void
 }
 
 export function BottomSheet({
@@ -51,10 +52,20 @@ export function BottomSheet({
   canEditSelectedCourse = false,
   reviews,
   reviewStats,
+  onOpenReviews,
 }: BottomSheetProps) {
+  const [open, setOpen] = useState(false)
+
+  const handleOpenReviews = () => {
+    setOpen(false)
+    window.setTimeout(() => {
+      onOpenReviews?.()
+    }, 0)
+  }
+
   return (
     <div className="md:hidden">
-      <Drawer>
+      <Drawer open={open} onOpenChange={setOpen}>
         <DrawerTrigger asChild>
           <Button
             className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 shadow-lg"
@@ -86,6 +97,7 @@ export function BottomSheet({
                 canEditCourse={canEditSelectedCourse}
                 reviews={reviews ?? []}
                 reviewStats={reviewStats ?? null}
+                onOpenReviews={handleOpenReviews}
               />
             ) : (
               <>

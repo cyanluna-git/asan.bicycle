@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { CourseReviewsSurface } from '@/components/courses/course-reviews-surface'
 import { Sidebar } from '@/components/layout/sidebar'
 import { BottomSheet } from '@/components/layout/bottom-sheet'
 import KakaoMap from '@/components/map/kakao-map'
 import { ElevationPanel } from '@/components/map/elevation-panel'
+import { Drawer, DrawerContent } from '@/components/ui/drawer'
 import { canEditCourse, isAdminUser } from '@/lib/admin'
 import { supabase } from '@/lib/supabase'
 import type {
@@ -47,6 +49,7 @@ export function ExploreShell({
 }: ExploreShellProps) {
   const [user, setUser] = useState<User | null>(null)
   const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null)
+  const [isReviewSurfaceOpen, setIsReviewSurfaceOpen] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -64,6 +67,7 @@ export function ExploreShell({
 
   useEffect(() => {
     setSelectedPoiId(null)
+    setIsReviewSurfaceOpen(false)
   }, [selectedCourseId])
 
   useEffect(() => {
@@ -95,6 +99,7 @@ export function ExploreShell({
         canEditSelectedCourse={canEditSelectedCourse}
         reviews={reviews}
         reviewStats={reviewStats}
+        onOpenReviews={() => setIsReviewSurfaceOpen(true)}
       />
       <main className="flex-1 flex flex-col min-h-0">
         <div className="relative flex-1 min-h-0">
@@ -118,7 +123,25 @@ export function ExploreShell({
             canEditSelectedCourse={canEditSelectedCourse}
             reviews={reviews}
             reviewStats={reviewStats}
+            onOpenReviews={() => setIsReviewSurfaceOpen(true)}
           />
+          {selectedCourse ? (
+            <Drawer
+              open={isReviewSurfaceOpen}
+              onOpenChange={setIsReviewSurfaceOpen}
+            >
+              <DrawerContent className="md:hidden data-[vaul-drawer-direction=bottom]:mt-0 data-[vaul-drawer-direction=bottom]:max-h-[100dvh] data-[vaul-drawer-direction=bottom]:rounded-none">
+                <CourseReviewsSurface
+                  courseId={selectedCourse.id}
+                  courseTitle={selectedCourse.title}
+                  reviews={reviews}
+                  stats={reviewStats}
+                  onClose={() => setIsReviewSurfaceOpen(false)}
+                  className="h-[100dvh]"
+                />
+              </DrawerContent>
+            </Drawer>
+          ) : null}
         </div>
         {selectedCourse && (
           <ElevationPanel
@@ -128,6 +151,17 @@ export function ExploreShell({
           />
         )}
       </main>
+      {selectedCourse && isReviewSurfaceOpen ? (
+        <aside className="hidden md:flex w-[360px] border-l bg-background">
+          <CourseReviewsSurface
+            courseId={selectedCourse.id}
+            courseTitle={selectedCourse.title}
+            reviews={reviews}
+            stats={reviewStats}
+            onClose={() => setIsReviewSurfaceOpen(false)}
+          />
+        </aside>
+      ) : null}
     </div>
   )
 }
