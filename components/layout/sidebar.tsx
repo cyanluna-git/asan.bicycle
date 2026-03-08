@@ -30,6 +30,7 @@ interface SidebarProps {
   user?: User | null
   onOpenReviews?: (triggerEl?: HTMLButtonElement | null) => void
   onOpenAlbum?: (triggerEl?: HTMLButtonElement | null) => void
+  onAlbumPhotoUploaded?: (photo: CourseAlbumPhoto) => void
 }
 
 export function Sidebar({
@@ -49,6 +50,7 @@ export function Sidebar({
   user,
   onOpenReviews,
   onOpenAlbum,
+  onAlbumPhotoUploaded,
 }: SidebarProps) {
   return (
     <aside className="hidden md:flex flex-col w-[280px] border-r bg-background">
@@ -70,6 +72,7 @@ export function Sidebar({
               albumTriggerId={selectedCourse ? `sidebar-album-trigger-${selectedCourse.id}` : undefined}
               onOpenReviews={onOpenReviews}
               onOpenAlbum={onOpenAlbum}
+              onAlbumPhotoUploaded={onAlbumPhotoUploaded}
             />
           </Suspense>
         ) : (

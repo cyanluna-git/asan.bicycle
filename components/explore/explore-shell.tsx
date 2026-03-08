@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CourseAlbumSurface } from '@/components/courses/course-album-surface'
 import { CourseReviewsSurface } from '@/components/courses/course-reviews-surface'
 import { Sidebar } from '@/components/layout/sidebar'
@@ -208,6 +208,14 @@ export function ExploreShell({
     [activeSurfaceKind, albumPhotos, selectedCourseId],
   )
 
+  const handleInlineAlbumPhotoUploaded = useCallback(
+    (photo: CourseAlbumPhoto) => {
+      setAlbumPreviewPhotos((prev) => [photo, ...prev].slice(0, 4))
+      setAlbumPhotos((prev) => [photo, ...prev])
+    },
+    [],
+  )
+
   const restoreFocusToSurfaceTrigger = () => {
     const triggerId = lastSurfaceTriggerIdRef.current
     if (!triggerId) {
@@ -288,6 +296,7 @@ export function ExploreShell({
         onOpenAlbum={(triggerEl) =>
           openSurface({ kind: 'album', source: 'sidebar', triggerEl })
         }
+        onAlbumPhotoUploaded={handleInlineAlbumPhotoUploaded}
       />
       <main className="flex-1 flex flex-col min-h-0">
         <div className="relative flex-1 min-h-0">
@@ -324,6 +333,7 @@ export function ExploreShell({
             onOpenAlbum={(triggerEl) =>
               openSurface({ kind: 'album', source: 'bottom-sheet', triggerEl })
             }
+            onAlbumPhotoUploaded={handleInlineAlbumPhotoUploaded}
           />
           {selectedCourse && surfaceSource === 'bottom-sheet' && activeSurfaceKind ? (
             <Drawer

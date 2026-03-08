@@ -42,6 +42,7 @@ interface BottomSheetProps {
   user?: User | null
   onOpenReviews?: (triggerEl?: HTMLButtonElement | null) => void
   onOpenAlbum?: (triggerEl?: HTMLButtonElement | null) => void
+  onAlbumPhotoUploaded?: (photo: CourseAlbumPhoto) => void
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -63,6 +64,7 @@ export function BottomSheet({
   user,
   onOpenReviews,
   onOpenAlbum,
+  onAlbumPhotoUploaded,
   open,
   onOpenChange,
 }: BottomSheetProps) {
@@ -137,6 +139,7 @@ export function BottomSheet({
                   albumTriggerId={selectedCourse ? `bottom-sheet-album-trigger-${selectedCourse.id}` : undefined}
                   onOpenReviews={handleOpenReviews}
                   onOpenAlbum={handleOpenAlbum}
+                  onAlbumPhotoUploaded={onAlbumPhotoUploaded}
                 />
               </Suspense>
             ) : (

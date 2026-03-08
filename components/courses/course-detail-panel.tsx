@@ -2,9 +2,9 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { ArrowRight, Camera, Download, LogIn, Pencil, Quote, Send, Star, X } from 'lucide-react'
+import { ArrowRight, Camera, Download, ImagePlus, Loader2, LogIn, Pencil, Quote, Send, Star, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { signInWithGoogle } from '@/lib/auth'
@@ -29,6 +29,7 @@ import {
   getReviewAuthorDisplay,
   shouldShowMoreButton,
 } from '@/lib/review-preview'
+import { uploadCourseAlbumPhoto } from '@/lib/course-album-upload'
 import { supabase } from '@/lib/supabase'
 import { getUploaderDisplayName } from '@/lib/user-display-name'
 import type {
@@ -56,6 +57,7 @@ interface CourseDetailPanelProps {
   reviewTriggerId?: string
   onOpenAlbum?: (triggerEl?: HTMLButtonElement | null) => void
   albumTriggerId?: string
+  onAlbumPhotoUploaded?: (photo: CourseAlbumPhoto) => void
 }
 
 export function CourseDetailPanel({
@@ -73,6 +75,7 @@ export function CourseDetailPanel({
   reviewTriggerId,
   onOpenAlbum,
   albumTriggerId,
+  onAlbumPhotoUploaded,
 }: CourseDetailPanelProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -327,6 +330,15 @@ export function CourseDetailPanel({
           <p className="mt-3 text-sm text-muted-foreground">
             아직 등록된 사진이 없습니다.
           </p>
+        )}
+
+        {!user ? (
+          <InlineAlbumLoginPrompt />
+        ) : (
+          <InlineAlbumUploadButton
+            courseId={course.id}
+            onUploaded={onAlbumPhotoUploaded}
+          />
         )}
       </div>
 
@@ -679,6 +691,113 @@ function InlineReviewForm({
       </div>
       {error && (
         <p className="text-xs text-destructive">{error}</p>
+      )}
+    </div>
+  )
+}
+
+function InlineAlbumLoginPrompt() {
+  return (
+    <div className="mt-3 flex items-center justify-between rounded-2xl bg-muted/45 px-3 py-3">
+      <span className="text-sm text-muted-foreground">
+        사진을 올리려면 로그인하세요
+      </span>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="shrink-0 rounded-full"
+        onClick={async () => {
+          await signInWithGoogle()
+        }}
+      >
+        <LogIn className="mr-1.5 h-3.5 w-3.5" />
+        로그인
+      </Button>
+    </div>
+  )
+}
+
+function InlineAlbumUploadButton({
+  courseId,
+  onUploaded,
+}: {
+  courseId: string
+  onUploaded?: (photo: CourseAlbumPhoto) => void
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleFileChange = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0]
+      if (!file) return
+
+      // Reset input so the same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = ''
+
+      setIsUploading(true)
+      setError(null)
+
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (!session?.access_token || !session.user) {
+          setError('로그인이 필요합니다.')
+          return
+        }
+
+        const photo = await uploadCourseAlbumPhoto({
+          courseId,
+          accessToken: session.access_token,
+          userId: session.user.id,
+          file,
+        })
+
+        onUploaded?.(photo)
+      } catch (uploadError) {
+        setError(
+          uploadError instanceof Error
+            ? uploadError.message
+            : '사진 업로드에 실패했습니다.',
+        )
+      } finally {
+        setIsUploading(false)
+      }
+    },
+    [courseId, onUploaded],
+  )
+
+  return (
+    <div className="mt-3">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        className="sr-only"
+        disabled={isUploading}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="w-full rounded-full"
+        disabled={isUploading}
+        onClick={() => fileInputRef.current?.click()}
+      >
+        {isUploading ? (
+          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <ImagePlus className="mr-1.5 h-3.5 w-3.5" />
+        )}
+        사진 추가
+      </Button>
+      {error && (
+        <p className="mt-1.5 text-xs text-destructive">{error}</p>
       )}
     </div>
   )
