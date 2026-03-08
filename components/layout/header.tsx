@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, Menu, X, LogOut, Settings2, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProfileEditor } from "@/components/profile/profile-editor";
@@ -12,14 +13,18 @@ import { getUploaderDisplayName } from "@/lib/user-display-name";
 import type { User } from "@supabase/supabase-js";
 
 const navLinks = [
-  { label: "코스 찾기", href: "/explore", active: false },
+  { label: "코스 찾기", href: "/courses", active: false },
   { label: "코스 올리기", href: "/upload", active: false },
 ] as const;
 
 export function Header() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [searchValue, setSearchValue] = useState("");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -31,9 +36,25 @@ export function Header() {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (pathname === "/courses") {
+      setSearchValue(searchParams.get("q") ?? "");
+      return;
+    }
+
+    setSearchValue("");
+  }, [pathname, searchParams]);
+
   const visibleLinks = user
     ? [...navLinks, { label: "내 코스", href: "/my-courses", active: false }]
     : navLinks;
+
+  const submitSearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalized = searchValue.trim();
+    router.push(normalized ? `/courses?q=${encodeURIComponent(normalized)}` : "/courses");
+    setMobileMenuOpen(false);
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 flex h-16 items-center border-b bg-background px-4 md:px-6">
@@ -65,14 +86,16 @@ export function Header() {
       <div className="flex-1" />
 
       {/* Search (desktop) */}
-      <div className="relative hidden items-center md:flex">
+      <form onSubmit={submitSearch} className="relative hidden items-center md:flex">
         <Search className="absolute left-2.5 size-4 text-muted-foreground" />
         <input
-          type="text"
+          type="search"
+          value={searchValue}
+          onChange={(event) => setSearchValue(event.target.value)}
           placeholder="코스 검색..."
           className="h-9 w-[200px] rounded-md border bg-background pl-8 pr-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring lg:w-[280px]"
         />
-      </div>
+      </form>
 
       {/* User actions (desktop) */}
       {user ? (
@@ -135,14 +158,16 @@ export function Header() {
       {/* Mobile dropdown nav */}
       {mobileMenuOpen && (
         <div className="absolute left-0 right-0 top-16 border-b bg-background p-4 md:hidden">
-          <div className="relative mb-3">
+          <form onSubmit={submitSearch} className="relative mb-3">
             <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
             <input
-              type="text"
+              type="search"
+              value={searchValue}
+              onChange={(event) => setSearchValue(event.target.value)}
               placeholder="코스 검색..."
               className="h-9 w-full rounded-md border bg-background pl-8 pr-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
             />
-          </div>
+          </form>
           <nav className="flex flex-col gap-1">
             {visibleLinks.map((link) => (
               <Link

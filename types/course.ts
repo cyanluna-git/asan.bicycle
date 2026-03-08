@@ -15,6 +15,21 @@ export type CourseListItem = Pick<
   uploader_emoji?: string | null
 }
 
+export type RoutePreviewPoint = {
+  lat: number
+  lng: number
+}
+
+export type CourseBrowseItem = CourseListItem & {
+  review_count: number
+  avg_rating: number | null
+  latest_reviewed_at: string | null
+  review_preview: string | null
+  review_author_name: string | null
+  review_author_emoji: string | null
+  route_preview: RoutePreviewPoint[]
+}
+
 export type CourseDetail = Pick<
   Tables<'courses'>,
   | 'id'

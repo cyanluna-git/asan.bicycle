@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { CourseCard } from '@/components/courses/course-card'
 import type { CourseListItem } from '@/types/course'
 
@@ -40,6 +40,7 @@ export function CourseListClient({
   hasActiveFilters = false,
 }: CourseListClientProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
   const selectedId = searchParams.get('courseId')
 
@@ -51,7 +52,7 @@ export function CourseListClient({
       params.set('courseId', id)
     }
     const qs = params.toString()
-    router.push(qs ? `?${qs}` : '/', { scroll: false })
+    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
   }
 
   if (courses.length === 0) {

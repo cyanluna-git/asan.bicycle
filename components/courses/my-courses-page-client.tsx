@@ -193,7 +193,7 @@ export function MyCoursesPageClient() {
 
               <div className="mt-5 flex gap-2">
                 <Button asChild variant="outline" className="flex-1">
-                  <Link href={`/explore?courseId=${course.id}`}>상세 보기</Link>
+                  <Link href={`/explore?courseId=${course.id}&returnTo=${encodeURIComponent('/my-courses')}`}>상세 보기</Link>
                 </Button>
                 <Button asChild className="flex-1">
                   <Link href={`/courses/${course.id}/edit`}>

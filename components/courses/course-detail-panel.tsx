@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight, Camera, Download, Pencil, Quote, Star, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -58,14 +58,22 @@ export function CourseDetailPanel({
   albumTriggerId,
 }: CourseDetailPanelProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
   const [activeCategory, setActiveCategory] = useState<PoiCategoryFilter>('all')
 
   const handleClose = () => {
+    const returnTo = searchParams.get('returnTo')
+    if (returnTo) {
+      router.replace(returnTo, { scroll: false })
+      return
+    }
+
     const params = new URLSearchParams(searchParams.toString())
     params.delete('courseId')
+    params.delete('returnTo')
     const qs = params.toString()
-    router.replace(qs ? `?${qs}` : '/', { scroll: false })
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
   }
 
   const durations = [

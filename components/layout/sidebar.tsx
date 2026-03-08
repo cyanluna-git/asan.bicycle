@@ -48,20 +48,22 @@ export function Sidebar({
     <aside className="hidden md:flex flex-col w-[280px] border-r bg-background">
       <div className="overflow-y-auto h-full p-4">
         {selectedCourse ? (
-          <CourseDetailPanel
-            course={selectedCourse}
-            pois={pois ?? []}
-            selectedPoiId={selectedPoiId}
-            onSelectPoi={onSelectPoi}
-            uphillSegments={uphillSegments ?? []}
-            canEditCourse={canEditSelectedCourse}
-            reviews={reviews ?? []}
-            reviewStats={reviewStats ?? null}
-            reviewTriggerId={selectedCourse ? `sidebar-review-trigger-${selectedCourse.id}` : undefined}
-            albumTriggerId={selectedCourse ? `sidebar-album-trigger-${selectedCourse.id}` : undefined}
-            onOpenReviews={onOpenReviews}
-            onOpenAlbum={onOpenAlbum}
-          />
+          <Suspense fallback={<CourseDetailSkeleton />}>
+            <CourseDetailPanel
+              course={selectedCourse}
+              pois={pois ?? []}
+              selectedPoiId={selectedPoiId}
+              onSelectPoi={onSelectPoi}
+              uphillSegments={uphillSegments ?? []}
+              canEditCourse={canEditSelectedCourse}
+              reviews={reviews ?? []}
+              reviewStats={reviewStats ?? null}
+              reviewTriggerId={selectedCourse ? `sidebar-review-trigger-${selectedCourse.id}` : undefined}
+              albumTriggerId={selectedCourse ? `sidebar-album-trigger-${selectedCourse.id}` : undefined}
+              onOpenReviews={onOpenReviews}
+              onOpenAlbum={onOpenAlbum}
+            />
+          </Suspense>
         ) : (
           <>
             {/* Filter section */}
@@ -107,6 +109,20 @@ function CourseListSkeleton() {
       {Array.from({ length: 3 }).map((_, i) => (
         <div key={i} className="h-[72px] rounded-lg border bg-muted/50 animate-pulse" />
       ))}
+    </div>
+  )
+}
+
+function CourseDetailSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="h-8 w-20 rounded-full bg-muted/50 animate-pulse" />
+      <div className="h-10 rounded-xl bg-muted/50 animate-pulse" />
+      <div className="grid grid-cols-2 gap-2">
+        <div className="h-20 rounded-2xl bg-muted/50 animate-pulse" />
+        <div className="h-20 rounded-2xl bg-muted/50 animate-pulse" />
+      </div>
+      <div className="h-32 rounded-3xl bg-muted/50 animate-pulse" />
     </div>
   )
 }

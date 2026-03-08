@@ -138,7 +138,7 @@ export default function LandingPage() {
 
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
-                href="/explore"
+                href="/courses"
                 className="inline-flex items-center gap-2 rounded-full bg-[#FFD84D] px-6 py-3 text-sm font-semibold text-[#102319] transition hover:bg-[#ffe277]"
               >
                 코스 바로 보기

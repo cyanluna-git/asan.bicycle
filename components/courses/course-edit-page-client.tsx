@@ -551,7 +551,7 @@ export function CourseEditPageClient({
         )
       }
 
-      router.push(`/explore?courseId=${course.id}`)
+      router.push(`/courses?focus=${course.id}`)
       router.refresh()
     } catch (error) {
       setSubmitError(
@@ -581,7 +581,7 @@ export function CourseEditPageClient({
           {loadError ?? '존재하지 않거나 접근할 수 없는 코스입니다.'}
         </p>
         <Button asChild variant="outline">
-          <Link href="/explore">코스 목록으로 돌아가기</Link>
+          <Link href="/courses">코스 목록으로 돌아가기</Link>
         </Button>
       </div>
     )
@@ -616,7 +616,7 @@ export function CourseEditPageClient({
         </p>
         <div className="flex gap-2">
           <Button asChild variant="outline">
-            <Link href={`/explore?courseId=${course.id}`}>코스 상세로 이동</Link>
+            <Link href={`/explore?courseId=${course.id}&returnTo=${encodeURIComponent(`/courses?focus=${course.id}`)}`}>코스 상세로 이동</Link>
           </Button>
           <Button asChild>
             <Link href="/my-courses">내 코스</Link>
@@ -636,7 +636,7 @@ export function CourseEditPageClient({
           </p>
         </div>
         <Button asChild variant="outline">
-          <Link href={`/explore?courseId=${course.id}`}>상세 보기</Link>
+          <Link href={`/explore?courseId=${course.id}&returnTo=${encodeURIComponent(`/courses?focus=${course.id}`)}`}>상세 보기</Link>
         </Button>
       </div>
 

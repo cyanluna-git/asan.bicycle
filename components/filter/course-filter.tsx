@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,6 @@ import {
   type DistancePreset,
   DIFFICULTY_OPTIONS,
   DISTANCE_PRESETS,
-  buildFilterQuery,
   countActiveFilters,
   defaultFilterState,
   parseFilterParams,
@@ -26,6 +25,7 @@ interface CourseFilterProps {
 
 export function CourseFilter({ startPoints, themes }: CourseFilterProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
 
   const [state, setState] = useState<CourseFilterState>(() =>
@@ -43,10 +43,24 @@ export function CourseFilter({ startPoints, themes }: CourseFilterProps) {
 
   const applyFilters = useCallback(
     (nextState: CourseFilterState) => {
-      const qs = buildFilterQuery(nextState)
-      router.replace(qs ? `?${qs}` : '/', { scroll: false })
+      const params = new URLSearchParams(searchParams.toString())
+
+      if (nextState.startPoint) params.set('startPoint', nextState.startPoint)
+      else params.delete('startPoint')
+
+      if (nextState.difficulty.length > 0) params.set('difficulty', nextState.difficulty.join(','))
+      else params.delete('difficulty')
+
+      if (nextState.distance) params.set('distance', nextState.distance)
+      else params.delete('distance')
+
+      if (nextState.themes.length > 0) params.set('theme', nextState.themes.join(','))
+      else params.delete('theme')
+
+      const qs = params.toString()
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
     },
-    [router],
+    [pathname, router, searchParams],
   )
 
   const handleApply = () => applyFilters(state)

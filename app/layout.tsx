@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ProfileGate } from "@/components/profile/profile-gate";
@@ -29,11 +30,19 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Header />
+        <Suspense fallback={<HeaderSkeleton />}>
+          <Header />
+        </Suspense>
         <ProfileGate>
           <div className="pt-16">{children}</div>
         </ProfileGate>
       </body>
     </html>
+  );
+}
+
+function HeaderSkeleton() {
+  return (
+    <div className="fixed top-0 left-0 right-0 z-50 h-16 border-b bg-background" />
   );
 }
