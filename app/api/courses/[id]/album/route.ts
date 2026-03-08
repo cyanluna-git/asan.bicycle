@@ -4,7 +4,10 @@ import { createAnonServerClient, createServiceRoleClient } from '@/lib/supabase-
 import {
   COURSE_ALBUM_BUCKET,
   extractCourseAlbumPhotoPath,
+  MAX_COURSE_ALBUM_CAPTION_LENGTH,
+  MAX_COURSE_ALBUM_IMAGE_DIMENSION,
   MAX_COURSE_ALBUM_PHOTOS_PER_USER_PER_COURSE,
+  MIN_COURSE_ALBUM_IMAGE_DIMENSION,
   normalizeCourseAlbumFetchLimit,
   type AlbumPhotoLocation,
 } from '@/lib/course-album'
@@ -145,6 +148,26 @@ export async function POST(request: Request, context: RouteContext) {
     return jsonError('업로드된 사진 파일을 찾을 수 없습니다. 먼저 사진을 업로드해주세요.', 400)
   }
 
+  const caption = body.caption?.trim() || null
+  if (caption && caption.length > MAX_COURSE_ALBUM_CAPTION_LENGTH) {
+    return jsonError(`사진 설명은 최대 ${MAX_COURSE_ALBUM_CAPTION_LENGTH}자까지 입력할 수 있습니다.`, 400)
+  }
+
+  const width = body.width
+  const height = body.height
+  if (
+    typeof width !== 'number' || typeof height !== 'number'
+    || !Number.isFinite(width) || !Number.isFinite(height)
+    || !Number.isInteger(width) || !Number.isInteger(height)
+    || width < MIN_COURSE_ALBUM_IMAGE_DIMENSION || width > MAX_COURSE_ALBUM_IMAGE_DIMENSION
+    || height < MIN_COURSE_ALBUM_IMAGE_DIMENSION || height > MAX_COURSE_ALBUM_IMAGE_DIMENSION
+  ) {
+    return jsonError(
+      `이미지 크기는 ${MIN_COURSE_ALBUM_IMAGE_DIMENSION}~${MAX_COURSE_ALBUM_IMAGE_DIMENSION}px 범위의 정수여야 합니다.`,
+      400,
+    )
+  }
+
   const insertResponse = await writeClient
     .from('course_album_photos')
     .insert({
@@ -154,9 +177,9 @@ export async function POST(request: Request, context: RouteContext) {
       public_url: publicUrl,
       location: location ? `SRID=4326;POINT(${location.lng} ${location.lat})` : null,
       taken_at: parseTakenAt(body.takenAt),
-      caption: body.caption?.trim() || null,
-      width: typeof body.width === 'number' && Number.isFinite(body.width) ? body.width : null,
-      height: typeof body.height === 'number' && Number.isFinite(body.height) ? body.height : null,
+      caption,
+      width,
+      height,
       source_exif_json: body.sourceExifJson ?? null,
     })
     .select('id, course_id, user_id, storage_path, public_url, taken_at, caption, width, height, source_exif_json, created_at, updated_at')

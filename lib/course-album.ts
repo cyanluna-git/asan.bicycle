@@ -4,6 +4,8 @@ import type { Json } from '@/types/database'
 export const COURSE_ALBUM_BUCKET = 'course-album-photos'
 export const MAX_COURSE_ALBUM_UPLOAD_BYTES = 20 * 1024 * 1024
 export const MAX_COURSE_ALBUM_CAPTION_LENGTH = 180
+export const MAX_COURSE_ALBUM_IMAGE_DIMENSION = 2048
+export const MIN_COURSE_ALBUM_IMAGE_DIMENSION = 1
 export const MAX_COURSE_ALBUM_PHOTOS_PER_USER_PER_COURSE = 30
 export const DEFAULT_COURSE_ALBUM_FETCH_LIMIT = 60
 export const MAX_COURSE_ALBUM_FETCH_LIMIT = 120

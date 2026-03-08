@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import {
   buildCourseAlbumPhotoPath,
   COURSE_ALBUM_BUCKET,
+  MAX_COURSE_ALBUM_IMAGE_DIMENSION,
   MAX_COURSE_ALBUM_UPLOAD_BYTES,
   normalizeAlbumCaption,
   toAlbumExifJson,
@@ -13,7 +14,6 @@ import {
 import type { Json } from '@/types/database'
 import type { CourseAlbumPhoto } from '@/types/course'
 
-const MAX_ALBUM_IMAGE_DIMENSION = 2048
 const WEBP_QUALITY = 0.82
 
 type ExtractedAlbumExif = {
@@ -99,7 +99,7 @@ export async function extractCourseAlbumExif(file: File): Promise<ExtractedAlbum
 
 export async function convertImageFileToWebp(file: File): Promise<PreparedAlbumImage> {
   const image = await loadImageFromFile(file)
-  const scale = Math.min(1, MAX_ALBUM_IMAGE_DIMENSION / Math.max(image.naturalWidth, image.naturalHeight))
+  const scale = Math.min(1, MAX_COURSE_ALBUM_IMAGE_DIMENSION / Math.max(image.naturalWidth, image.naturalHeight))
   const targetWidth = Math.max(1, Math.round(image.naturalWidth * scale))
   const targetHeight = Math.max(1, Math.round(image.naturalHeight * scale))
   const canvas = document.createElement('canvas')

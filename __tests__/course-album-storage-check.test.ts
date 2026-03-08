@@ -134,6 +134,8 @@ function validBody(overrides: Record<string, unknown> = {}) {
     publicUrl: makePublicUrl(storagePath),
     lat: 36.78,
     lng: 127.0,
+    width: 1024,
+    height: 768,
     ...overrides,
   }
 }
@@ -184,8 +186,8 @@ function setDefaults() {
       public_url: validBody().publicUrl,
       taken_at: null,
       caption: null,
-      width: null,
-      height: null,
+      width: 1024,
+      height: 768,
       source_exif_json: null,
       created_at: '2026-03-08T00:00:00Z',
       updated_at: '2026-03-08T00:00:00Z',
