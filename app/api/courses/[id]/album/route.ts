@@ -110,6 +110,11 @@ export async function POST(request: Request, context: RouteContext) {
   const location: AlbumPhotoLocation | null = isValidLocation(body.lat, body.lng)
     ? { lat: body.lat as number, lng: body.lng as number }
     : null
+
+  if (!location) {
+    return jsonError('GPS 위치 메타데이터가 있는 사진만 업로드할 수 있습니다.', 400)
+  }
+
   const existingCountResponse = await writeClient
     .from('course_album_photos')
     .select('id', { count: 'exact', head: true })

@@ -7,7 +7,6 @@ import {
   COURSE_ALBUM_BUCKET,
   MAX_COURSE_ALBUM_UPLOAD_BYTES,
   normalizeAlbumCaption,
-  resolveAlbumPhotoLocation,
   toAlbumExifJson,
   type AlbumPhotoLocation,
 } from '@/lib/course-album'
@@ -35,7 +34,6 @@ type UploadCourseAlbumPhotoParams = {
   userId: string
   file: File
   caption?: string | null
-  manualLocation?: AlbumPhotoLocation | null
 }
 
 function normalizeExifDate(value: unknown) {
@@ -149,7 +147,6 @@ export async function uploadCourseAlbumPhoto({
   userId,
   file,
   caption,
-  manualLocation,
 }: UploadCourseAlbumPhotoParams): Promise<CourseAlbumPhoto> {
   if (file.size > MAX_COURSE_ALBUM_UPLOAD_BYTES) {
     throw new Error('앨범 사진은 20MB 이하 파일만 업로드할 수 있습니다.')
@@ -160,13 +157,8 @@ export async function uploadCourseAlbumPhoto({
     extractCourseAlbumExif(file),
   ])
 
-  const resolvedLocation = resolveAlbumPhotoLocation(
-    exifMetadata.location,
-    manualLocation,
-  )
-
-  if (!resolvedLocation) {
-    throw new Error('사진의 위치 정보가 없습니다. 지도 위치를 직접 지정해주세요.')
+  if (!exifMetadata.location) {
+    throw new Error('GPS 위치 메타데이터가 있는 사진만 업로드할 수 있습니다.')
   }
 
   const storagePath = buildCourseAlbumPhotoPath({
@@ -202,8 +194,8 @@ export async function uploadCourseAlbumPhoto({
       body: JSON.stringify({
         storagePath,
         publicUrl,
-        lat: resolvedLocation.lat,
-        lng: resolvedLocation.lng,
+        lat: exifMetadata.location.lat,
+        lng: exifMetadata.location.lng,
         takenAt: exifMetadata.takenAt,
         caption: normalizeAlbumCaption(caption),
         width: preparedFile.width,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Loader2, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MAX_COURSE_ALBUM_CAPTION_LENGTH, MAX_COURSE_ALBUM_UPLOAD_BYTES } from '@/lib/course-album'
@@ -19,22 +19,9 @@ export function CourseAlbumUploadForm({
 }: CourseAlbumUploadFormProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [caption, setCaption] = useState('')
-  const [manualLat, setManualLat] = useState('')
-  const [manualLng, setManualLng] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
-
-  const manualLocation = useMemo(() => {
-    const lat = Number(manualLat)
-    const lng = Number(manualLng)
-
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      return null
-    }
-
-    return { lat, lng }
-  }, [manualLat, manualLng])
 
   const handleSubmit = async () => {
     if (!selectedFile) {
@@ -62,13 +49,10 @@ export function CourseAlbumUploadForm({
         userId: session.user.id,
         file: selectedFile,
         caption,
-        manualLocation,
       })
 
       setSelectedFile(null)
       setCaption('')
-      setManualLat('')
-      setManualLng('')
       setSuccessMessage('앨범 사진이 업로드되었습니다.')
       onUploaded?.(photo)
     } catch (submitError) {
@@ -87,8 +71,8 @@ export function CourseAlbumUploadForm({
         <div>
           <h3 className="text-sm font-semibold text-foreground">라이드 사진 업로드</h3>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            사진의 GPS 메타를 먼저 읽고, 업로드 전 WebP로 변환해 저장합니다.
-            위치 메타가 없으면 아래 좌표를 직접 입력해주세요.
+            사진의 GPS 메타를 읽고, 업로드 전 WebP로 변환해 저장합니다.
+            위치 메타가 없는 사진은 업로드할 수 없습니다.
           </p>
         </div>
       </div>
@@ -127,35 +111,6 @@ export function CourseAlbumUploadForm({
           <p className="text-xs text-muted-foreground">
             최대 {(MAX_COURSE_ALBUM_UPLOAD_BYTES / (1024 * 1024)).toFixed(0)}MB 이미지, 캡션 {MAX_COURSE_ALBUM_CAPTION_LENGTH}자
           </p>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor={`course-album-lat-${courseId}`}>
-              수동 위도
-            </label>
-            <input
-              id={`course-album-lat-${courseId}`}
-              inputMode="decimal"
-              value={manualLat}
-              onChange={(event) => setManualLat(event.target.value)}
-              placeholder="36.7797"
-              className="h-10 w-full rounded-2xl border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor={`course-album-lng-${courseId}`}>
-              수동 경도
-            </label>
-            <input
-              id={`course-album-lng-${courseId}`}
-              inputMode="decimal"
-              value={manualLng}
-              onChange={(event) => setManualLng(event.target.value)}
-              placeholder="127.004"
-              className="h-10 w-full rounded-2xl border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
         </div>
 
         {error ? (

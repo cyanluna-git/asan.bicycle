@@ -71,21 +71,6 @@ export function isValidAlbumPhotoLocation(location: unknown): location is AlbumP
   )
 }
 
-export function resolveAlbumPhotoLocation(
-  exifLocation: AlbumPhotoLocation | null | undefined,
-  manualLocation: AlbumPhotoLocation | null | undefined,
-) {
-  if (isValidAlbumPhotoLocation(exifLocation)) {
-    return exifLocation
-  }
-
-  if (isValidAlbumPhotoLocation(manualLocation)) {
-    return manualLocation
-  }
-
-  return null
-}
-
 export function normalizeAlbumCaption(value: string | null | undefined) {
   const normalized = value?.trim() ?? ''
   return normalized || null

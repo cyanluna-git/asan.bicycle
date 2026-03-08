@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { signInWithGoogle } from '@/lib/auth'
 import { getReviewEmptyStateCopy, type ReviewSurfaceViewerState } from '@/lib/course-reviews-surface-ui'
 import { supabase } from '@/lib/supabase'
 import { sortCourseReviews, type ReviewSortOrder } from '@/lib/course-reviews-ui'
@@ -318,10 +319,7 @@ export function CourseReviewsSection({
             </div>
             <Button
               onClick={async () => {
-                await supabase.auth.signInWithOAuth({
-                  provider: 'google',
-                  options: { redirectTo: window.location.href },
-                })
+                await signInWithGoogle()
               }}
               className="shrink-0 rounded-full"
             >

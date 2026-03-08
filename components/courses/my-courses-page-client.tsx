@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Loader2, LogIn, MapPinned, Pencil } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { signInWithGoogle } from '@/lib/auth'
 import { difficultyLabel, difficultyVariant } from '@/lib/difficulty'
 import { supabase } from '@/lib/supabase'
 import type { CourseListItem } from '@/types/course'
@@ -115,10 +116,7 @@ export function MyCoursesPageClient() {
         </p>
         <Button
           onClick={async () => {
-            await supabase.auth.signInWithOAuth({
-              provider: 'google',
-              options: { redirectTo: window.location.href },
-            })
+            await signInWithGoogle()
           }}
         >
           <LogIn className="mr-2 h-4 w-4" />

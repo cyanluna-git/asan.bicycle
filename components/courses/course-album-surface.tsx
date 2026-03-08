@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { CalendarDays, Camera, ImagePlus, Loader2, LogIn, MapPinned, RefreshCcw, Trash2, X } from 'lucide-react'
 import { CourseAlbumUploadForm } from '@/components/courses/course-album-upload-form'
 import { Button } from '@/components/ui/button'
+import { signInWithGoogle } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import type { CourseAlbumPhoto } from '@/types/course'
@@ -165,10 +166,7 @@ export function CourseAlbumSurface({
                 </div>
                 <Button
                   onClick={async () => {
-                    await supabase.auth.signInWithOAuth({
-                      provider: 'google',
-                      options: { redirectTo: window.location.href },
-                    })
+                    await signInWithGoogle()
                   }}
                   className="shrink-0 rounded-full"
                 >

@@ -5,7 +5,6 @@ import {
   extractCourseAlbumPhotoPath,
   MAX_COURSE_ALBUM_FETCH_LIMIT,
   normalizeCourseAlbumFetchLimit,
-  resolveAlbumPhotoLocation,
   sanitizeAlbumPhotoBaseName,
   toAlbumExifJson,
 } from '@/lib/course-album'
@@ -32,22 +31,6 @@ describe('course album helpers', () => {
         'https://example.supabase.co/storage/v1/object/public/course-album-photos/user-1/course-1/test.webp',
       ),
     ).toBe('user-1/course-1/test.webp')
-  })
-
-  it('prefers exif location and falls back to manual location', () => {
-    expect(
-      resolveAlbumPhotoLocation(
-        { lat: 36.7, lng: 127.0 },
-        { lat: 35.0, lng: 128.0 },
-      ),
-    ).toEqual({ lat: 36.7, lng: 127.0 })
-
-    expect(
-      resolveAlbumPhotoLocation(
-        null,
-        { lat: 35.0, lng: 128.0 },
-      ),
-    ).toEqual({ lat: 35.0, lng: 128.0 })
   })
 
   it('serializes compact exif snapshots', () => {

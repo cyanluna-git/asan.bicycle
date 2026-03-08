@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, Loader2, Lock, LogIn, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { signInWithGoogle } from '@/lib/auth'
 import { CourseMetadataForm } from '@/components/upload/course-metadata-form'
 import { CourseRoutePreviewMap } from '@/components/upload/course-route-preview-map'
 import { UphillEditor } from '@/components/upload/uphill-editor'
@@ -596,10 +597,7 @@ export function CourseEditPageClient({
         </p>
         <Button
           onClick={async () => {
-            await supabase.auth.signInWithOAuth({
-              provider: 'google',
-              options: { redirectTo: window.location.href },
-            })
+            await signInWithGoogle()
           }}
         >
           Google로 로그인

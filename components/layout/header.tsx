@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Search, Menu, X, LogOut, Settings2, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProfileEditor } from "@/components/profile/profile-editor";
+import { signInWithGoogle } from "@/lib/auth";
 import { resolveProfileEmoji } from "@/lib/profile";
 import { supabase } from "@/lib/supabase";
 import { getUploaderDisplayName } from "@/lib/user-display-name";
@@ -111,10 +112,7 @@ export function Header() {
         <div className="hidden items-center gap-2 ml-3 md:flex">
           <Button
             onClick={async () => {
-              await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: { redirectTo: window.location.href },
-              })
+              await signInWithGoogle()
             }}
           >
             <LogIn className="mr-2 h-4 w-4" />
@@ -197,10 +195,7 @@ export function Header() {
               <Button
                 className="w-full"
                 onClick={async () => {
-                  await supabase.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: { redirectTo: window.location.href },
-                  })
+                  await signInWithGoogle()
                 }}
               >
                 <LogIn className="mr-2 h-4 w-4" />
