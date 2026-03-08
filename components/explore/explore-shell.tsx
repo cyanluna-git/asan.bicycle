@@ -9,6 +9,7 @@ import KakaoMap from '@/components/map/kakao-map'
 import { ElevationPanel } from '@/components/map/elevation-panel'
 import { Drawer, DrawerContent } from '@/components/ui/drawer'
 import { canEditCourse, isAdminUser } from '@/lib/admin'
+import { filterSafeAlbumPhotos } from '@/lib/course-album'
 import {
   getReviewSurfaceViewerState,
   shouldRestoreCourseSheet,
@@ -170,6 +171,11 @@ export function ExploreShell({
     [reviews, user],
   )
 
+  const safeAlbumPhotos = useMemo(
+    () => filterSafeAlbumPhotos({ activeSurfaceKind, albumPhotos, selectedCourseId }),
+    [activeSurfaceKind, albumPhotos, selectedCourseId],
+  )
+
   const restoreFocusToSurfaceTrigger = () => {
     const triggerId = lastSurfaceTriggerIdRef.current
     if (!triggerId) {
@@ -257,7 +263,7 @@ export function ExploreShell({
             pois={pois}
             selectedPoiId={selectedPoiId}
             onSelectPoi={setSelectedPoiId}
-            albumPhotos={activeSurfaceKind === 'album' ? albumPhotos : []}
+            albumPhotos={safeAlbumPhotos}
             selectedAlbumPhotoId={selectedAlbumPhotoId}
             onSelectAlbumPhoto={setSelectedAlbumPhotoId}
           />
@@ -314,7 +320,7 @@ export function ExploreShell({
                     isLoggedIn={Boolean(user)}
                     currentUserId={user?.id ?? null}
                     isAdmin={isAdminUser(user)}
-                    photos={albumPhotos}
+                    photos={safeAlbumPhotos}
                     isLoading={albumLoading}
                     error={albumError}
                     selectedPhotoId={selectedAlbumPhotoId}
@@ -362,7 +368,7 @@ export function ExploreShell({
               isLoggedIn={Boolean(user)}
               currentUserId={user?.id ?? null}
               isAdmin={isAdminUser(user)}
-              photos={albumPhotos}
+              photos={safeAlbumPhotos}
               isLoading={albumLoading}
               error={albumError}
               selectedPhotoId={selectedAlbumPhotoId}

@@ -1,3 +1,4 @@
+import type { CourseAlbumPhoto } from '@/types/course'
 import type { Json } from '@/types/database'
 
 export const COURSE_ALBUM_BUCKET = 'course-album-photos'
@@ -108,4 +109,30 @@ export function toAlbumExifJson(snapshot: AlbumExifSnapshot): Json | null {
   }
 
   return payload
+}
+
+/**
+ * Guards album photos against stale state during surface/course transitions.
+ *
+ * Returns `albumPhotos` only when:
+ * 1. The active surface is 'album'
+ * 2. There is at least one photo
+ * 3. The first photo's `course_id` matches `selectedCourseId`
+ *
+ * Otherwise returns `[]` to prevent stale photos from bleeding into the wrong course view.
+ */
+export function filterSafeAlbumPhotos({
+  activeSurfaceKind,
+  albumPhotos,
+  selectedCourseId,
+}: {
+  activeSurfaceKind: string | null
+  albumPhotos: CourseAlbumPhoto[]
+  selectedCourseId: string | null
+}): CourseAlbumPhoto[] {
+  return activeSurfaceKind === 'album' &&
+    albumPhotos.length > 0 &&
+    albumPhotos[0].course_id === selectedCourseId
+    ? albumPhotos
+    : []
 }
