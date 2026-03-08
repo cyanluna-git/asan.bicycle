@@ -20,6 +20,18 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Ridingazua batch export
+
+Use the numeric course downloader to scan public Ridingazua course IDs and export their public `gpx`/`tcx` files:
+
+```bash
+pnpm ridingazua:download --start 200000 --end 200138
+pnpm ridingazua:download --start 200000 --stop-after-misses 50 --formats gpx
+```
+
+Files are written under `courses/ridingazua/` by default, along with `manifest.json` and `manifest.csv`.
+Existing files are skipped unless you pass `--force`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

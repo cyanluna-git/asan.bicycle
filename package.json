@@ -7,7 +7,8 @@
     "build": "next build --turbopack",
     "start": "next start -p 3102",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "ridingazua:download": "node scripts/ridingazua-download.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
