@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { BrowseCourseCard } from '@/components/courses/browse-course-card'
+import { MobileBrowseControls } from '@/components/courses/mobile-browse-controls'
 import { CourseFilter } from '@/components/filter/course-filter'
 import { buildFilterQuery, countActiveFilters, parseFilterParams } from '@/lib/filter'
 import { fetchBrowseCourses, getSearchQuery } from '@/lib/course-browse'
@@ -43,7 +44,15 @@ export default async function CoursesBrowsePage({
   return (
     <main className="min-h-[calc(100vh-64px)] bg-[#f5f1e8]">
       <div className="mx-auto max-w-7xl px-4 py-5 md:px-6 lg:px-8">
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <Suspense fallback={null}>
+          <MobileBrowseControls
+            courseCount={courses.length}
+            startPoints={startPoints}
+            themes={themes}
+          />
+        </Suspense>
+
+        <div className="mb-4 hidden items-center justify-between gap-3 lg:flex">
           <div>
             <p className="text-sm font-medium text-foreground">
               {courses.length}개 코스
@@ -56,11 +65,6 @@ export default async function CoursesBrowsePage({
 
         <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
           <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-            <div className="rounded-[28px] border border-black/8 bg-white/90 p-4 shadow-sm lg:hidden">
-              <Suspense fallback={null}>
-                <CourseFilter startPoints={startPoints} themes={themes} />
-              </Suspense>
-            </div>
             <div className="hidden rounded-[28px] border border-black/8 bg-white/90 p-4 shadow-sm lg:block">
               <Suspense fallback={null}>
                 <CourseFilter startPoints={startPoints} themes={themes} />

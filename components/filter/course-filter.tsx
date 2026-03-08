@@ -21,9 +21,20 @@ import type { Enums } from '@/types/database'
 interface CourseFilterProps {
   startPoints: { id: string; name: string }[]
   themes: string[]
+  mode?: 'default' | 'drawer'
+  showHeading?: boolean
+  className?: string
+  onApplied?: () => void
 }
 
-export function CourseFilter({ startPoints, themes }: CourseFilterProps) {
+export function CourseFilter({
+  startPoints,
+  themes,
+  mode = 'default',
+  showHeading = true,
+  className,
+  onApplied,
+}: CourseFilterProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -63,7 +74,10 @@ export function CourseFilter({ startPoints, themes }: CourseFilterProps) {
     [pathname, router, searchParams],
   )
 
-  const handleApply = () => applyFilters(state)
+  const handleApply = () => {
+    applyFilters(state)
+    onApplied?.()
+  }
 
   const handleResetAll = () => {
     const next = defaultFilterState()
@@ -144,18 +158,30 @@ export function CourseFilter({ startPoints, themes }: CourseFilterProps) {
     startPoints.find((sp) => sp.id === state.startPoint)?.name ?? null
 
   return (
-    <div className="mb-6">
+    <div className={className}>
       {/* Heading + badge + reset */}
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <h2 className="text-sm font-semibold text-foreground">필터</h2>
+      {showHeading ? (
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <h2 className="text-sm font-semibold text-foreground">필터</h2>
+            {activeCount > 0 && (
+              <Badge variant="default" className="text-[10px] px-1.5 py-0">
+                {activeCount}
+              </Badge>
+            )}
+          </div>
           {activeCount > 0 && (
-            <Badge variant="default" className="text-[10px] px-1.5 py-0">
-              {activeCount}
-            </Badge>
+            <button
+              type="button"
+              onClick={handleResetAll}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              전체 초기화
+            </button>
           )}
         </div>
-        {activeCount > 0 && (
+      ) : activeCount > 0 ? (
+        <div className="mb-3 flex items-center justify-end">
           <button
             type="button"
             onClick={handleResetAll}
@@ -163,8 +189,8 @@ export function CourseFilter({ startPoints, themes }: CourseFilterProps) {
           >
             전체 초기화
           </button>
-        )}
-      </div>
+        </div>
+      ) : null}
 
       {/* Active filter chips with individual X */}
       {activeCount > 0 && (
@@ -226,7 +252,7 @@ export function CourseFilter({ startPoints, themes }: CourseFilterProps) {
         </div>
       )}
 
-      <div className="flex flex-col gap-3">
+      <div className={mode === 'drawer' ? 'flex flex-col gap-4' : 'flex flex-col gap-3'}>
         {/* Start Point Dropdown */}
         <div>
           <Label htmlFor="start-point-filter" className="text-xs text-muted-foreground">출발 기점</Label>
@@ -257,7 +283,10 @@ export function CourseFilter({ startPoints, themes }: CourseFilterProps) {
           <label className="text-xs text-muted-foreground">난이도</label>
           <div className="mt-1.5 flex flex-col gap-2">
             {DIFFICULTY_OPTIONS.map((opt) => (
-              <div key={opt.value} className="flex items-center gap-2">
+              <div
+                key={opt.value}
+                className={mode === 'drawer' ? 'flex items-center gap-2 rounded-xl border border-black/6 bg-white px-3 py-2' : 'flex items-center gap-2'}
+              >
                 <Checkbox
                   id={`difficulty-${opt.value}`}
                   checked={state.difficulty.includes(opt.value)}
@@ -289,6 +318,7 @@ export function CourseFilter({ startPoints, themes }: CourseFilterProps) {
                 type="button"
                 variant={state.distance === key ? 'default' : 'outline'}
                 size="sm"
+                className={mode === 'drawer' ? 'h-9 rounded-full' : undefined}
                 onClick={() => toggleDistance(key)}
               >
                 {preset.label}
@@ -303,7 +333,10 @@ export function CourseFilter({ startPoints, themes }: CourseFilterProps) {
             <label className="text-xs text-muted-foreground">테마</label>
             <div className="mt-1.5 flex flex-col gap-2">
               {themes.map((theme) => (
-                <div key={theme} className="flex items-center gap-2">
+                <div
+                  key={theme}
+                  className={mode === 'drawer' ? 'flex items-center gap-2 rounded-xl border border-black/6 bg-white px-3 py-2' : 'flex items-center gap-2'}
+                >
                   <Checkbox
                     id={`theme-${theme}`}
                     checked={state.themes.includes(theme)}
@@ -322,7 +355,11 @@ export function CourseFilter({ startPoints, themes }: CourseFilterProps) {
         )}
 
         {/* Apply Button */}
-        <Button type="button" onClick={handleApply} className="w-full mt-1">
+        <Button
+          type="button"
+          onClick={handleApply}
+          className={mode === 'drawer' ? 'mt-2 h-10 w-full rounded-full' : 'w-full mt-1'}
+        >
           필터 적용
         </Button>
       </div>

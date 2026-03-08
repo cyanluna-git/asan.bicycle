@@ -158,16 +158,26 @@ export function Header() {
       {/* Mobile dropdown nav */}
       {mobileMenuOpen && (
         <div className="absolute left-0 right-0 top-16 border-b bg-background p-4 md:hidden">
-          <form onSubmit={submitSearch} className="relative mb-3">
-            <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-            <input
-              type="search"
-              value={searchValue}
-              onChange={(event) => setSearchValue(event.target.value)}
-              placeholder="코스 검색..."
-              className="h-9 w-full rounded-md border bg-background pl-8 pr-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </form>
+          {pathname !== "/courses" ? (
+            <form onSubmit={submitSearch} className="relative mb-3">
+              <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+              <input
+                type="search"
+                value={searchValue}
+                onChange={(event) => setSearchValue(event.target.value)}
+                placeholder="코스 검색..."
+                className="h-9 w-full rounded-md border bg-background pl-8 pr-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </form>
+          ) : (
+            <div className="mb-3 rounded-2xl border border-black/8 bg-[#f7f4ec] px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+              코스 검색과 필터는 화면 상단의
+              {' '}
+              <span className="font-medium text-foreground">검색·필터</span>
+              {' '}
+              버튼에서 여세요.
+            </div>
+          )}
           <nav className="flex flex-col gap-1">
             {visibleLinks.map((link) => (
               <Link
