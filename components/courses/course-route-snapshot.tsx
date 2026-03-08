@@ -1,15 +1,17 @@
 'use client'
 
+import { useEffect } from 'react'
 import {
-  StaticMap,
+  CustomOverlayMap,
+  Map,
+  Polyline,
   useKakaoLoader,
+  useMap,
 } from 'react-kakao-maps-sdk'
-import {
-  getRoutePreviewViewport,
-  normalizeRoutePreviewPoints,
-} from '@/lib/course-route-preview'
 import { cn } from '@/lib/utils'
 import type { RoutePreviewPoint } from '@/types/course'
+
+const ASAN_CENTER = { lat: 36.7797, lng: 127.004 }
 
 interface CourseRouteSnapshotProps {
   points: RoutePreviewPoint[]
@@ -20,17 +22,14 @@ export function CourseRouteSnapshot({
   points,
   className,
 }: CourseRouteSnapshotProps) {
-  const normalizedPoints = normalizeRoutePreviewPoints(points)
-  const routeLine = normalizedPoints.join(' ')
-  const viewport = getRoutePreviewViewport(points)
   const [loading, error] = useKakaoLoader({
     appkey: process.env.NEXT_PUBLIC_KAKAO_MAP_KEY ?? '',
   })
-  const [startPoint, endPoint] =
-    normalizedPoints.length > 1
-      ? [normalizedPoints[0].split(','), normalizedPoints[normalizedPoints.length - 1].split(',')]
-      : [null, null]
-  const canRenderMap = Boolean(process.env.NEXT_PUBLIC_KAKAO_MAP_KEY) && !loading && !error
+  const canRenderMap =
+    Boolean(process.env.NEXT_PUBLIC_KAKAO_MAP_KEY) &&
+    !loading &&
+    !error &&
+    points.length > 1
 
   return (
     <div
@@ -40,12 +39,42 @@ export function CourseRouteSnapshot({
       )}
     >
       {canRenderMap ? (
-        <StaticMap
-          center={viewport.center}
-          level={viewport.level}
-          marker={false}
-          className="absolute inset-0 h-full w-full scale-[1.06] saturate-[0.9]"
-        />
+        <Map
+          center={points[0] ?? ASAN_CENTER}
+          style={{ width: '100%', height: '100%' }}
+          level={8}
+          draggable={false}
+          zoomable={false}
+          scrollwheel={false}
+          disableDoubleClick
+          disableDoubleClickZoom
+          keyboardShortcuts={false}
+          tileAnimation={false}
+        >
+          <Polyline
+            path={points}
+            strokeWeight={5}
+            strokeColor="#FFFFFF"
+            strokeOpacity={0.98}
+            strokeStyle="solid"
+          />
+          <Polyline
+            path={points}
+            strokeWeight={3}
+            strokeColor="#FC4C02"
+            strokeOpacity={0.98}
+            strokeStyle="solid"
+          />
+
+          <CustomOverlayMap position={points[0]} xAnchor={0.5} yAnchor={0.5} zIndex={3}>
+            <div className="h-3.5 w-3.5 rounded-full border-2 border-white bg-[#FC4C02] shadow-[0_1px_6px_rgba(0,0,0,0.28)]" />
+          </CustomOverlayMap>
+          <CustomOverlayMap position={points[points.length - 1]} xAnchor={0.5} yAnchor={0.5} zIndex={3}>
+            <div className="h-3.5 w-3.5 rounded-full border-2 border-white bg-[#2563EB] shadow-[0_1px_6px_rgba(0,0,0,0.28)]" />
+          </CustomOverlayMap>
+
+          <RouteSnapshotViewport points={points} />
+        </Map>
       ) : (
         <>
           <div className="absolute inset-0 bg-[linear-gradient(180deg,_rgba(239,242,245,0.96),_rgba(247,248,250,0.98))]" />
@@ -73,77 +102,32 @@ export function CourseRouteSnapshot({
               strokeDasharray="3 4"
             />
           </svg>
+          <div className="absolute inset-0 bg-white/18" />
         </>
       )}
-
-      <div className="absolute inset-0 bg-white/18" />
-      <div className="absolute inset-x-0 top-0 h-14 bg-[linear-gradient(180deg,_rgba(255,255,255,0.4),_transparent)]" />
-
-      <svg
-        aria-hidden
-        viewBox="0 0 100 100"
-        className="relative h-full w-full"
-        fill="none"
-      >
-        {normalizedPoints.length > 1 && startPoint && endPoint ? (
-          <>
-            <polyline
-              points={routeLine}
-              stroke="rgba(255,255,255,0.96)"
-              strokeWidth="8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <polyline
-              points={routeLine}
-              stroke="rgba(252,76,2,0.28)"
-              strokeWidth="6.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <polyline
-              points={routeLine}
-              stroke="#fc4c02"
-              strokeWidth="3.1"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <circle
-              cx={startPoint[0]}
-              cy={startPoint[1]}
-              r="4.8"
-              fill="rgba(255,255,255,0.95)"
-            />
-            <circle
-              cx={startPoint[0]}
-              cy={startPoint[1]}
-              r="2.7"
-              fill="#fc4c02"
-            />
-            <circle
-              cx={endPoint[0]}
-              cy={endPoint[1]}
-              r="4.8"
-              fill="rgba(255,255,255,0.95)"
-            />
-            <circle
-              cx={endPoint[0]}
-              cy={endPoint[1]}
-              r="2.7"
-              fill="#2563eb"
-            />
-          </>
-        ) : (
-          <text
-            x="50"
-            y="52"
-            textAnchor="middle"
-            className="fill-muted-foreground text-[7px]"
-          >
-            route preview
-          </text>
-        )}
-      </svg>
     </div>
   )
+}
+
+function RouteSnapshotViewport({
+  points,
+}: {
+  points: RoutePreviewPoint[]
+}) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (points.length < 2) {
+      return
+    }
+
+    const bounds = new kakao.maps.LatLngBounds()
+    for (const point of points) {
+      bounds.extend(new kakao.maps.LatLng(point.lat, point.lng))
+    }
+
+    map.setBounds(bounds, 18, 18, 18, 18)
+  }, [map, points])
+
+  return null
 }
