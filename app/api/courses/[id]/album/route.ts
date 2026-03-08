@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { isAdminUser } from '@/lib/admin'
 import { createAnonServerClient, createServiceRoleClient } from '@/lib/supabase-server'
 import {
+  COURSE_ALBUM_BUCKET,
   extractCourseAlbumPhotoPath,
   MAX_COURSE_ALBUM_PHOTOS_PER_USER_PER_COURSE,
   normalizeCourseAlbumFetchLimit,
@@ -130,6 +131,18 @@ export async function POST(request: Request, context: RouteContext) {
       `코스당 업로드 가능한 사진은 최대 ${MAX_COURSE_ALBUM_PHOTOS_PER_USER_PER_COURSE}장입니다.`,
       400,
     )
+  }
+
+  const lastSlash = storagePath.lastIndexOf('/')
+  const storageFolder = storagePath.slice(0, lastSlash)
+  const storageFileName = storagePath.slice(lastSlash + 1)
+  const { data: storageFiles, error: storageListError } = await writeClient
+    .storage
+    .from(COURSE_ALBUM_BUCKET)
+    .list(storageFolder, { search: storageFileName, limit: 1 })
+
+  if (storageListError || !storageFiles?.some(f => f.name === storageFileName)) {
+    return jsonError('업로드된 사진 파일을 찾을 수 없습니다. 먼저 사진을 업로드해주세요.', 400)
   }
 
   const insertResponse = await writeClient
