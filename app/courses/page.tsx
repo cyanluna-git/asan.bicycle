@@ -1,5 +1,4 @@
 import { Suspense } from 'react'
-import { Search } from 'lucide-react'
 import { BrowseCourseCard } from '@/components/courses/browse-course-card'
 import { CourseFilter } from '@/components/filter/course-filter'
 import { buildFilterQuery, countActiveFilters, parseFilterParams } from '@/lib/filter'
@@ -44,35 +43,6 @@ export default async function CoursesBrowsePage({
   return (
     <main className="min-h-[calc(100vh-64px)] bg-[#f5f1e8]">
       <div className="mx-auto max-w-7xl px-4 py-5 md:px-6 lg:px-8">
-        <section className="mb-5">
-          <form action="/courses" className="mx-auto w-full max-w-2xl">
-            <div className="flex items-center gap-3 rounded-full border border-black/10 bg-white/90 px-4 py-2 shadow-sm">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <input
-                type="search"
-                name="q"
-                defaultValue={searchQuery ?? ''}
-                placeholder="코스명, 설명, 테마로 검색"
-                className="h-10 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-              />
-              {filters.startPoint ? <input type="hidden" name="startPoint" value={filters.startPoint} /> : null}
-              {filters.difficulty.length > 0 ? (
-                <input type="hidden" name="difficulty" value={filters.difficulty.join(',')} />
-              ) : null}
-              {filters.distance ? <input type="hidden" name="distance" value={filters.distance} /> : null}
-              {filters.themes.length > 0 ? (
-                <input type="hidden" name="theme" value={filters.themes.join(',')} />
-              ) : null}
-              <button
-                type="submit"
-                className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background"
-              >
-                찾기
-              </button>
-            </div>
-          </form>
-        </section>
-
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-medium text-foreground">
