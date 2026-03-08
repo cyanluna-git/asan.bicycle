@@ -198,6 +198,62 @@ export type Database = {
           },
         ]
       }
+      course_album_photos: {
+        Row: {
+          id: string
+          course_id: string
+          user_id: string
+          storage_path: string
+          public_url: string
+          location: unknown | null // PostGIS geography
+          taken_at: string | null
+          caption: string | null
+          width: number | null
+          height: number | null
+          source_exif_json: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          course_id: string
+          user_id: string
+          storage_path: string
+          public_url: string
+          location?: unknown | null
+          taken_at?: string | null
+          caption?: string | null
+          width?: number | null
+          height?: number | null
+          source_exif_json?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          course_id?: string
+          user_id?: string
+          storage_path?: string
+          public_url?: string
+          location?: unknown | null
+          taken_at?: string | null
+          caption?: string | null
+          width?: number | null
+          height?: number | null
+          source_exif_json?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'course_album_photos_course_id_fkey'
+            columns: ['course_id']
+            isOneToOne: false
+            referencedRelation: 'courses'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       uphill_segments: {
         Row: {
           id: string
@@ -285,6 +341,33 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: 'course_reviews_course_id_fkey'
+            columns: ['course_id']
+            isOneToOne: false
+            referencedRelation: 'courses'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      course_album_photos_with_coords: {
+        Row: {
+          id: string | null
+          course_id: string | null
+          user_id: string | null
+          storage_path: string | null
+          public_url: string | null
+          taken_at: string | null
+          caption: string | null
+          width: number | null
+          height: number | null
+          source_exif_json: Json | null
+          created_at: string | null
+          updated_at: string | null
+          lat: number | null
+          lng: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'course_album_photos_course_id_fkey'
             columns: ['course_id']
             isOneToOne: false
             referencedRelation: 'courses'

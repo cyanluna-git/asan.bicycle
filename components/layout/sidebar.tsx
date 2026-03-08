@@ -25,6 +25,7 @@ interface SidebarProps {
   reviews?: CourseReview[]
   reviewStats?: CourseReviewStats | null
   onOpenReviews?: (triggerEl?: HTMLButtonElement | null) => void
+  onOpenAlbum?: (triggerEl?: HTMLButtonElement | null) => void
 }
 
 export function Sidebar({
@@ -41,6 +42,7 @@ export function Sidebar({
   reviews,
   reviewStats,
   onOpenReviews,
+  onOpenAlbum,
 }: SidebarProps) {
   return (
     <aside className="hidden md:flex flex-col w-[280px] border-r bg-background">
@@ -56,7 +58,9 @@ export function Sidebar({
             reviews={reviews ?? []}
             reviewStats={reviewStats ?? null}
             reviewTriggerId={selectedCourse ? `sidebar-review-trigger-${selectedCourse.id}` : undefined}
+            albumTriggerId={selectedCourse ? `sidebar-album-trigger-${selectedCourse.id}` : undefined}
             onOpenReviews={onOpenReviews}
+            onOpenAlbum={onOpenAlbum}
           />
         ) : (
           <>

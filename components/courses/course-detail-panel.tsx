@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowRight, Download, Pencil, Quote, Star, X } from 'lucide-react'
+import { ArrowRight, Camera, Download, Pencil, Quote, Star, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { difficultyLabel, difficultyVariant } from '@/lib/difficulty'
@@ -39,6 +39,8 @@ interface CourseDetailPanelProps {
   reviewStats?: CourseReviewStats | null
   onOpenReviews?: (triggerEl?: HTMLButtonElement | null) => void
   reviewTriggerId?: string
+  onOpenAlbum?: (triggerEl?: HTMLButtonElement | null) => void
+  albumTriggerId?: string
 }
 
 export function CourseDetailPanel({
@@ -52,6 +54,8 @@ export function CourseDetailPanel({
   reviewStats = null,
   onOpenReviews,
   reviewTriggerId,
+  onOpenAlbum,
+  albumTriggerId,
 }: CourseDetailPanelProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -226,6 +230,37 @@ export function CourseDetailPanel({
             아직 첫 후기 전입니다. 실제 라이딩 느낌과 노면 정보를 남겨보세요.
           </p>
         )}
+      </div>
+
+      <div className="rounded-[24px] border bg-card p-4 shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              <Camera className="h-3.5 w-3.5" />
+              라이드 앨범
+            </div>
+            <p className="mt-2 text-sm font-semibold text-foreground">
+              이 코스 위에서 찍은 사진을 모아볼 수 있습니다.
+            </p>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              GPS가 있는 사진은 이후 지도 위 포인트와 함께 이어집니다.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            id={albumTriggerId}
+            onClick={(event) => onOpenAlbum?.(event.currentTarget)}
+            disabled={!onOpenAlbum}
+            className="shrink-0 rounded-full"
+            aria-haspopup="dialog"
+            aria-label={`${course.title} 앨범 보기`}
+          >
+            앨범 보기
+            <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
 
       <div>

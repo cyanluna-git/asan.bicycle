@@ -9,7 +9,7 @@ import {
   useKakaoLoader,
   useMap,
 } from "react-kakao-maps-sdk"
-import type { CourseMapItem, RouteGeoJSON, PoiMapItem } from "@/types/course"
+import type { CourseAlbumPhoto, CourseMapItem, RouteGeoJSON, PoiMapItem } from "@/types/course"
 import { getPoiMeta } from '@/lib/poi'
 
 // ---------------------------------------------------------------------------
@@ -100,6 +100,9 @@ interface KakaoMapProps {
   pois?: PoiMapItem[]
   selectedPoiId?: string | null
   onSelectPoi?: (id: string | null) => void
+  albumPhotos?: CourseAlbumPhoto[]
+  selectedAlbumPhotoId?: string | null
+  onSelectAlbumPhoto?: (id: string | null) => void
 }
 
 // ---------------------------------------------------------------------------
@@ -112,6 +115,9 @@ export default function KakaoMap({
   pois,
   selectedPoiId,
   onSelectPoi,
+  albumPhotos,
+  selectedAlbumPhotoId,
+  onSelectAlbumPhoto,
 }: KakaoMapProps) {
   const appkey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY
   if (!appkey) {
@@ -128,6 +134,9 @@ export default function KakaoMap({
       pois={pois}
       selectedPoiId={selectedPoiId}
       onSelectPoi={onSelectPoi}
+      albumPhotos={albumPhotos}
+      selectedAlbumPhotoId={selectedAlbumPhotoId}
+      onSelectAlbumPhoto={onSelectAlbumPhoto}
     />
   )
 }
@@ -143,6 +152,9 @@ function KakaoMapInner({
   pois,
   selectedPoiId,
   onSelectPoi,
+  albumPhotos,
+  selectedAlbumPhotoId,
+  onSelectAlbumPhoto,
 }: { appkey: string } & KakaoMapProps) {
   const [loading, error] = useKakaoLoader({
     appkey,
@@ -220,6 +232,11 @@ function KakaoMapInner({
           selectedPoiId={selectedPoiId}
           onSelectPoi={onSelectPoi}
         />
+        <AlbumPhotoMarkers
+          photos={albumPhotos ?? []}
+          selectedPhotoId={selectedAlbumPhotoId}
+          onSelectPhoto={onSelectAlbumPhoto}
+        />
       </Map>
       {isRoutesLoading ? (
         <div className="pointer-events-none absolute right-4 top-4 rounded-full bg-background/90 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm ring-1 ring-black/5 backdrop-blur">
@@ -227,6 +244,162 @@ function KakaoMapInner({
         </div>
       ) : null}
     </div>
+  )
+}
+
+function AlbumPhotoMarkers({
+  photos,
+  selectedPhotoId,
+  onSelectPhoto,
+}: {
+  photos: CourseAlbumPhoto[]
+  selectedPhotoId?: string | null
+  onSelectPhoto?: (id: string | null) => void
+}) {
+  const map = useMap()
+  const [openId, setOpenId] = useState<string | null>(selectedPhotoId ?? null)
+  const geotaggedPhotos = useMemo(
+    () => photos.filter((photo) => photo.lat != null && photo.lng != null),
+    [photos],
+  )
+
+  useEffect(() => {
+    setOpenId(selectedPhotoId ?? null)
+  }, [selectedPhotoId])
+
+  useEffect(() => {
+    if (!openId) return
+
+    const activePhoto = geotaggedPhotos.find((photo) => photo.id === openId)
+    if (!activePhoto || activePhoto.lat == null || activePhoto.lng == null) return
+
+    map.panTo(new kakao.maps.LatLng(activePhoto.lat, activePhoto.lng))
+  }, [geotaggedPhotos, map, openId])
+
+  useEffect(() => {
+    if (openId && !geotaggedPhotos.some((photo) => photo.id === openId)) {
+      setOpenId(null)
+      onSelectPhoto?.(null)
+    }
+  }, [geotaggedPhotos, onSelectPhoto, openId])
+
+  if (geotaggedPhotos.length === 0) return null
+
+  return (
+    <>
+      {geotaggedPhotos.map((photo) => {
+        const isOpen = openId === photo.id
+        const pos = { lat: photo.lat!, lng: photo.lng! }
+
+        return (
+          <CustomOverlayMap
+            key={photo.id}
+            position={pos}
+            yAnchor={1.1}
+            xAnchor={0.5}
+            zIndex={5}
+          >
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => {
+                  const nextId = isOpen ? null : photo.id
+                  setOpenId(nextId)
+                  onSelectPhoto?.(nextId)
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: isOpen ? 34 : 28,
+                  height: isOpen ? 34 : 28,
+                  borderRadius: '999px',
+                  backgroundColor: isOpen ? '#111827' : '#f97316',
+                  border: '2px solid white',
+                  boxShadow: isOpen
+                    ? '0 0 0 6px rgba(249,115,22,0.22), 0 8px 18px rgba(0,0,0,0.28)'
+                    : '0 2px 6px rgba(0,0,0,0.35)',
+                  cursor: 'pointer',
+                  color: 'white',
+                  fontSize: 13,
+                  lineHeight: 1,
+                  transform: isOpen ? 'translateY(-2px)' : 'none',
+                  transition: 'all 160ms ease',
+                }}
+                aria-label={photo.caption ?? '라이드 사진'}
+              >
+                📷
+              </button>
+
+              {isOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 40,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    backgroundColor: 'white',
+                    borderRadius: 14,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+                    padding: 10,
+                    width: 184,
+                    zIndex: 10,
+                  }}
+                >
+                  <div
+                    aria-label={photo.caption ?? '라이드 사진'}
+                    role="img"
+                    style={{
+                      width: '100%',
+                      aspectRatio: '4 / 3',
+                      borderRadius: 10,
+                      overflow: 'hidden',
+                      backgroundColor: '#e2e8f0',
+                      backgroundImage: `url(${photo.public_url})`,
+                      backgroundPosition: 'center',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundSize: 'cover',
+                    }}
+                  />
+                  <p
+                    style={{
+                      margin: '8px 0 0',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: '#1e293b',
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {photo.caption?.trim() || '캡션 없는 라이딩 사진'}
+                  </p>
+                  <p
+                    style={{
+                      margin: '4px 0 0',
+                      fontSize: 11,
+                      color: '#64748b',
+                    }}
+                  >
+                    {photo.taken_at ? new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric' }).format(new Date(photo.taken_at)) : '촬영일 없음'}
+                  </p>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: -7,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: 0,
+                      height: 0,
+                      borderLeft: '7px solid transparent',
+                      borderRight: '7px solid transparent',
+                      borderTop: '7px solid white',
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          </CustomOverlayMap>
+        )
+      })}
+    </>
   )
 }
 

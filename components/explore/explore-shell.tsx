@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { CourseAlbumSurface } from '@/components/courses/course-album-surface'
 import { CourseReviewsSurface } from '@/components/courses/course-reviews-surface'
 import { Sidebar } from '@/components/layout/sidebar'
 import { BottomSheet } from '@/components/layout/bottom-sheet'
@@ -15,6 +16,7 @@ import {
 } from '@/lib/course-reviews-surface-ui'
 import { supabase } from '@/lib/supabase'
 import type {
+  CourseAlbumPhoto,
   CourseDetail,
   CourseReview,
   CourseReviewStats,
@@ -23,6 +25,8 @@ import type {
   UphillSegment,
 } from '@/types/course'
 import type { User } from '@supabase/supabase-js'
+
+type ExploreSurfaceKind = 'review' | 'album'
 
 interface ExploreShellProps {
   courses: CourseListItem[]
@@ -53,11 +57,16 @@ export function ExploreShell({
 }: ExploreShellProps) {
   const [user, setUser] = useState<User | null>(null)
   const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null)
+  const [albumPhotos, setAlbumPhotos] = useState<CourseAlbumPhoto[]>([])
+  const [albumLoading, setAlbumLoading] = useState(false)
+  const [albumError, setAlbumError] = useState<string | null>(null)
+  const [albumReloadToken, setAlbumReloadToken] = useState(0)
+  const [selectedAlbumPhotoId, setSelectedAlbumPhotoId] = useState<string | null>(null)
   const [isCourseSheetOpen, setIsCourseSheetOpen] = useState(false)
-  const [isReviewSurfaceOpen, setIsReviewSurfaceOpen] = useState(false)
-  const [reviewSurfaceSource, setReviewSurfaceSource] = useState<ReviewSurfaceSource>(null)
+  const [activeSurfaceKind, setActiveSurfaceKind] = useState<ExploreSurfaceKind | null>(null)
+  const [surfaceSource, setSurfaceSource] = useState<ReviewSurfaceSource>(null)
   const [shouldReopenCourseSheet, setShouldReopenCourseSheet] = useState(false)
-  const lastReviewTriggerIdRef = useRef<string | null>(null)
+  const lastSurfaceTriggerIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -75,11 +84,16 @@ export function ExploreShell({
 
   useEffect(() => {
     setSelectedPoiId(null)
+    setAlbumPhotos([])
+    setAlbumLoading(false)
+    setAlbumError(null)
+    setAlbumReloadToken(0)
+    setSelectedAlbumPhotoId(null)
     setIsCourseSheetOpen(false)
-    setIsReviewSurfaceOpen(false)
-    setReviewSurfaceSource(null)
+    setActiveSurfaceKind(null)
+    setSurfaceSource(null)
     setShouldReopenCourseSheet(false)
-    lastReviewTriggerIdRef.current = null
+    lastSurfaceTriggerIdRef.current = null
   }, [selectedCourseId])
 
   useEffect(() => {
@@ -87,6 +101,57 @@ export function ExploreShell({
       setSelectedPoiId(null)
     }
   }, [pois, selectedPoiId])
+
+  useEffect(() => {
+    if (selectedAlbumPhotoId && !albumPhotos.some((photo) => photo.id === selectedAlbumPhotoId)) {
+      setSelectedAlbumPhotoId(null)
+    }
+  }, [albumPhotos, selectedAlbumPhotoId])
+
+  useEffect(() => {
+    if (!selectedCourse || activeSurfaceKind !== 'album') {
+      return
+    }
+
+    const controller = new AbortController()
+    const courseId = selectedCourse.id
+
+    async function loadAlbum() {
+      setAlbumLoading(true)
+      setAlbumError(null)
+
+      try {
+        const response = await fetch(`/api/courses/${courseId}/album`, {
+          signal: controller.signal,
+        })
+        const payload = await response.json().catch(() => ({}))
+
+        if (!response.ok) {
+          throw new Error(
+            typeof payload?.error === 'string'
+              ? payload.error
+              : '코스 앨범을 불러오지 못했습니다.',
+          )
+        }
+
+        setAlbumPhotos(Array.isArray(payload.photos) ? payload.photos : [])
+      } catch (loadError) {
+        if ((loadError as Error).name === 'AbortError') {
+          return
+        }
+
+        setAlbumError(loadError instanceof Error ? loadError.message : '코스 앨범을 불러오지 못했습니다.')
+      } finally {
+        if (!controller.signal.aborted) {
+          setAlbumLoading(false)
+        }
+      }
+    }
+
+    void loadAlbum()
+
+    return () => controller.abort()
+  }, [activeSurfaceKind, albumReloadToken, selectedCourse])
 
   const canEditSelectedCourse = selectedCourse
     ? canEditCourse({
@@ -105,8 +170,8 @@ export function ExploreShell({
     [reviews, user],
   )
 
-  const restoreFocusToReviewTrigger = () => {
-    const triggerId = lastReviewTriggerIdRef.current
+  const restoreFocusToSurfaceTrigger = () => {
+    const triggerId = lastSurfaceTriggerIdRef.current
     if (!triggerId) {
       return
     }
@@ -119,46 +184,48 @@ export function ExploreShell({
     })
   }
 
-  const openReviewSurface = ({
+  const openSurface = ({
+    kind,
     source,
     triggerEl,
   }: {
+    kind: ExploreSurfaceKind
     source: Exclude<ReviewSurfaceSource, null>
     triggerEl?: HTMLButtonElement | null
   }) => {
-    setReviewSurfaceSource(source)
-    lastReviewTriggerIdRef.current = triggerEl?.id ?? null
-    setIsReviewSurfaceOpen(true)
+    setSurfaceSource(source)
+    lastSurfaceTriggerIdRef.current = triggerEl?.id ?? null
+    setActiveSurfaceKind(kind)
   }
 
-  const handleCloseReviewSurface = () => {
+  const handleCloseSurface = () => {
     const shouldRestore = shouldRestoreCourseSheet({
-      source: reviewSurfaceSource,
+      source: surfaceSource,
       hasSelectedCourse: Boolean(selectedCourse),
     })
 
-    setIsReviewSurfaceOpen(false)
-    setReviewSurfaceSource(null)
+    setActiveSurfaceKind(null)
+    setSurfaceSource(null)
 
     if (shouldRestore) {
       setShouldReopenCourseSheet(true)
       return
     }
 
-    restoreFocusToReviewTrigger()
+    restoreFocusToSurfaceTrigger()
   }
 
   useEffect(() => {
-    if (isReviewSurfaceOpen || !shouldReopenCourseSheet) {
+    if (activeSurfaceKind || !shouldReopenCourseSheet) {
       return
     }
 
     window.requestAnimationFrame(() => {
       setIsCourseSheetOpen(true)
       setShouldReopenCourseSheet(false)
-      restoreFocusToReviewTrigger()
+      restoreFocusToSurfaceTrigger()
     })
-  }, [isReviewSurfaceOpen, shouldReopenCourseSheet])
+  }, [activeSurfaceKind, shouldReopenCourseSheet])
 
   return (
     <div className="flex h-[calc(100vh-64px)]">
@@ -176,7 +243,10 @@ export function ExploreShell({
         reviews={reviews}
         reviewStats={reviewStats}
         onOpenReviews={(triggerEl) =>
-          openReviewSurface({ source: 'sidebar', triggerEl })
+          openSurface({ kind: 'review', source: 'sidebar', triggerEl })
+        }
+        onOpenAlbum={(triggerEl) =>
+          openSurface({ kind: 'album', source: 'sidebar', triggerEl })
         }
       />
       <main className="flex-1 flex flex-col min-h-0">
@@ -187,6 +257,9 @@ export function ExploreShell({
             pois={pois}
             selectedPoiId={selectedPoiId}
             onSelectPoi={setSelectedPoiId}
+            albumPhotos={activeSurfaceKind === 'album' ? albumPhotos : []}
+            selectedAlbumPhotoId={selectedAlbumPhotoId}
+            onSelectAlbumPhoto={setSelectedAlbumPhotoId}
           />
           <BottomSheet
             courses={courses}
@@ -204,30 +277,61 @@ export function ExploreShell({
             open={isCourseSheetOpen}
             onOpenChange={setIsCourseSheetOpen}
             onOpenReviews={(triggerEl) =>
-              openReviewSurface({ source: 'bottom-sheet', triggerEl })
+              openSurface({ kind: 'review', source: 'bottom-sheet', triggerEl })
+            }
+            onOpenAlbum={(triggerEl) =>
+              openSurface({ kind: 'album', source: 'bottom-sheet', triggerEl })
             }
           />
-          {selectedCourse && reviewSurfaceSource === 'bottom-sheet' ? (
+          {selectedCourse && surfaceSource === 'bottom-sheet' && activeSurfaceKind ? (
             <Drawer
-              open={isReviewSurfaceOpen}
+              open={Boolean(activeSurfaceKind)}
               onOpenChange={(nextOpen) => {
                 if (nextOpen) {
-                  setIsReviewSurfaceOpen(true)
+                  if (activeSurfaceKind) {
+                    setActiveSurfaceKind(activeSurfaceKind)
+                  }
                   return
                 }
-                handleCloseReviewSurface()
+                handleCloseSurface()
               }}
             >
               <DrawerContent className="md:hidden data-[vaul-drawer-direction=bottom]:mt-0 data-[vaul-drawer-direction=bottom]:max-h-[100dvh] data-[vaul-drawer-direction=bottom]:rounded-none">
-                <CourseReviewsSurface
-                  courseId={selectedCourse.id}
-                  courseTitle={selectedCourse.title}
-                  reviews={reviews}
-                  stats={reviewStats}
-                  viewerState={viewerState}
-                  onClose={handleCloseReviewSurface}
-                  className="h-[100dvh]"
-                />
+                {activeSurfaceKind === 'review' ? (
+                  <CourseReviewsSurface
+                    courseId={selectedCourse.id}
+                    courseTitle={selectedCourse.title}
+                    reviews={reviews}
+                    stats={reviewStats}
+                    viewerState={viewerState}
+                    onClose={handleCloseSurface}
+                    className="h-[100dvh]"
+                  />
+                ) : (
+                  <CourseAlbumSurface
+                    courseId={selectedCourse.id}
+                    courseTitle={selectedCourse.title}
+                    isLoggedIn={Boolean(user)}
+                    currentUserId={user?.id ?? null}
+                    isAdmin={isAdminUser(user)}
+                    photos={albumPhotos}
+                    isLoading={albumLoading}
+                    error={albumError}
+                    selectedPhotoId={selectedAlbumPhotoId}
+                    onRetry={() => setAlbumReloadToken((value) => value + 1)}
+                    onUploaded={(photo) => {
+                      setAlbumPhotos((prev) => [photo, ...prev])
+                      setSelectedAlbumPhotoId(photo.id)
+                    }}
+                    onSelectPhoto={setSelectedAlbumPhotoId}
+                    onDeletedPhoto={(photoId) => {
+                      setAlbumPhotos((prev) => prev.filter((photo) => photo.id !== photoId))
+                      setSelectedAlbumPhotoId((prev) => (prev === photoId ? null : prev))
+                    }}
+                    onClose={handleCloseSurface}
+                    className="h-[100dvh]"
+                  />
+                )}
               </DrawerContent>
             </Drawer>
           ) : null}
@@ -240,16 +344,41 @@ export function ExploreShell({
           />
         )}
       </main>
-      {selectedCourse && isReviewSurfaceOpen && reviewSurfaceSource !== 'bottom-sheet' ? (
+      {selectedCourse && activeSurfaceKind && surfaceSource !== 'bottom-sheet' ? (
         <aside className="hidden md:flex w-[360px] border-l bg-background">
-          <CourseReviewsSurface
-            courseId={selectedCourse.id}
-            courseTitle={selectedCourse.title}
-            reviews={reviews}
-            stats={reviewStats}
-            viewerState={viewerState}
-            onClose={handleCloseReviewSurface}
-          />
+          {activeSurfaceKind === 'review' ? (
+            <CourseReviewsSurface
+              courseId={selectedCourse.id}
+              courseTitle={selectedCourse.title}
+              reviews={reviews}
+              stats={reviewStats}
+              viewerState={viewerState}
+              onClose={handleCloseSurface}
+            />
+          ) : (
+            <CourseAlbumSurface
+              courseId={selectedCourse.id}
+              courseTitle={selectedCourse.title}
+              isLoggedIn={Boolean(user)}
+              currentUserId={user?.id ?? null}
+              isAdmin={isAdminUser(user)}
+              photos={albumPhotos}
+              isLoading={albumLoading}
+              error={albumError}
+              selectedPhotoId={selectedAlbumPhotoId}
+              onRetry={() => setAlbumReloadToken((value) => value + 1)}
+              onUploaded={(photo) => {
+                setAlbumPhotos((prev) => [photo, ...prev])
+                setSelectedAlbumPhotoId(photo.id)
+              }}
+              onSelectPhoto={setSelectedAlbumPhotoId}
+              onDeletedPhoto={(photoId) => {
+                setAlbumPhotos((prev) => prev.filter((photo) => photo.id !== photoId))
+                setSelectedAlbumPhotoId((prev) => (prev === photoId ? null : prev))
+              }}
+              onClose={handleCloseSurface}
+            />
+          )}
         </aside>
       ) : null}
     </div>

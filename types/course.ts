@@ -1,4 +1,4 @@
-import type { Tables } from '@/types/database'
+import type { Json, Tables } from '@/types/database'
 
 export type CourseListItem = Pick<
   Tables<'courses'>,
@@ -107,4 +107,21 @@ export type CourseReview = {
 export type CourseReviewStats = {
   review_count: number
   avg_rating: number | null
+}
+
+export type CourseAlbumPhoto = {
+  id: string
+  course_id: string
+  user_id: string
+  storage_path: string
+  public_url: string
+  taken_at: string | null
+  caption: string | null
+  width: number | null
+  height: number | null
+  source_exif_json: Json | null
+  created_at: string
+  updated_at: string
+  lat: number | null
+  lng: number | null
 }

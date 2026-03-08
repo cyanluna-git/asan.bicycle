@@ -37,6 +37,7 @@ interface BottomSheetProps {
   reviews?: CourseReview[]
   reviewStats?: CourseReviewStats | null
   onOpenReviews?: (triggerEl?: HTMLButtonElement | null) => void
+  onOpenAlbum?: (triggerEl?: HTMLButtonElement | null) => void
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -55,24 +56,36 @@ export function BottomSheet({
   reviews,
   reviewStats,
   onOpenReviews,
+  onOpenAlbum,
   open,
   onOpenChange,
 }: BottomSheetProps) {
-  const [pendingReviewOpen, setPendingReviewOpen] = useState(false)
+  const [pendingSurfaceOpen, setPendingSurfaceOpen] = useState<'review' | 'album' | null>(null)
   const [pendingTrigger, setPendingTrigger] = useState<HTMLButtonElement | null>(null)
 
   useEffect(() => {
-    if (open || !pendingReviewOpen) {
+    if (open || !pendingSurfaceOpen) {
       return
     }
 
-    onOpenReviews?.(pendingTrigger)
-    setPendingReviewOpen(false)
+    if (pendingSurfaceOpen === 'review') {
+      onOpenReviews?.(pendingTrigger)
+    } else {
+      onOpenAlbum?.(pendingTrigger)
+    }
+
+    setPendingSurfaceOpen(null)
     setPendingTrigger(null)
-  }, [onOpenReviews, open, pendingReviewOpen, pendingTrigger])
+  }, [onOpenAlbum, onOpenReviews, open, pendingSurfaceOpen, pendingTrigger])
 
   const handleOpenReviews = (triggerEl?: HTMLButtonElement | null) => {
-    setPendingReviewOpen(true)
+    setPendingSurfaceOpen('review')
+    setPendingTrigger(triggerEl ?? null)
+    onOpenChange(false)
+  }
+
+  const handleOpenAlbum = (triggerEl?: HTMLButtonElement | null) => {
+    setPendingSurfaceOpen('album')
     setPendingTrigger(triggerEl ?? null)
     onOpenChange(false)
   }
@@ -112,7 +125,9 @@ export function BottomSheet({
                 reviews={reviews ?? []}
                 reviewStats={reviewStats ?? null}
                 reviewTriggerId={selectedCourse ? `bottom-sheet-review-trigger-${selectedCourse.id}` : undefined}
+                albumTriggerId={selectedCourse ? `bottom-sheet-album-trigger-${selectedCourse.id}` : undefined}
                 onOpenReviews={handleOpenReviews}
+                onOpenAlbum={handleOpenAlbum}
               />
             ) : (
               <>
