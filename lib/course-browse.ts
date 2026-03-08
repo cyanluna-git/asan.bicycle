@@ -1,5 +1,4 @@
 import { hydrateCourseReviews } from '@/lib/course-reviews'
-import { buildRoutePreview } from '@/lib/course-route-preview'
 import { hydrateUploaderNames } from '@/lib/course-uploader'
 import { parseFilterParams } from '@/lib/filter'
 import { supabase } from '@/lib/supabase'
@@ -7,11 +6,11 @@ import type {
   CourseBrowseItem,
   CourseListItem,
   CourseReview,
-  RouteGeoJSON,
+  RoutePreviewPoint,
 } from '@/types/course'
 
-const COURSE_BROWSE_FIELDS = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, created_by, uploader_name, uploader_emoji, route_geojson'
-const COURSE_BROWSE_FIELDS_FALLBACK = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, created_by, route_geojson'
+const COURSE_BROWSE_FIELDS = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, created_by, uploader_name, uploader_emoji, route_preview_points'
+const COURSE_BROWSE_FIELDS_FALLBACK = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, created_by, route_preview_points'
 type CourseBrowseRow = {
   id: string
   title: string
@@ -23,7 +22,7 @@ type CourseBrowseRow = {
   created_by: string | null
   uploader_name?: string | null
   uploader_emoji?: string | null
-  route_geojson: RouteGeoJSON | null
+  route_preview_points: RoutePreviewPoint[] | null
 }
 
 type CourseReviewRow = {
@@ -226,7 +225,7 @@ export async function fetchBrowseCourses(rawParams: URLSearchParams | Record<str
       review_preview: summarizeReview(latestReview?.content),
       review_author_name: latestReview?.author_name ?? null,
       review_author_emoji: latestReview?.author_emoji ?? null,
-      route_preview: buildRoutePreview(course.route_geojson ?? null),
+      route_preview: (course.route_preview_points ?? []) as RoutePreviewPoint[],
     } satisfies CourseBrowseItem
   })
 }

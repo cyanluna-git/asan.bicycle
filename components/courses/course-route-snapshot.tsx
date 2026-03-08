@@ -1,17 +1,6 @@
-'use client'
-
-import { useEffect } from 'react'
-import {
-  CustomOverlayMap,
-  Map,
-  Polyline,
-  useKakaoLoader,
-  useMap,
-} from 'react-kakao-maps-sdk'
+import { normalizeRoutePreviewPoints } from '@/lib/course-route-preview'
 import { cn } from '@/lib/utils'
 import type { RoutePreviewPoint } from '@/types/course'
-
-const ASAN_CENTER = { lat: 36.7797, lng: 127.004 }
 
 interface CourseRouteSnapshotProps {
   points: RoutePreviewPoint[]
@@ -22,14 +11,8 @@ export function CourseRouteSnapshot({
   points,
   className,
 }: CourseRouteSnapshotProps) {
-  const [loading, error] = useKakaoLoader({
-    appkey: process.env.NEXT_PUBLIC_KAKAO_MAP_KEY ?? '',
-  })
-  const canRenderMap =
-    Boolean(process.env.NEXT_PUBLIC_KAKAO_MAP_KEY) &&
-    !loading &&
-    !error &&
-    points.length > 1
+  const normalized = normalizeRoutePreviewPoints(points)
+  const hasRoute = normalized.length >= 2
 
   return (
     <div
@@ -38,43 +21,53 @@ export function CourseRouteSnapshot({
         className,
       )}
     >
-      {canRenderMap ? (
-        <Map
-          center={points[0] ?? ASAN_CENTER}
-          style={{ width: '100%', height: '100%' }}
-          level={8}
-          draggable={false}
-          zoomable={false}
-          scrollwheel={false}
-          disableDoubleClick
-          disableDoubleClickZoom
-          keyboardShortcuts={false}
-          tileAnimation={false}
+      {hasRoute ? (
+        <svg
+          aria-hidden
+          viewBox="0 0 100 100"
+          className="absolute inset-0 h-full w-full"
+          fill="none"
         >
-          <Polyline
-            path={points}
-            strokeWeight={5}
-            strokeColor="#FFFFFF"
-            strokeOpacity={0.98}
-            strokeStyle="solid"
+          {/* White outline for contrast */}
+          <polyline
+            points={normalized.join(' ')}
+            stroke="#FFFFFF"
+            strokeWidth="5"
+            strokeOpacity="0.98"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
           />
-          <Polyline
-            path={points}
-            strokeWeight={3}
-            strokeColor="#FC4C02"
-            strokeOpacity={0.98}
-            strokeStyle="solid"
+          {/* Orange route */}
+          <polyline
+            points={normalized.join(' ')}
+            stroke="#FC4C02"
+            strokeWidth="3"
+            strokeOpacity="0.98"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
           />
 
-          <CustomOverlayMap position={points[0]} xAnchor={0.5} yAnchor={0.5} zIndex={3}>
-            <div className="h-3.5 w-3.5 rounded-full border-2 border-white bg-[#FC4C02] shadow-[0_1px_6px_rgba(0,0,0,0.28)]" />
-          </CustomOverlayMap>
-          <CustomOverlayMap position={points[points.length - 1]} xAnchor={0.5} yAnchor={0.5} zIndex={3}>
-            <div className="h-3.5 w-3.5 rounded-full border-2 border-white bg-[#2563EB] shadow-[0_1px_6px_rgba(0,0,0,0.28)]" />
-          </CustomOverlayMap>
-
-          <RouteSnapshotViewport points={points} />
-        </Map>
+          {/* Start marker */}
+          <circle
+            cx={normalized[0].split(',')[0]}
+            cy={normalized[0].split(',')[1]}
+            r="3.5"
+            fill="#FC4C02"
+            stroke="#FFFFFF"
+            strokeWidth="2"
+          />
+          {/* End marker */}
+          <circle
+            cx={normalized[normalized.length - 1].split(',')[0]}
+            cy={normalized[normalized.length - 1].split(',')[1]}
+            r="3.5"
+            fill="#2563EB"
+            stroke="#FFFFFF"
+            strokeWidth="2"
+          />
+        </svg>
       ) : (
         <>
           <div className="absolute inset-0 bg-[linear-gradient(180deg,_rgba(239,242,245,0.96),_rgba(247,248,250,0.98))]" />
@@ -107,27 +100,4 @@ export function CourseRouteSnapshot({
       )}
     </div>
   )
-}
-
-function RouteSnapshotViewport({
-  points,
-}: {
-  points: RoutePreviewPoint[]
-}) {
-  const map = useMap()
-
-  useEffect(() => {
-    if (points.length < 2) {
-      return
-    }
-
-    const bounds = new kakao.maps.LatLngBounds()
-    for (const point of points) {
-      bounds.extend(new kakao.maps.LatLng(point.lat, point.lng))
-    }
-
-    map.setBounds(bounds, 18, 18, 18, 18)
-  }, [map, points])
-
-  return null
 }

@@ -22,6 +22,7 @@ import {
 } from '@/lib/course-upload'
 import { normalizePoiCategory } from '@/lib/poi'
 import { resolveProfileEmoji } from '@/lib/profile'
+import { buildRoutePreview } from '@/lib/course-route-preview'
 import { parseGpxToGeoJSON, type ParsedGpx } from '@/lib/gpx-parser'
 import { supabase } from '@/lib/supabase'
 import { getUploaderDisplayName } from '@/lib/user-display-name'
@@ -345,6 +346,7 @@ export default function UploadPage() {
         elevation_gain_m: parsed.elevationGainM,
         gpx_url: publicUrl,
         route_geojson: parsed.geojson as unknown as Json,
+        route_preview_points: buildRoutePreview(parsed.geojson) as unknown as Json,
         created_by: authData.user.id,
         theme: form.theme.trim() || null,
         tags,
