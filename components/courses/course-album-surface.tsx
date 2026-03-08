@@ -255,23 +255,14 @@ export function CourseAlbumSurface({
                   <button
                     type="button"
                     onClick={() => onSelectPhoto?.(selectedPhotoId === photo.id ? null : photo.id)}
-                    className="block w-full space-y-2 p-3 text-left"
+                    className="block w-full px-3 py-2 text-left"
                   >
-                    <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                      <span>{formatDate(photo.taken_at ?? photo.created_at) ?? '날짜 없음'}</span>
-                      <span>{photo.lat != null && photo.lng != null ? '지도 표시 가능' : '위치 없음'}</span>
-                    </div>
-                    <p className="text-sm font-medium leading-relaxed text-foreground">
-                      {photo.caption?.trim() || '캡션 없는 라이딩 사진'}
+                    {photo.caption?.trim() ? (
+                      <p className="truncate text-sm font-medium text-foreground">{photo.caption.trim()}</p>
+                    ) : null}
+                    <p className="text-xs text-muted-foreground">
+                      {formatDate(photo.taken_at ?? photo.created_at) ?? '날짜 없음'}
                     </p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <MapPinned className="h-3.5 w-3.5" />
-                      <span>
-                        {photo.lat != null && photo.lng != null
-                          ? `${photo.lat.toFixed(4)}, ${photo.lng.toFixed(4)}`
-                          : '좌표 없음'}
-                      </span>
-                    </div>
                   </button>
                 </article>
               ))}
