@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
@@ -27,6 +28,7 @@ import {
   shouldShowMoreButton,
 } from '@/lib/review-preview'
 import type {
+  CourseAlbumPhoto,
   CourseDetail,
   CourseReview,
   CourseReviewStats,
@@ -43,6 +45,7 @@ interface CourseDetailPanelProps {
   canEditCourse?: boolean
   reviews?: CourseReview[]
   reviewStats?: CourseReviewStats | null
+  albumPreviewPhotos?: CourseAlbumPhoto[]
   onOpenReviews?: (triggerEl?: HTMLButtonElement | null) => void
   reviewTriggerId?: string
   onOpenAlbum?: (triggerEl?: HTMLButtonElement | null) => void
@@ -58,6 +61,7 @@ export function CourseDetailPanel({
   canEditCourse = false,
   reviews = [],
   reviewStats = null,
+  albumPreviewPhotos = [],
   onOpenReviews,
   reviewTriggerId,
   onOpenAlbum,
@@ -266,6 +270,32 @@ export function CourseDetailPanel({
             <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
           </Button>
         </div>
+
+        {albumPreviewPhotos.length > 0 ? (
+          <div className="mt-3 grid grid-cols-2 gap-1">
+            {albumPreviewPhotos.slice(0, 4).map((photo) => (
+              <button
+                key={photo.id}
+                type="button"
+                className="relative aspect-square overflow-hidden rounded-lg"
+                onClick={() => onOpenAlbum?.()}
+                aria-label="앨범 사진 보기"
+              >
+                <Image
+                  src={photo.public_url}
+                  alt={photo.caption || ''}
+                  fill
+                  sizes="120px"
+                  className="object-cover"
+                />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-muted-foreground">
+            아직 등록된 사진이 없습니다.
+          </p>
+        )}
       </div>
 
       <div>

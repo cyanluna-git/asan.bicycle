@@ -59,6 +59,7 @@ export function ExploreShell({
   const [user, setUser] = useState<User | null>(null)
   const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null)
   const [albumPhotos, setAlbumPhotos] = useState<CourseAlbumPhoto[]>([])
+  const [albumPreviewPhotos, setAlbumPreviewPhotos] = useState<CourseAlbumPhoto[]>([])
   const [albumLoading, setAlbumLoading] = useState(false)
   const [albumError, setAlbumError] = useState<string | null>(null)
   const [albumReloadToken, setAlbumReloadToken] = useState(0)
@@ -85,6 +86,7 @@ export function ExploreShell({
 
   useEffect(() => {
     setSelectedPoiId(null)
+    setAlbumPreviewPhotos([])
     setAlbumPhotos([])
     setAlbumLoading(false)
     setAlbumError(null)
@@ -108,6 +110,36 @@ export function ExploreShell({
       setSelectedAlbumPhotoId(null)
     }
   }, [albumPhotos, selectedAlbumPhotoId])
+
+  useEffect(() => {
+    if (!selectedCourse) {
+      return
+    }
+
+    const controller = new AbortController()
+    const courseId = selectedCourse.id
+
+    async function loadPreview() {
+      try {
+        const response = await fetch(`/api/courses/${courseId}/album?limit=4`, {
+          signal: controller.signal,
+        })
+        const payload = await response.json().catch(() => ({}))
+
+        if (response.ok && Array.isArray(payload.photos)) {
+          setAlbumPreviewPhotos(payload.photos)
+        }
+      } catch (loadError) {
+        if ((loadError as Error).name === 'AbortError') {
+          return
+        }
+      }
+    }
+
+    void loadPreview()
+
+    return () => controller.abort()
+  }, [selectedCourse])
 
   useEffect(() => {
     if (!selectedCourse || activeSurfaceKind !== 'album') {
@@ -248,6 +280,7 @@ export function ExploreShell({
         canEditSelectedCourse={canEditSelectedCourse}
         reviews={reviews}
         reviewStats={reviewStats}
+        albumPreviewPhotos={albumPreviewPhotos}
         onOpenReviews={(triggerEl) =>
           openSurface({ kind: 'review', source: 'sidebar', triggerEl })
         }
@@ -280,6 +313,7 @@ export function ExploreShell({
             canEditSelectedCourse={canEditSelectedCourse}
             reviews={reviews}
             reviewStats={reviewStats}
+            albumPreviewPhotos={albumPreviewPhotos}
             open={isCourseSheetOpen}
             onOpenChange={setIsCourseSheetOpen}
             onOpenReviews={(triggerEl) =>

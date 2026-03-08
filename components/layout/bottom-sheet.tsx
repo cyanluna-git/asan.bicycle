@@ -15,6 +15,7 @@ import { CourseFilter } from '@/components/filter/course-filter'
 import { CourseListClient } from '@/components/courses/course-list-client'
 import { CourseDetailPanel } from '@/components/courses/course-detail-panel'
 import type {
+  CourseAlbumPhoto,
   CourseListItem,
   CourseDetail,
   CourseReview,
@@ -36,6 +37,7 @@ interface BottomSheetProps {
   canEditSelectedCourse?: boolean
   reviews?: CourseReview[]
   reviewStats?: CourseReviewStats | null
+  albumPreviewPhotos?: CourseAlbumPhoto[]
   onOpenReviews?: (triggerEl?: HTMLButtonElement | null) => void
   onOpenAlbum?: (triggerEl?: HTMLButtonElement | null) => void
   open: boolean
@@ -55,6 +57,7 @@ export function BottomSheet({
   canEditSelectedCourse = false,
   reviews,
   reviewStats,
+  albumPreviewPhotos,
   onOpenReviews,
   onOpenAlbum,
   open,
@@ -125,6 +128,7 @@ export function BottomSheet({
                   canEditCourse={canEditSelectedCourse}
                   reviews={reviews ?? []}
                   reviewStats={reviewStats ?? null}
+                  albumPreviewPhotos={albumPreviewPhotos}
                   reviewTriggerId={selectedCourse ? `bottom-sheet-review-trigger-${selectedCourse.id}` : undefined}
                   albumTriggerId={selectedCourse ? `bottom-sheet-album-trigger-${selectedCourse.id}` : undefined}
                   onOpenReviews={handleOpenReviews}
