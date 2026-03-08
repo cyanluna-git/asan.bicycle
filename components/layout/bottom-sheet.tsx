@@ -121,7 +121,7 @@ export function BottomSheet({
                 : '아산시 자전거 코스를 탐색하세요'}
             </DrawerDescription>
           </DrawerHeader>
-          <div className="overflow-y-auto px-4 pb-6">
+          <div className="overflow-y-auto overscroll-contain px-4 pb-6">
             {selectedCourse ? (
               <Suspense fallback={<CourseDetailSkeleton />}>
                 <CourseDetailPanel
