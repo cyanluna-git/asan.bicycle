@@ -20,6 +20,7 @@ import { signInWithGoogle } from '@/lib/auth'
 import { getReviewEmptyStateCopy, type ReviewSurfaceViewerState } from '@/lib/course-reviews-surface-ui'
 import { supabase } from '@/lib/supabase'
 import { sortCourseReviews, type ReviewSortOrder } from '@/lib/course-reviews-ui'
+import { summarizeText } from '@/lib/text'
 import type { CourseReview, CourseReviewStats } from '@/types/course'
 import type { User } from '@supabase/supabase-js'
 
@@ -625,9 +626,3 @@ function MetaChip({
   )
 }
 
-function summarizeText(value: string, maxLength: number) {
-  const normalized = value.replace(/\s+/g, ' ').trim()
-  if (!normalized) return null
-  if (normalized.length <= maxLength) return normalized
-  return `${normalized.slice(0, maxLength - 1).trimEnd()}…`
-}

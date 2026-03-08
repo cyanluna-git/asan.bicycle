@@ -20,6 +20,12 @@ import {
   SPEED_INTERMEDIATE,
   SPEED_ADVANCED,
 } from '@/lib/calc-duration'
+import { summarizeText } from '@/lib/text'
+import {
+  getPreviewReviews,
+  getReviewAuthorDisplay,
+  shouldShowMoreButton,
+} from '@/lib/review-preview'
 import type {
   CourseDetail,
   CourseReview,
@@ -83,9 +89,8 @@ export function CourseDetailPanel({
   ] as const
   const categoryTabs = getPoiCategoryTabs(pois)
   const visiblePois = sortPoisForRail(pois, activeCategory)
-  const previewReview = reviews[0] ?? null
+  const previewReviews = getPreviewReviews(reviews)
   const compactDescription = summarizeText(course.description, 120)
-  const reviewPreview = summarizeText(previewReview?.content ?? null, 92)
 
   useEffect(() => {
     setActiveCategory('all')
@@ -207,31 +212,29 @@ export function CourseDetailPanel({
               </span>
             </div>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            id={reviewTriggerId}
-            onClick={(event) => onOpenReviews?.(event.currentTarget)}
-            disabled={!onOpenReviews}
-            className="shrink-0 rounded-full"
-            aria-haspopup="dialog"
-            aria-label={`${course.title} 후기 보기`}
-          >
-            후기 보기
-            <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-          </Button>
+          {shouldShowMoreButton(reviews) && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              id={reviewTriggerId}
+              onClick={(event) => onOpenReviews?.(event.currentTarget)}
+              disabled={!onOpenReviews}
+              className="shrink-0 rounded-full"
+              aria-haspopup="dialog"
+              aria-label={`${course.title} 후기 더보기`}
+            >
+              더보기
+              <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
 
-        {reviewPreview ? (
-          <div className="mt-3 rounded-2xl bg-muted/45 px-3 py-3">
-            <p className="text-sm leading-relaxed text-foreground">
-              “{reviewPreview}”
-            </p>
-            <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span aria-hidden>{previewReview?.author_emoji ?? '🙂'}</span>
-              <span>{previewReview?.author_name ?? '라이더'}</span>
-            </div>
+        {previewReviews.length > 0 ? (
+          <div className="mt-3 flex flex-col gap-2">
+            {previewReviews.map((review) => (
+              <ReviewPreviewCard key={review.id} review={review} />
+            ))}
           </div>
         ) : (
           <p className="mt-3 text-sm text-muted-foreground">
@@ -398,12 +401,37 @@ function DurationTile({
   )
 }
 
-function summarizeText(value: string | null | undefined, maxLength: number) {
-  if (!value) return null
-  const normalized = value.replace(/\s+/g, ' ').trim()
-  if (!normalized) return null
-  if (normalized.length <= maxLength) return normalized
-  return `${normalized.slice(0, maxLength - 1).trimEnd()}…`
+function ReviewPreviewCard({ review }: { review: CourseReview }) {
+  const excerpt = summarizeText(review.content, 92)
+  const author = getReviewAuthorDisplay(review)
+  return (
+    <div className="rounded-2xl bg-muted/45 px-3 py-3">
+      <div className="flex items-center gap-1">
+        {Array.from({ length: 5 }, (_, i) => (
+          <Star
+            key={i}
+            className={`h-3 w-3 ${
+              i < review.rating
+                ? 'fill-amber-400 text-amber-400'
+                : 'fill-muted text-muted'
+            }`}
+          />
+        ))}
+        <span className="ml-1 text-xs font-medium text-foreground/70">
+          {review.rating.toFixed(1)}
+        </span>
+      </div>
+      {excerpt && (
+        <p className="mt-1.5 text-sm leading-relaxed text-foreground">
+          {excerpt}
+        </p>
+      )}
+      <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <span aria-hidden>{author.emoji}</span>
+        <span>{author.name}</span>
+      </div>
+    </div>
+  )
 }
 
 function PoiFilterChip({
