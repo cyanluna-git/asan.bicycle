@@ -65,18 +65,7 @@ export function CourseAlbumUploadForm({
 
   return (
     <div className="rounded-3xl border bg-card p-4 shadow-sm">
-      <div className="mb-4 flex items-start gap-3">
-        <div className="rounded-2xl bg-orange-100 p-2 text-orange-600">
-          <Upload className="h-4 w-4" />
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">라이드 사진 업로드</h3>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            사진의 GPS 메타를 읽고, 업로드 전 WebP로 변환해 저장합니다.
-            위치 메타가 없는 사진은 업로드할 수 없습니다.
-          </p>
-        </div>
-      </div>
+      <h3 className="mb-3 text-sm font-semibold text-foreground">사진 업로드</h3>
 
       <div className="space-y-4">
         <div className="space-y-2">
@@ -137,9 +126,6 @@ export function CourseAlbumUploadForm({
             rows={3}
             className="w-full rounded-2xl border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
-          <p className="text-xs text-muted-foreground">
-            최대 {(MAX_COURSE_ALBUM_UPLOAD_BYTES / (1024 * 1024)).toFixed(0)}MB 이미지, 캡션 {MAX_COURSE_ALBUM_CAPTION_LENGTH}자
-          </p>
         </div>
 
         {error ? (

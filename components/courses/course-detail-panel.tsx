@@ -234,8 +234,8 @@ export function CourseDetailPanel({
             </div>
           </div>
         ) : (
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            아직 첫 후기 전입니다. 실제 라이딩 느낌과 노면 정보를 남겨보세요.
+          <p className="mt-3 text-sm text-muted-foreground">
+            아직 첫 후기 전입니다.
           </p>
         )}
       </div>
@@ -247,12 +247,6 @@ export function CourseDetailPanel({
               <Camera className="h-3.5 w-3.5" />
               라이드 앨범
             </div>
-            <p className="mt-2 text-sm font-semibold text-foreground">
-              이 코스 위에서 찍은 사진을 모아볼 수 있습니다.
-            </p>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              GPS가 있는 사진은 이후 지도 위 포인트와 함께 이어집니다.
-            </p>
           </div>
           <Button
             type="button"

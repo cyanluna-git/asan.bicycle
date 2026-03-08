@@ -117,9 +117,6 @@ export function CourseAlbumSurface({
             <h2 className="mt-1 truncate text-base font-semibold text-foreground">
               {courseTitle}
             </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              이 코스 위에서 찍은 라이딩 사진을 모아보고, 위치가 있는 사진은 지도 위 경험 포인트로 이어집니다.
-            </p>
           </div>
           {onClose ? (
             <Button
