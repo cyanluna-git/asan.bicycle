@@ -2,11 +2,12 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { ArrowRight, Camera, Download, Pencil, Quote, Star, X } from 'lucide-react'
+import { ArrowRight, Camera, Download, LogIn, Pencil, Quote, Send, Star, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { signInWithGoogle } from '@/lib/auth'
 import { difficultyLabel, difficultyVariant } from '@/lib/difficulty'
 import {
   getPoiCategoryTabs,
@@ -21,12 +22,15 @@ import {
   SPEED_INTERMEDIATE,
   SPEED_ADVANCED,
 } from '@/lib/calc-duration'
+import { resolveProfileEmoji } from '@/lib/profile'
 import { summarizeText } from '@/lib/text'
 import {
   getPreviewReviews,
   getReviewAuthorDisplay,
   shouldShowMoreButton,
 } from '@/lib/review-preview'
+import { supabase } from '@/lib/supabase'
+import { getUploaderDisplayName } from '@/lib/user-display-name'
 import type {
   CourseAlbumPhoto,
   CourseDetail,
@@ -35,6 +39,7 @@ import type {
   PoiMapItem,
   UphillSegment,
 } from '@/types/course'
+import type { User } from '@supabase/supabase-js'
 
 interface CourseDetailPanelProps {
   course: CourseDetail
@@ -46,6 +51,7 @@ interface CourseDetailPanelProps {
   reviews?: CourseReview[]
   reviewStats?: CourseReviewStats | null
   albumPreviewPhotos?: CourseAlbumPhoto[]
+  user?: User | null
   onOpenReviews?: (triggerEl?: HTMLButtonElement | null) => void
   reviewTriggerId?: string
   onOpenAlbum?: (triggerEl?: HTMLButtonElement | null) => void
@@ -62,6 +68,7 @@ export function CourseDetailPanel({
   reviews = [],
   reviewStats = null,
   albumPreviewPhotos = [],
+  user = null,
   onOpenReviews,
   reviewTriggerId,
   onOpenAlbum,
@@ -71,6 +78,15 @@ export function CourseDetailPanel({
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [activeCategory, setActiveCategory] = useState<PoiCategoryFilter>('all')
+  const [optimisticReview, setOptimisticReview] = useState<CourseReview | null>(null)
+
+  const allReviews = optimisticReview
+    ? [optimisticReview, ...reviews.filter((r) => r.id !== optimisticReview.id)]
+    : reviews
+
+  const hasOwnReview = Boolean(
+    user && allReviews.some((r) => r.user_id === user.id),
+  )
 
   const handleClose = () => {
     const returnTo = searchParams.get('returnTo')
@@ -93,11 +109,12 @@ export function CourseDetailPanel({
   ] as const
   const categoryTabs = getPoiCategoryTabs(pois)
   const visiblePois = sortPoisForRail(pois, activeCategory)
-  const previewReviews = getPreviewReviews(reviews)
+  const previewReviews = getPreviewReviews(allReviews)
   const compactDescription = summarizeText(course.description, 120)
 
   useEffect(() => {
     setActiveCategory('all')
+    setOptimisticReview(null)
   }, [course.id])
 
   useEffect(() => {
@@ -216,7 +233,7 @@ export function CourseDetailPanel({
               </span>
             </div>
           </div>
-          {shouldShowMoreButton(reviews) && (
+          {shouldShowMoreButton(allReviews) && (
             <Button
               type="button"
               variant="outline"
@@ -244,6 +261,21 @@ export function CourseDetailPanel({
           <p className="mt-3 text-sm text-muted-foreground">
             아직 첫 후기 전입니다.
           </p>
+        )}
+
+        {!user ? (
+          <InlineLoginPrompt />
+        ) : hasOwnReview ? (
+          <InlineOwnReviewNotice
+            onOpenReviews={onOpenReviews}
+            reviewTriggerId={reviewTriggerId}
+          />
+        ) : (
+          <InlineReviewForm
+            courseId={course.id}
+            user={user}
+            onSubmitted={setOptimisticReview}
+          />
         )}
       </div>
 
@@ -460,6 +492,194 @@ function ReviewPreviewCard({ review }: { review: CourseReview }) {
         <span aria-hidden>{author.emoji}</span>
         <span>{author.name}</span>
       </div>
+    </div>
+  )
+}
+
+function InlineLoginPrompt() {
+  return (
+    <div className="mt-3 flex items-center justify-between rounded-2xl bg-muted/45 px-3 py-3">
+      <span className="text-sm text-muted-foreground">
+        후기를 남기려면 로그인하세요
+      </span>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="shrink-0 rounded-full"
+        onClick={async () => {
+          await signInWithGoogle()
+        }}
+      >
+        <LogIn className="mr-1.5 h-3.5 w-3.5" />
+        로그인
+      </Button>
+    </div>
+  )
+}
+
+function InlineOwnReviewNotice({
+  onOpenReviews,
+  reviewTriggerId,
+}: {
+  onOpenReviews?: (triggerEl?: HTMLButtonElement | null) => void
+  reviewTriggerId?: string
+}) {
+  return (
+    <div className="mt-3 flex items-center justify-between rounded-2xl bg-muted/45 px-3 py-3">
+      <span className="text-sm text-muted-foreground">
+        이미 후기를 작성했습니다
+      </span>
+      {onOpenReviews && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          id={reviewTriggerId ? `${reviewTriggerId}-notice` : undefined}
+          className="shrink-0 rounded-full"
+          onClick={(event) => onOpenReviews(event.currentTarget)}
+          aria-haspopup="dialog"
+        >
+          후기 보기
+          <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+        </Button>
+      )}
+    </div>
+  )
+}
+
+function InlineReviewForm({
+  courseId,
+  user,
+  onSubmitted,
+}: {
+  courseId: string
+  user: User
+  onSubmitted: (review: CourseReview | null) => void
+}) {
+  const [rating, setRating] = useState(0)
+  const [hoverRating, setHoverRating] = useState(0)
+  const [content, setContent] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const displayRating = hoverRating || rating
+
+  const handleSubmit = () => {
+    setError(null)
+
+    if (rating < 1 || rating > 5) {
+      setError('별점을 선택해주세요 (1~5)')
+      return
+    }
+
+    if (!content.trim()) {
+      setError('한줄 후기를 입력해주세요.')
+      return
+    }
+
+    const now = new Date().toISOString()
+    const optimistic: CourseReview = {
+      id: `optimistic-${Date.now()}`,
+      course_id: courseId,
+      user_id: user.id,
+      rating,
+      content: content.trim(),
+      ridden_at: null,
+      perceived_difficulty: null,
+      condition_note: null,
+      created_at: now,
+      updated_at: now,
+      author_name: getUploaderDisplayName(user),
+      author_emoji: resolveProfileEmoji(user),
+    }
+
+    const submittedRating = rating
+    const submittedContent = content.trim()
+
+    onSubmitted(optimistic)
+    setContent('')
+    setRating(0)
+
+    startTransition(() => {
+      void (async () => {
+        const { error: insertError } = await supabase
+          .from('course_reviews')
+          .insert({
+            course_id: courseId,
+            user_id: user.id,
+            rating: submittedRating,
+            content: submittedContent,
+          })
+
+        if (insertError) {
+          onSubmitted(null)
+          setError(insertError.message)
+          setRating(submittedRating)
+          setContent(submittedContent)
+        }
+      })()
+    })
+  }
+
+  return (
+    <div className="mt-3 space-y-2 rounded-2xl bg-muted/45 px-3 py-3">
+      <div className="flex items-center gap-1">
+        {Array.from({ length: 5 }, (_, i) => (
+          <button
+            key={i}
+            type="button"
+            className="p-0.5"
+            onMouseEnter={() => setHoverRating(i + 1)}
+            onMouseLeave={() => setHoverRating(0)}
+            onClick={() => setRating(i + 1)}
+            aria-label={`${i + 1}점`}
+          >
+            <Star
+              className={`h-4 w-4 transition-colors ${
+                i < displayRating
+                  ? 'fill-amber-400 text-amber-400'
+                  : 'fill-muted text-muted-foreground/40'
+              }`}
+            />
+          </button>
+        ))}
+        {rating > 0 && (
+          <span className="ml-1 text-xs font-medium text-foreground/70">
+            {rating}.0
+          </span>
+        )}
+      </div>
+      <div className="flex gap-2">
+        <input
+          ref={inputRef}
+          type="text"
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+              handleSubmit()
+            }
+          }}
+          placeholder="한줄 후기를 남겨주세요"
+          className="min-w-0 flex-1 rounded-lg border bg-background px-2.5 py-1.5 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-foreground/20"
+          disabled={isPending}
+          maxLength={200}
+        />
+        <Button
+          type="button"
+          size="sm"
+          className="shrink-0 rounded-full"
+          disabled={isPending || rating < 1 || !content.trim()}
+          onClick={handleSubmit}
+        >
+          <Send className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+      {error && (
+        <p className="text-xs text-destructive">{error}</p>
+      )}
     </div>
   )
 }

@@ -11,6 +11,7 @@ import type {
   PoiMapItem,
   UphillSegment,
 } from '@/types/course'
+import type { User } from '@supabase/supabase-js'
 
 interface SidebarProps {
   courses: CourseListItem[]
@@ -26,6 +27,7 @@ interface SidebarProps {
   reviews?: CourseReview[]
   reviewStats?: CourseReviewStats | null
   albumPreviewPhotos?: CourseAlbumPhoto[]
+  user?: User | null
   onOpenReviews?: (triggerEl?: HTMLButtonElement | null) => void
   onOpenAlbum?: (triggerEl?: HTMLButtonElement | null) => void
 }
@@ -44,6 +46,7 @@ export function Sidebar({
   reviews,
   reviewStats,
   albumPreviewPhotos,
+  user,
   onOpenReviews,
   onOpenAlbum,
 }: SidebarProps) {
@@ -62,6 +65,7 @@ export function Sidebar({
               reviews={reviews ?? []}
               reviewStats={reviewStats ?? null}
               albumPreviewPhotos={albumPreviewPhotos}
+              user={user}
               reviewTriggerId={selectedCourse ? `sidebar-review-trigger-${selectedCourse.id}` : undefined}
               albumTriggerId={selectedCourse ? `sidebar-album-trigger-${selectedCourse.id}` : undefined}
               onOpenReviews={onOpenReviews}

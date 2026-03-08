@@ -281,6 +281,7 @@ export function ExploreShell({
         reviews={reviews}
         reviewStats={reviewStats}
         albumPreviewPhotos={albumPreviewPhotos}
+        user={user}
         onOpenReviews={(triggerEl) =>
           openSurface({ kind: 'review', source: 'sidebar', triggerEl })
         }
@@ -314,6 +315,7 @@ export function ExploreShell({
             reviews={reviews}
             reviewStats={reviewStats}
             albumPreviewPhotos={albumPreviewPhotos}
+            user={user}
             open={isCourseSheetOpen}
             onOpenChange={setIsCourseSheetOpen}
             onOpenReviews={(triggerEl) =>

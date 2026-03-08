@@ -23,6 +23,7 @@ import type {
   PoiMapItem,
   UphillSegment,
 } from '@/types/course'
+import type { User } from '@supabase/supabase-js'
 
 interface BottomSheetProps {
   courses: CourseListItem[]
@@ -38,6 +39,7 @@ interface BottomSheetProps {
   reviews?: CourseReview[]
   reviewStats?: CourseReviewStats | null
   albumPreviewPhotos?: CourseAlbumPhoto[]
+  user?: User | null
   onOpenReviews?: (triggerEl?: HTMLButtonElement | null) => void
   onOpenAlbum?: (triggerEl?: HTMLButtonElement | null) => void
   open: boolean
@@ -58,6 +60,7 @@ export function BottomSheet({
   reviews,
   reviewStats,
   albumPreviewPhotos,
+  user,
   onOpenReviews,
   onOpenAlbum,
   open,
@@ -129,6 +132,7 @@ export function BottomSheet({
                   reviews={reviews ?? []}
                   reviewStats={reviewStats ?? null}
                   albumPreviewPhotos={albumPreviewPhotos}
+                  user={user}
                   reviewTriggerId={selectedCourse ? `bottom-sheet-review-trigger-${selectedCourse.id}` : undefined}
                   albumTriggerId={selectedCourse ? `bottom-sheet-album-trigger-${selectedCourse.id}` : undefined}
                   onOpenReviews={handleOpenReviews}
