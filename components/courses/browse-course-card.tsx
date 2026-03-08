@@ -93,11 +93,7 @@ export function BrowseCourseCard({
               <span>{course.review_author_name ?? '라이더'}</span>
             </div>
           </div>
-        ) : (
-          <div className="rounded-[22px] border border-dashed border-black/8 px-3 py-3 text-sm text-muted-foreground">
-            아직 후기가 없습니다. 첫 라이더 반응을 남겨보세요.
-          </div>
-        )}
+        ) : null}
       </div>
     </Link>
   )

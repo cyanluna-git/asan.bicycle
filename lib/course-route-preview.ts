@@ -48,10 +48,13 @@ export function normalizeRoutePreviewPoints(points: RoutePreviewPoint[]) {
   const height = Math.max(maxLat - minLat, 0.000001)
   const inset = 8
   const drawable = 100 - inset * 2
+  const scale = drawable / Math.max(width, height)
+  const offsetX = inset + (drawable - width * scale) / 2
+  const offsetY = inset + (drawable - height * scale) / 2
 
   return points.map((point) => {
-    const x = inset + ((point.lng - minLng) / width) * drawable
-    const y = 100 - inset - ((point.lat - minLat) / height) * drawable
+    const x = offsetX + (point.lng - minLng) * scale
+    const y = offsetY + (maxLat - point.lat) * scale
     return `${x.toFixed(2)},${y.toFixed(2)}`
   })
 }

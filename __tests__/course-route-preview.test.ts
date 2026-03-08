@@ -38,8 +38,8 @@ describe('course route preview helpers', () => {
     ])
 
     expect(points).toEqual([
-      '8.00,92.00',
-      '64.00,8.00',
+      '8.00,78.00',
+      '64.00,22.00',
       '92.00,50.00',
     ])
   })
