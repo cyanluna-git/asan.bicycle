@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Loader2, Upload } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { ImagePlus, Loader2, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MAX_COURSE_ALBUM_CAPTION_LENGTH, MAX_COURSE_ALBUM_UPLOAD_BYTES } from '@/lib/course-album'
 import { uploadCourseAlbumPhoto } from '@/lib/course-album-upload'
@@ -17,6 +17,7 @@ export function CourseAlbumUploadForm({
   courseId,
   onUploaded,
 }: CourseAlbumUploadFormProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [caption, setCaption] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -79,11 +80,11 @@ export function CourseAlbumUploadForm({
 
       <div className="space-y-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor={`course-album-file-${courseId}`}>
+          <label className="text-sm font-medium">
             사진 파일
           </label>
           <input
-            id={`course-album-file-${courseId}`}
+            ref={fileInputRef}
             type="file"
             accept="image/*"
             onChange={(event) => {
@@ -91,8 +92,36 @@ export function CourseAlbumUploadForm({
               setError(null)
               setSuccessMessage(null)
             }}
-            className="block w-full text-sm"
+            className="sr-only"
           />
+          {selectedFile ? (
+            <div className="flex items-center gap-2 rounded-2xl border bg-muted/30 px-3 py-2.5">
+              <ImagePlus className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="min-w-0 flex-1 truncate text-sm text-foreground">
+                {selectedFile.name}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedFile(null)
+                  if (fileInputRef.current) fileInputRef.current.value = ''
+                }}
+                className="shrink-0 rounded-full p-1 text-muted-foreground hover:bg-muted"
+                aria-label="선택 해제"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-muted-foreground/25 bg-muted/20 px-4 py-5 text-sm font-medium text-muted-foreground transition-colors active:bg-muted/40"
+            >
+              <ImagePlus className="h-5 w-5" />
+              사진 앨범에서 선택
+            </button>
+          )}
         </div>
 
         <div className="space-y-2">
