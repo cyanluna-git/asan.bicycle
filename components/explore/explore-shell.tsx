@@ -351,6 +351,7 @@ export function ExploreShell({
           <KakaoMap
             routeQueryString={routeQueryString}
             selectedCourseId={selectedCourseId}
+            selectedCourseRouteGeoJSON={selectedCourse?.route_geojson ?? null}
             pois={pois}
             selectedPoiId={selectedPoiId}
             onSelectPoi={setSelectedPoiId}

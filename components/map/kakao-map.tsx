@@ -11,6 +11,7 @@ import {
 } from "react-kakao-maps-sdk"
 import type { CourseAlbumPhoto, CourseMapItem, RouteGeoJSON, PoiMapItem } from "@/types/course"
 import type { RouteHoverPoint } from '@/lib/elevation-hover-sync'
+import { mergeSelectedAndBackgroundRoutes } from '@/lib/map-route-display'
 import { getPoiMeta } from '@/lib/poi'
 import { buildSlopePolylineSegments, SLOPE_BANDS, SLOPE_LEGEND_ORDER } from '@/lib/slope-visualization'
 
@@ -49,6 +50,7 @@ const SAMPLE_ROUTE: RouteGeoJSON = {
 }
 
 const SAMPLE_COURSE_ID = "__sample__"
+const ROUTE_CACHE = new globalThis.Map<string, CourseMapItem[]>()
 
 // ---------------------------------------------------------------------------
 // Utility helpers
@@ -99,6 +101,7 @@ function computeBounds(coords: LatLng[]) {
 interface KakaoMapProps {
   routeQueryString?: string
   selectedCourseId?: string | null
+  selectedCourseRouteGeoJSON?: RouteGeoJSON | null
   pois?: PoiMapItem[]
   selectedPoiId?: string | null
   onSelectPoi?: (id: string | null) => void
@@ -115,6 +118,7 @@ interface KakaoMapProps {
 export default function KakaoMap({
   routeQueryString,
   selectedCourseId,
+  selectedCourseRouteGeoJSON,
   pois,
   selectedPoiId,
   onSelectPoi,
@@ -135,6 +139,7 @@ export default function KakaoMap({
       appkey={appkey}
       routeQueryString={routeQueryString}
       selectedCourseId={selectedCourseId}
+      selectedCourseRouteGeoJSON={selectedCourseRouteGeoJSON}
       pois={pois}
       selectedPoiId={selectedPoiId}
       onSelectPoi={onSelectPoi}
@@ -154,6 +159,7 @@ function KakaoMapInner({
   appkey,
   routeQueryString,
   selectedCourseId,
+  selectedCourseRouteGeoJSON,
   pois,
   selectedPoiId,
   onSelectPoi,
@@ -166,13 +172,40 @@ function KakaoMapInner({
     appkey,
     libraries: ["services", "clusterer"],
   })
-  const [courses, setCourses] = useState<CourseMapItem[]>([])
-  const [isRoutesLoading, setIsRoutesLoading] = useState(true)
+  const [backgroundCourses, setBackgroundCourses] = useState<CourseMapItem[]>([])
+  const [isRoutesLoading, setIsRoutesLoading] = useState(false)
+
+  useEffect(() => {
+    if (!selectedCourseId) return
+    if (typeof performance === 'undefined') return
+    performance.mark(`map-selection-start:${selectedCourseId}`)
+  }, [selectedCourseId])
+
+  const mergedCourses = useMemo(
+    () =>
+      mergeSelectedAndBackgroundRoutes({
+        selectedCourseId,
+        selectedCourseRouteGeoJSON,
+        backgroundCourses,
+      }),
+    [backgroundCourses, selectedCourseId, selectedCourseRouteGeoJSON],
+  )
 
   useEffect(() => {
     const controller = new AbortController()
+    const cacheKey = routeQueryString || '__all__'
+
+    if (!selectedCourseId && routeQueryString === undefined) {
+      setBackgroundCourses([])
+    }
 
     async function loadRoutes() {
+      if (ROUTE_CACHE.has(cacheKey)) {
+        setBackgroundCourses(ROUTE_CACHE.get(cacheKey) ?? [])
+        setIsRoutesLoading(false)
+        return
+      }
+
       setIsRoutesLoading(true)
 
       try {
@@ -186,11 +219,13 @@ function KakaoMapInner({
         }
 
         const payload = await response.json() as { routes?: CourseMapItem[] }
-        setCourses(payload.routes ?? [])
+        const routes = payload.routes ?? []
+        ROUTE_CACHE.set(cacheKey, routes)
+        setBackgroundCourses(routes)
       } catch (fetchError) {
         if ((fetchError as Error).name !== 'AbortError') {
           console.error('[kakao-map] failed to fetch routes', fetchError)
-          setCourses([])
+          setBackgroundCourses([])
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -199,10 +234,29 @@ function KakaoMapInner({
       }
     }
 
-    void loadRoutes()
+    const timer = window.setTimeout(
+      () => {
+        void loadRoutes()
+      },
+      selectedCourseRouteGeoJSON ? 160 : 0,
+    )
 
-    return () => controller.abort()
-  }, [routeQueryString])
+    return () => {
+      controller.abort()
+      window.clearTimeout(timer)
+    }
+  }, [routeQueryString, selectedCourseId, selectedCourseRouteGeoJSON])
+  const hasAnyRoute = mergedCourses.some((course) => course.route_geojson != null)
+  const effectiveCourses: CourseMapItem[] = hasAnyRoute
+    ? mergedCourses
+    : isRoutesLoading
+      ? []
+      : [{ id: SAMPLE_COURSE_ID, route_geojson: SAMPLE_ROUTE }]
+  const effectiveSelectedId = hasAnyRoute
+    ? (selectedCourseRouteGeoJSON ? selectedCourseId : selectedCourseId ?? null)
+    : isRoutesLoading
+      ? null
+      : SAMPLE_COURSE_ID
 
   if (error) {
     return <MapError message="지도를 불러오는 중 오류가 발생했습니다." />
@@ -210,14 +264,6 @@ function KakaoMapInner({
   if (loading) {
     return <MapSkeleton />
   }
-
-  const hasAnyRoute = courses.some((course) => course.route_geojson != null)
-  const effectiveCourses: CourseMapItem[] = hasAnyRoute
-    ? courses
-    : isRoutesLoading
-      ? []
-      : [{ id: SAMPLE_COURSE_ID, route_geojson: SAMPLE_ROUTE }]
-  const effectiveSelectedId = hasAnyRoute ? selectedCourseId : isRoutesLoading ? null : SAMPLE_COURSE_ID
 
   // Only show POIs when a course is selected
   const visiblePois =
@@ -251,7 +297,7 @@ function KakaoMapInner({
       {effectiveSelectedId ? (
         <SlopeLegend />
       ) : null}
-      {isRoutesLoading ? (
+      {isRoutesLoading && !selectedCourseRouteGeoJSON ? (
         <div className="pointer-events-none absolute right-4 top-4 rounded-full bg-background/90 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm ring-1 ring-black/5 backdrop-blur">
           경로 불러오는 중
         </div>
@@ -498,13 +544,25 @@ function RoutePolylines({
     () => courses.map((course) => ({
       id: course.id,
       coords: course.route_geojson ? extractCoordinates(course.route_geojson) : [],
-      slopeSegments: course.route_geojson ? buildSlopePolylineSegments(course.route_geojson) : [],
+      slopeSegments:
+        course.id === selectedCourseId && course.route_geojson
+          ? buildSlopePolylineSegments(course.route_geojson)
+          : [],
     })),
-    [courses],
+    [courses, selectedCourseId],
   )
 
   const selectedCourse = routePaths.find((course) => course.id === selectedCourseId)
-  const selectedCoords = selectedCourse?.coords ?? []
+  const selectedCoords = useMemo(
+    () => selectedCourse?.coords ?? [],
+    [selectedCourse],
+  )
+
+  useEffect(() => {
+    if (!selectedCourseId || selectedCoords.length < 2) return
+    if (typeof performance === 'undefined') return
+    performance.mark(`map-selected-route-ready:${selectedCourseId}`)
+  }, [selectedCoords, selectedCourseId])
 
   return (
     <>
@@ -635,6 +693,9 @@ function BoundsController({
 
   useEffect(() => {
     fitBounds()
+    if (selectedCourseId && selectedCoords.length >= 2 && typeof performance !== 'undefined') {
+      performance.mark(`map-bounds-fit:${selectedCourseId}`)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCourseId])
 
