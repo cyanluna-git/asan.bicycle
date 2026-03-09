@@ -188,7 +188,7 @@ export function CourseDetailPanel({
             <SummaryMetric label="거리" value={`${course.distance_km} km`} />
             <SummaryMetric
               label="획득고도"
-              value={`↑ ${course.elevation_gain_m} m`}
+              value={`${course.elevation_gain_m.toLocaleString('ko-KR')}m`}
             />
           </div>
 
@@ -467,7 +467,7 @@ function SummaryMetric({
       <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-foreground/45">
         {label}
       </p>
-      <p className="mt-1 text-[1.15rem] font-semibold text-foreground sm:text-2xl">
+      <p className="mt-1 whitespace-nowrap text-[1.15rem] font-semibold text-foreground sm:text-2xl">
         {value}
       </p>
     </div>
