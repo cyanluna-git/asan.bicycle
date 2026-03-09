@@ -10,6 +10,8 @@ import { CourseMetadataForm } from '@/components/upload/course-metadata-form'
 import { CourseRoutePreviewMap } from '@/components/upload/course-route-preview-map'
 import { UphillEditor } from '@/components/upload/uphill-editor'
 import { canEditCourse, isAdminUser } from '@/lib/admin'
+import { Badge } from '@/components/ui/badge'
+import { getCourseOwnershipDiagnosis } from '@/lib/course-ownership-ui'
 import {
   buildPoiDraftFromRecord,
   buildStartPointOptions,
@@ -324,6 +326,15 @@ export function CourseEditPageClient({
     userId: user?.id,
     isAdmin: isAdminUser(user),
   })
+  const ownershipDiagnosis = course
+    ? getCourseOwnershipDiagnosis({
+        canEdit,
+        courseOwnerId: course.created_by,
+        userId: user?.id,
+        isAdmin: isAdminUser(user),
+        uploaderName: course.uploader_name,
+      })
+    : null
 
   const uploaderName = useMemo(() => {
     if (course?.uploader_name) {
@@ -611,9 +622,21 @@ export function CourseEditPageClient({
       <div className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center gap-4 px-4 pt-16 text-center">
         <Lock className="h-12 w-12 text-muted-foreground" />
         <h1 className="text-xl font-bold">수정 권한이 없습니다</h1>
-        <p className="text-sm text-muted-foreground">
-          코스 소유자 또는 관리자만 이 코스를 수정할 수 있습니다.
-        </p>
+        {ownershipDiagnosis ? (
+          <div className="w-full rounded-2xl border bg-card p-4 text-left shadow-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={ownershipDiagnosis.badgeVariant}>
+                {ownershipDiagnosis.badgeLabel}
+              </Badge>
+              <span className="text-sm font-semibold text-foreground">
+                {ownershipDiagnosis.statusLabel}
+              </span>
+            </div>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {ownershipDiagnosis.description}
+            </p>
+          </div>
+        ) : null}
         <div className="flex gap-2">
           <Button asChild variant="outline">
             <Link href={`/explore?courseId=${course.id}&returnTo=${encodeURIComponent(`/courses?focus=${course.id}`)}`}>코스 상세로 이동</Link>

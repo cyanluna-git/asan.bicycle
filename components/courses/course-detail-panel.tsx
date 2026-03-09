@@ -8,7 +8,9 @@ import { ArrowLeft, ArrowRight, Download, ImagePlus, Loader2, LogIn, Pencil, Sen
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { CourseShareButton } from '@/components/courses/course-share-button'
+import { isAdminUser } from '@/lib/admin'
 import { signInWithGoogle } from '@/lib/auth'
+import { getCourseOwnershipDiagnosis } from '@/lib/course-ownership-ui'
 import { difficultyLabel, difficultyVariant } from '@/lib/difficulty'
 import {
   getPoiCategoryTabs,
@@ -122,6 +124,13 @@ export function CourseDetailPanel({
   const compactDescription = summarizeText(course.description, 120)
   const shareDescription = compactDescription
     || `${course.distance_km}km · 획득고도 ${course.elevation_gain_m.toLocaleString('ko-KR')}m`
+  const ownershipDiagnosis = getCourseOwnershipDiagnosis({
+    canEdit: canEditCourse,
+    courseOwnerId: course.created_by,
+    userId: user?.id,
+    isAdmin: isAdminUser(user),
+    uploaderName: course.uploader_name,
+  })
 
   useEffect(() => {
     setActiveCategory('all')
@@ -388,6 +397,20 @@ export function CourseDetailPanel({
         )}
       </div>
 
+      <div className="rounded-[24px] border bg-card p-4 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant={ownershipDiagnosis.badgeVariant}>
+            {ownershipDiagnosis.badgeLabel}
+          </Badge>
+          <span className="text-sm font-semibold text-foreground">
+            {ownershipDiagnosis.statusLabel}
+          </span>
+        </div>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          {ownershipDiagnosis.description}
+        </p>
+      </div>
+
       {uphillSegments.length > 0 && (
         <div>
           <h3 className="mb-2 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
@@ -412,8 +435,7 @@ export function CourseDetailPanel({
       )}
 
       <div className="rounded-[24px] border bg-card p-4 shadow-sm">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
+        <div className="grid w-full gap-2">
             <CourseShareButton
               courseId={course.id}
               courseTitle={course.title}
@@ -421,7 +443,7 @@ export function CourseDetailPanel({
               imageUrl={albumPreviewPhotos[0]?.public_url ?? null}
             />
             {canEditCourse ? (
-              <Button asChild variant="outline" className="h-11 w-full sm:w-auto">
+              <Button asChild variant="outline" className="h-11 w-full">
                 <Link href={`/courses/${course.id}/edit`}>
                   <Pencil className="mr-2 h-4 w-4" />
                   코스 수정
@@ -430,19 +452,18 @@ export function CourseDetailPanel({
             ) : null}
 
             {course.gpx_url ? (
-              <Button asChild className="h-11 w-full sm:w-auto">
+              <Button asChild className="h-11 w-full">
                 <a href={`/api/courses/${course.id}/download`}>
                   <Download className="mr-2 h-4 w-4" />
                   GPX 다운로드
                 </a>
               </Button>
             ) : (
-              <Button className="h-11 w-full sm:w-auto" disabled>
+              <Button className="h-11 w-full" disabled>
                 <Download className="mr-2 h-4 w-4" />
                 GPX 다운로드
               </Button>
             )}
-          </div>
         </div>
       </div>
     </div>

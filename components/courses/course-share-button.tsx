@@ -105,7 +105,7 @@ export function CourseShareButton({
       <Button
         type="button"
         variant="outline"
-        className="h-11 w-full sm:w-auto"
+        className="h-11 w-full"
         onClick={() => {
           void handleShare()
         }}
