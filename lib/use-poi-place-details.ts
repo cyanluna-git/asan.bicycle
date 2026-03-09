@@ -67,6 +67,23 @@ export function isKakaoPlacesReady() {
   return typeof window !== 'undefined' && Boolean(window.kakao?.maps?.services)
 }
 
+export async function waitForKakaoPlacesReady(timeoutMs = 4000, intervalMs = 80) {
+  if (isKakaoPlacesReady()) {
+    return true
+  }
+
+  const startedAt = Date.now()
+
+  while (Date.now() - startedAt < timeoutMs) {
+    await new Promise((resolve) => window.setTimeout(resolve, intervalMs))
+    if (isKakaoPlacesReady()) {
+      return true
+    }
+  }
+
+  return false
+}
+
 export async function lookupPoiPlaceDetails(poi: PoiMapItem) {
   if (poi.address || poi.place_url) {
     return {
