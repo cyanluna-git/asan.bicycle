@@ -26,6 +26,7 @@ import {
 } from '@/lib/calc-duration'
 import { resolveProfileEmoji } from '@/lib/profile'
 import { summarizeText } from '@/lib/text'
+import { lookupPoiPlaceDetails } from '@/lib/use-poi-place-details'
 import {
   getPreviewReviews,
   getReviewAuthorDisplay,
@@ -894,9 +895,43 @@ function PoiCard({
   onClick: () => void
 }) {
   const [imageFailed, setImageFailed] = useState(false)
+  const [placeDetails, setPlaceDetails] = useState<{
+    address: string | null
+    place_url: string | null
+  } | null>(
+    poi.address || poi.place_url
+      ? {
+          address: poi.address ?? null,
+          place_url: poi.place_url ?? null,
+        }
+      : null,
+  )
   const category = normalizePoiCategory(poi.category)
   const meta = getPoiMeta(category)
   const showImage = Boolean(poi.photo_url) && !imageFailed
+  const resolvedAddress = placeDetails?.address ?? poi.address ?? null
+  const resolvedPlaceUrl = placeDetails?.place_url ?? poi.place_url ?? null
+
+  useEffect(() => {
+    if (!isSelected) {
+      return
+    }
+
+    if (resolvedAddress || resolvedPlaceUrl) {
+      return
+    }
+
+    let cancelled = false
+    void lookupPoiPlaceDetails(poi).then((details) => {
+      if (!cancelled && details) {
+        setPlaceDetails(details)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [isSelected, poi, resolvedAddress, resolvedPlaceUrl])
 
   return (
     <div
@@ -955,7 +990,7 @@ function PoiCard({
           >
             {poi.description?.trim() || `${meta.label} 정보를 확인해보세요.`}
           </p>
-          {poi.address ? (
+          {resolvedAddress ? (
             <p
               className="text-[11px] leading-4 text-muted-foreground"
               style={{
@@ -965,15 +1000,15 @@ function PoiCard({
                 overflow: 'hidden',
               }}
             >
-              {poi.address}
+              {resolvedAddress}
             </p>
           ) : null}
         </div>
       </button>
-      {poi.place_url ? (
+      {resolvedPlaceUrl ? (
         <div className="px-3 pb-3">
           <a
-            href={poi.place_url}
+            href={resolvedPlaceUrl}
             target="_blank"
             rel="noreferrer"
             className="inline-flex h-8 w-full items-center justify-center rounded-full border text-xs font-medium text-foreground transition-colors hover:bg-muted/50"

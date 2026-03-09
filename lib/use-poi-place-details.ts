@@ -1,10 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { useKakaoLoader } from 'react-kakao-maps-sdk'
 import type { PoiMapItem } from '@/types/course'
 
-type PoiPlaceDetails = {
+export type PoiPlaceDetails = {
   address: string | null
   place_url: string | null
 }
@@ -65,12 +63,20 @@ function selectBestResult(poi: PoiMapItem, results: PlaceSearchResult[]) {
   }, null as { result: PlaceSearchResult; distance: number } | null)?.result ?? null
 }
 
-async function lookupPoiPlaceDetails(poi: PoiMapItem) {
+export function isKakaoPlacesReady() {
+  return typeof window !== 'undefined' && Boolean(window.kakao?.maps?.services)
+}
+
+export async function lookupPoiPlaceDetails(poi: PoiMapItem) {
   if (poi.address || poi.place_url) {
     return {
       address: poi.address ?? null,
       place_url: poi.place_url ?? null,
     }
+  }
+
+  if (!isKakaoPlacesReady()) {
+    return null
   }
 
   const cacheKey = buildPoiCacheKey(poi)
@@ -122,89 +128,4 @@ async function lookupPoiPlaceDetails(poi: PoiMapItem) {
 
   pendingCache.set(cacheKey, request)
   return request
-}
-
-export function usePoiPlaceDetails(pois: PoiMapItem[]) {
-  const appkey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY
-  const [detailsById, setDetailsById] = useState<Record<string, PoiPlaceDetails>>({})
-  const [loading, error] = useKakaoLoader({
-    appkey: appkey ?? 'missing',
-    libraries: ['services'],
-  })
-
-  useEffect(() => {
-    const presetEntries = pois
-      .filter((poi) => poi.address || poi.place_url)
-      .map((poi) => [
-        poi.id,
-        {
-          address: poi.address ?? null,
-          place_url: poi.place_url ?? null,
-        },
-      ] as const)
-
-    if (presetEntries.length === 0) {
-      return
-    }
-
-    setDetailsById((prev) => {
-      const next = { ...prev }
-      for (const [id, details] of presetEntries) {
-        next[id] = details
-      }
-      return next
-    })
-  }, [pois])
-
-  useEffect(() => {
-    if (!appkey || loading || error) {
-      return
-    }
-
-    let cancelled = false
-    const unresolvedPois = pois.filter((poi) => !detailsById[poi.id] && !(poi.address || poi.place_url))
-
-    if (unresolvedPois.length === 0) {
-      return
-    }
-
-    void Promise.all(
-      unresolvedPois.map(async (poi) => {
-        const details = await lookupPoiPlaceDetails(poi)
-        return details ? [poi.id, details] as const : null
-      }),
-    ).then((entries) => {
-      if (cancelled) {
-        return
-      }
-
-      setDetailsById((prev) => {
-        const next = { ...prev }
-        for (const entry of entries) {
-          if (!entry) continue
-          next[entry[0]] = entry[1]
-        }
-        return next
-      })
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [appkey, detailsById, error, loading, pois])
-
-  return useMemo(
-    () => {
-      if (!appkey) {
-        return pois
-      }
-
-      return pois.map((poi) => ({
-        ...poi,
-        address: detailsById[poi.id]?.address ?? poi.address ?? null,
-        place_url: detailsById[poi.id]?.place_url ?? poi.place_url ?? null,
-      }))
-    },
-    [appkey, detailsById, pois],
-  )
 }

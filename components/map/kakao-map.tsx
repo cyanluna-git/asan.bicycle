@@ -14,6 +14,7 @@ import type { RouteHoverPoint } from '@/lib/elevation-hover-sync'
 import { mergeSelectedAndBackgroundRoutes } from '@/lib/map-route-display'
 import { getPoiMeta } from '@/lib/poi'
 import { buildSlopePolylineSegments, SLOPE_BANDS, SLOPE_LEGEND_ORDER } from '@/lib/slope-visualization'
+import { lookupPoiPlaceDetails } from '@/lib/use-poi-place-details'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -717,6 +718,7 @@ function PoiMarkers({
 }) {
   const map = useMap()
   const [openId, setOpenId] = useState<string | null>(selectedPoiId ?? null)
+  const [detailsById, setDetailsById] = useState<Record<string, { address: string | null; place_url: string | null }>>({})
 
   useEffect(() => {
     setOpenId(selectedPoiId ?? null)
@@ -738,6 +740,28 @@ function PoiMarkers({
     }
   }, [onSelectPoi, openId, pois])
 
+  useEffect(() => {
+    if (!openId) {
+      return
+    }
+
+    const activePoi = pois.find((poi) => poi.id === openId)
+    if (!activePoi || detailsById[activePoi.id] || activePoi.address || activePoi.place_url) {
+      return
+    }
+
+    let cancelled = false
+    void lookupPoiPlaceDetails(activePoi).then((details) => {
+      if (!cancelled && details) {
+        setDetailsById((prev) => ({ ...prev, [activePoi.id]: details }))
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [detailsById, openId, pois])
+
   if (pois.length === 0) return null
 
   return (
@@ -746,6 +770,8 @@ function PoiMarkers({
         const cfg = getPoiMeta(poi.category)
         const pos = { lat: poi.lat, lng: poi.lng }
         const isOpen = openId === poi.id
+        const resolvedAddress = detailsById[poi.id]?.address ?? poi.address ?? null
+        const resolvedPlaceUrl = detailsById[poi.id]?.place_url ?? poi.place_url ?? null
 
         return (
           <CustomOverlayMap
@@ -887,7 +913,7 @@ function PoiMarkers({
                       {poi.description}
                     </p>
                   )}
-                  {poi.address ? (
+                  {resolvedAddress ? (
                     <p
                       style={{
                         margin: poi.description ? "4px 0 0" : "5px 0 0",
@@ -896,12 +922,12 @@ function PoiMarkers({
                         lineHeight: 1.5,
                       }}
                     >
-                      {poi.address}
+                      {resolvedAddress}
                     </p>
                   ) : null}
-                  {poi.place_url ? (
+                  {resolvedPlaceUrl ? (
                     <a
-                      href={poi.place_url}
+                      href={resolvedPlaceUrl}
                       target="_blank"
                       rel="noreferrer"
                       style={{

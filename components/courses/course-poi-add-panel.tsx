@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button'
 import { POI_CATEGORY_ORDER, getPoiMeta, suggestPoiCategoryFromSearch, type PoiCategory } from '@/lib/poi'
 import { signInWithGoogle } from '@/lib/auth'
 import { POI_PHOTO_BUCKET } from '@/lib/poi-photo-storage'
+import { isKakaoPlacesReady } from '@/lib/use-poi-place-details'
 import { supabase } from '@/lib/supabase'
 import type { PoiMapItem } from '@/types/course'
-import { useKakaoLoader } from 'react-kakao-maps-sdk'
 
 type CoursePoiAddPanelProps = {
   courseId: string
@@ -97,7 +97,6 @@ function CoursePoiAddForm({
 
   return (
     <CoursePoiAddLoadedForm
-      appkey={appkey}
       courseId={courseId}
       onCancel={onCancel}
       onCreated={onCreated}
@@ -106,12 +105,10 @@ function CoursePoiAddForm({
 }
 
 function CoursePoiAddLoadedForm({
-  appkey,
   courseId,
   onCancel,
   onCreated,
 }: {
-  appkey: string
   courseId: string
   onCancel: () => void
   onCreated?: (poi: PoiMapItem) => void
@@ -126,11 +123,6 @@ function CoursePoiAddLoadedForm({
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-
-  const [loading, loaderError] = useKakaoLoader({
-    appkey,
-    libraries: ['services'],
-  })
 
   const selectedPlaceAddress = useMemo(() => {
     if (!selectedPlace) {
@@ -157,12 +149,8 @@ function CoursePoiAddLoadedForm({
       return
     }
 
-    if (loading) {
-      return
-    }
-
-    if (loaderError) {
-      setError('카카오 장소 검색을 불러오지 못했습니다.')
+    if (!isKakaoPlacesReady()) {
+      setError('카카오 장소 검색이 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.')
       return
     }
 
@@ -323,7 +311,7 @@ function CoursePoiAddLoadedForm({
             type="button"
             className="h-10 rounded-full"
             onClick={() => void handleSearch()}
-            disabled={searching || loading || !keyword.trim()}
+            disabled={searching || !keyword.trim()}
           >
             {searching ? (
               <Loader2 className="h-4 w-4 animate-spin" />
