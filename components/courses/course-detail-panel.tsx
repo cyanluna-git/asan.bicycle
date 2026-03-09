@@ -4,9 +4,10 @@ import Image from 'next/image'
 import Link from 'next/link'
 import React, { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, ArrowRight, Camera, Download, ImagePlus, Loader2, LogIn, Pencil, Quote, Send, Star } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Download, ImagePlus, Loader2, LogIn, Pencil, Send, Star } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { CourseShareButton } from '@/components/courses/course-share-button'
 import { signInWithGoogle } from '@/lib/auth'
 import { difficultyLabel, difficultyVariant } from '@/lib/difficulty'
 import {
@@ -98,6 +99,11 @@ export function CourseDetailPanel({
       return
     }
 
+    if (pathname.startsWith('/courses/') && !searchParams.get('courseId')) {
+      router.replace(`/courses?focus=${course.id}`, { scroll: false })
+      return
+    }
+
     const params = new URLSearchParams(searchParams.toString())
     params.delete('courseId')
     params.delete('returnTo')
@@ -114,6 +120,8 @@ export function CourseDetailPanel({
   const visiblePois = sortPoisForRail(pois, activeCategory)
   const previewReviews = getPreviewReviews(allReviews)
   const compactDescription = summarizeText(course.description, 120)
+  const shareDescription = compactDescription
+    || `${course.distance_km}km · 획득고도 ${course.elevation_gain_m.toLocaleString('ko-KR')}m`
 
   useEffect(() => {
     setActiveCategory('all')
@@ -224,20 +232,14 @@ export function CourseDetailPanel({
 
       <div className="rounded-[24px] border bg-card p-4 shadow-sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-              <Quote className="h-3.5 w-3.5" />
-              라이더 반응
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <div className="flex items-center gap-1 text-sm font-semibold text-foreground">
+              <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+              <span>{reviewStats?.avg_rating?.toFixed(1) ?? '-'}</span>
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-              <div className="flex items-center gap-1 text-sm font-semibold text-foreground">
-                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                <span>{reviewStats?.avg_rating?.toFixed(1) ?? '-'}</span>
-              </div>
-              <span className="text-sm text-muted-foreground">
-                {reviewStats?.review_count ?? 0}개 후기
-              </span>
-            </div>
+            <span className="text-sm text-muted-foreground">
+              {reviewStats?.review_count ?? 0}개 후기
+            </span>
           </div>
           {shouldShowMoreButton(allReviews) && (
             <Button
@@ -251,7 +253,7 @@ export function CourseDetailPanel({
               aria-haspopup="dialog"
               aria-label={`${course.title} 후기 더보기`}
             >
-              더보기
+              후기 보기
               <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
             </Button>
           )}
@@ -286,13 +288,7 @@ export function CourseDetailPanel({
       </div>
 
       <div className="rounded-[24px] border bg-card p-4 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-              <Camera className="h-3.5 w-3.5" />
-              라이드 앨범
-            </div>
-          </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-end">
           <Button
             type="button"
             variant="outline"
@@ -416,18 +412,16 @@ export function CourseDetailPanel({
       )}
 
       <div className="rounded-[24px] border bg-card p-4 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <h3 className="text-sm font-semibold text-foreground">
-              GPX 가져가기
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              모바일에서도 바로 다운로드 링크를 열 수 있게 아래에 고정 액션으로 배치했습니다.
-            </p>
-          </div>
-          <div className={`grid w-full gap-2 sm:w-auto ${canEditCourse ? 'sm:grid-cols-2' : ''}`}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
+            <CourseShareButton
+              courseId={course.id}
+              courseTitle={course.title}
+              description={shareDescription}
+              imageUrl={albumPreviewPhotos[0]?.public_url ?? null}
+            />
             {canEditCourse ? (
-              <Button asChild variant="outline" className="h-11 w-full">
+              <Button asChild variant="outline" className="h-11 w-full sm:w-auto">
                 <Link href={`/courses/${course.id}/edit`}>
                   <Pencil className="mr-2 h-4 w-4" />
                   코스 수정
@@ -436,14 +430,14 @@ export function CourseDetailPanel({
             ) : null}
 
             {course.gpx_url ? (
-              <Button asChild className="h-11 w-full">
+              <Button asChild className="h-11 w-full sm:w-auto">
                 <a href={`/api/courses/${course.id}/download`}>
                   <Download className="mr-2 h-4 w-4" />
                   GPX 다운로드
                 </a>
               </Button>
             ) : (
-              <Button className="h-11 w-full" disabled>
+              <Button className="h-11 w-full sm:w-auto" disabled>
                 <Download className="mr-2 h-4 w-4" />
                 GPX 다운로드
               </Button>
@@ -533,21 +527,18 @@ function ReviewPreviewCard({ review }: { review: CourseReview }) {
 
 function InlineLoginPrompt() {
   return (
-    <div className="mt-3 flex flex-col gap-3 rounded-2xl bg-muted/45 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <span className="text-sm text-muted-foreground">
-        후기를 남기려면 로그인하세요
-      </span>
+    <div className="mt-3">
       <Button
         type="button"
         variant="outline"
         size="sm"
-        className="h-10 w-full rounded-full sm:h-9 sm:w-auto sm:shrink-0"
+        className="h-10 w-full rounded-full"
         onClick={async () => {
           await signInWithGoogle()
         }}
       >
         <LogIn className="mr-1.5 h-3.5 w-3.5" />
-        로그인
+        후기 쓰기
       </Button>
     </div>
   )
@@ -562,9 +553,6 @@ function InlineOwnReviewNotice({
 }) {
   return (
     <div className="mt-3 flex flex-col gap-3 rounded-2xl bg-muted/45 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <span className="text-sm text-muted-foreground">
-        이미 후기를 작성했습니다
-      </span>
       {onOpenReviews && (
         <Button
           type="button"
@@ -722,21 +710,18 @@ function InlineReviewForm({
 
 function InlineAlbumLoginPrompt() {
   return (
-    <div className="mt-3 flex flex-col gap-3 rounded-2xl bg-muted/45 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <span className="text-sm text-muted-foreground">
-        사진을 올리려면 로그인하세요
-      </span>
+    <div className="mt-3">
       <Button
         type="button"
         variant="outline"
         size="sm"
-        className="h-10 w-full rounded-full sm:h-9 sm:w-auto sm:shrink-0"
+        className="h-10 w-full rounded-full"
         onClick={async () => {
           await signInWithGoogle()
         }}
       >
         <LogIn className="mr-1.5 h-3.5 w-3.5" />
-        로그인
+        사진 추가
       </Button>
     </div>
   )

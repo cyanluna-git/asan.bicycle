@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ProfileGate } from "@/components/profile/profile-gate";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
+import { getSiteUrl } from "@/lib/site-url";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,9 +16,20 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const googleSiteVerification =
+  process.env.GOOGLE_SITE_VERIFICATION?.trim() ||
+  process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim() ||
+  undefined;
+
 export const metadata: Metadata = {
+  metadataBase: new URL(getSiteUrl()),
   title: "아산 자전거 코스 | asan.bicycle",
   description: "아산시 자전거 코스 탐색 및 공유 플랫폼",
+  verification: googleSiteVerification
+    ? {
+        google: googleSiteVerification,
+      }
+    : undefined,
 };
 
 export default function RootLayout({

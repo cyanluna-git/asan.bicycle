@@ -167,10 +167,12 @@ describe('CourseDetailPanel mobile layout', () => {
   it('renders mobile-first CTA structure for reviews, album, POI, and GPX download', () => {
     const { markup, document } = renderPanel()
 
-    expect(document.body.textContent).toContain('라이더 반응')
-    expect(document.body.textContent).toContain('라이드 앨범')
+    expect(document.body.textContent).toContain('2개 후기')
+    expect(document.body.textContent).toContain('후기 쓰기')
+    expect(document.body.textContent).toContain('앨범 보기')
+    expect(document.body.textContent).toContain('사진 추가')
     expect(document.body.textContent).toContain('들를만한 곳')
-    expect(document.body.textContent).toContain('GPX 가져가기')
+    expect(document.body.textContent).toContain('카카오 공유')
     expect(markup).toContain('h-10 w-full rounded-full sm:h-9 sm:w-auto sm:shrink-0')
     expect(markup).toContain('px-3.5 py-2 text-sm')
     expect(markup).toContain('w-[17rem]')
