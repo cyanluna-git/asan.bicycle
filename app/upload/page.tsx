@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Upload, FileUp, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { AlertCircle, CheckCircle2, FileUp, Loader2, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CourseMetadataForm } from '@/components/upload/course-metadata-form'
 import { CourseRoutePreviewMap } from '@/components/upload/course-route-preview-map'
@@ -11,23 +11,19 @@ import { signInWithGoogle } from '@/lib/auth'
 import {
   buildMetadataHistoryEntry,
   buildStartPointOptions,
-  createEmptyPoiDraft,
-  isObjectUrl,
   recommendStartPoint,
   toMetadataHistoryJson,
-  type PoiDraft,
   type StartPointOption,
   type StartPointRow,
   type UploadMetadataFormData,
 } from '@/lib/course-upload'
-import { normalizePoiCategory } from '@/lib/poi'
 import { resolveProfileEmoji } from '@/lib/profile'
 import { buildRoutePreview } from '@/lib/course-route-preview'
 import { parseGpxToGeoJSON, type ParsedGpx } from '@/lib/gpx-parser'
 import { supabase } from '@/lib/supabase'
 import { getUploaderDisplayName } from '@/lib/user-display-name'
-import { isWithinAsan } from '@/lib/validation'
 import { detectUphillSegments, type UphillSegmentDraft } from '@/lib/uphill-detection'
+import { isWithinAsan } from '@/lib/validation'
 import type { Json } from '@/types/database'
 import type { User } from '@supabase/supabase-js'
 
@@ -59,14 +55,10 @@ export default function UploadPage() {
   const [form, setForm] = useState<UploadMetadataFormData>(EMPTY_FORM)
   const [formErrors, setFormErrors] = useState<{ title?: string; startPointId?: string }>({})
   const [uphillSegments, setUphillSegments] = useState<UphillSegmentDraft[]>([])
-  const [poiDrafts, setPoiDrafts] = useState<PoiDraft[]>([])
-  const [activePoiDraftId, setActivePoiDraftId] = useState<string | null>(null)
-
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const latestPoiDraftsRef = useRef<PoiDraft[]>([])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -133,21 +125,6 @@ export default function UploadPage() {
     })
   }, [parsed, startPoints])
 
-  useEffect(() => {
-    latestPoiDraftsRef.current = poiDrafts
-  }, [poiDrafts])
-
-  useEffect(() => {
-    return () => {
-      for (const draft of latestPoiDraftsRef.current) {
-        const previewUrl = draft.photoPreviewUrl
-        if (isObjectUrl(previewUrl)) {
-          URL.revokeObjectURL(previewUrl)
-        }
-      }
-    }
-  }, [])
-
   const uploaderName = user ? getUploaderDisplayName(user) : '익명'
 
   const handleFile = useCallback(async (nextFile: File) => {
@@ -156,7 +133,7 @@ export default function UploadPage() {
     setParseError(null)
     setValidationError(null)
     setSubmitError(null)
-    setUpillAndPoiState()
+    setUphillSegments([])
 
     const inferredTitle = nextFile.name
       .replace(/\.gpx$/i, '')
@@ -186,12 +163,6 @@ export default function UploadPage() {
     }
   }, [])
 
-  const setUpillAndPoiState = () => {
-    setUphillSegments([])
-    setPoiDrafts([])
-    setActivePoiDraftId(null)
-  }
-
   const onDrop = useCallback((event: React.DragEvent) => {
     event.preventDefault()
     setIsDragging(false)
@@ -219,52 +190,6 @@ export default function UploadPage() {
     setFormErrors((prev) => ({ ...prev, [key]: undefined }))
   }
 
-  const updatePoiDraft = <K extends keyof PoiDraft>(
-    id: string,
-    key: K,
-    value: PoiDraft[K],
-  ) => {
-    setPoiDrafts((prev) => prev.map((draft) => {
-      if (draft.id !== id) return draft
-
-      if (
-        key === 'photoPreviewUrl'
-        && isObjectUrl(draft.photoPreviewUrl)
-        && draft.photoPreviewUrl !== value
-      ) {
-        const previewUrl = draft.photoPreviewUrl
-        URL.revokeObjectURL(previewUrl)
-      }
-
-      return { ...draft, [key]: value }
-    }))
-  }
-
-  const addPoiDraft = () => {
-    const nextDraft = createEmptyPoiDraft()
-    setPoiDrafts((prev) => [...prev, nextDraft])
-    setActivePoiDraftId(nextDraft.id)
-  }
-
-  const removePoiDraft = (id: string) => {
-    setPoiDrafts((prev) => {
-      const target = prev.find((draft) => draft.id === id)
-      const previewUrl = target?.photoPreviewUrl
-      if (isObjectUrl(previewUrl)) {
-        URL.revokeObjectURL(previewUrl)
-      }
-
-      return prev.filter((draft) => draft.id !== id)
-    })
-
-    setActivePoiDraftId((prev) => (prev === id ? null : prev))
-  }
-
-  const handlePoiLocationPick = (draftId: string, lat: number, lng: number) => {
-    updatePoiDraft(draftId, 'lat', lat)
-    updatePoiDraft(draftId, 'lng', lng)
-  }
-
   const validateBeforeSubmit = () => {
     const nextErrors: { title?: string; startPointId?: string } = {}
 
@@ -276,29 +201,7 @@ export default function UploadPage() {
       nextErrors.startPointId = '출발 기점을 선택해주세요.'
     }
 
-    const hasInvalidPoi = poiDrafts.some((draft) => {
-      const hasAnyInput = Boolean(
-        draft.name.trim()
-        || draft.description.trim()
-        || draft.photoFile
-        || draft.lat != null
-        || draft.lng != null,
-      )
-
-      if (!hasAnyInput) {
-        return false
-      }
-
-      return !draft.name.trim() || draft.lat == null || draft.lng == null
-    })
-
     setFormErrors(nextErrors)
-
-    if (hasInvalidPoi) {
-      setSubmitError('POI를 추가하려면 이름과 지도 위치를 함께 입력해주세요.')
-      return false
-    }
-
     return Object.keys(nextErrors).length === 0
   }
 
@@ -407,50 +310,6 @@ export default function UploadPage() {
         }
       }
 
-      const completePoiDrafts = poiDrafts.filter(
-        (draft) => draft.name.trim() && draft.lat != null && draft.lng != null,
-      )
-
-      if (completePoiDrafts.length > 0) {
-        const poiRows = []
-
-        for (const draft of completePoiDrafts) {
-          let photoUrl: string | null = null
-
-          if (draft.photoFile) {
-            const photoPath = `${authData.user.id}/${courseId}/${draft.id}_${draft.photoFile.name.replace(/[^\w\-_.]/g, '_')}`
-            const { error: photoError } = await supabase.storage
-              .from('poi-photos')
-              .upload(photoPath, draft.photoFile, {
-                contentType: draft.photoFile.type || 'image/jpeg',
-              })
-
-            if (photoError) {
-              throw new Error(`POI 사진 업로드 실패: ${photoError.message}`)
-            }
-
-            photoUrl = supabase.storage.from('poi-photos').getPublicUrl(photoPath).data.publicUrl
-          }
-
-          poiRows.push({
-            course_id: courseId,
-            name: draft.name.trim(),
-            category: normalizePoiCategory(draft.category),
-            description: draft.description.trim() || null,
-            photo_url: photoUrl,
-            location: `SRID=4326;POINT(${draft.lng} ${draft.lat})`,
-          })
-        }
-
-        const { error: poiError } = await supabase
-          .from('pois')
-          .insert(poiRows)
-
-        if (poiError) {
-          throw new Error(`POI 저장 실패: ${poiError.message}`)
-        }
-      }
-
       router.push(`/courses?focus=${courseId}`)
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.')
@@ -547,7 +406,7 @@ export default function UploadPage() {
         </div>
       )}
 
-      {parsed && (
+      {parsed ? (
         <div className="mb-6 grid grid-cols-3 gap-4">
           <StatCard label="거리" value={`${parsed.distanceKm} km`} />
           <StatCard label="획득 고도" value={`${parsed.elevationGainM} m`} />
@@ -556,20 +415,18 @@ export default function UploadPage() {
             value={`${parsed.startLat.toFixed(4)}, ${parsed.startLng.toFixed(4)}`}
           />
         </div>
-      )}
+      ) : null}
 
-      {parsed && (
+      {parsed ? (
         <div className="mb-8 overflow-hidden rounded-xl border" style={{ height: 400 }}>
           <CourseRoutePreviewMap
             geojson={parsed.geojson}
-            poiDrafts={poiDrafts}
-            activePoiDraftId={activePoiDraftId}
-            onPickPoiLocation={handlePoiLocationPick}
+            poiDrafts={[]}
           />
         </div>
-      )}
+      ) : null}
 
-      {parsed && parsed.elevationProfile.length > 0 && (
+      {parsed && parsed.elevationProfile.length > 0 ? (
         <div className="mb-8 rounded-xl border p-4">
           <UphillEditor
             profile={parsed.elevationProfile}
@@ -577,29 +434,28 @@ export default function UploadPage() {
             onChange={setUphillSegments}
           />
         </div>
-      )}
+      ) : null}
 
-      {parsed && !validationError && (
-        <CourseMetadataForm
-          form={form}
-          startPoints={startPoints}
-          recommendedStartPoint={recommendedStartPoint}
-          uploaderName={uploaderName}
-          submitError={submitError}
-          validationErrors={formErrors}
-          isSubmitting={isSubmitting}
-          submitLabel="코스 업로드"
-          submittingLabel="업로드 중..."
-          poiDrafts={poiDrafts}
-          activePoiDraftId={activePoiDraftId}
-          onSubmit={handleSubmit}
-          onChangeForm={updateForm}
-          onAddPoiDraft={addPoiDraft}
-          onRemovePoiDraft={removePoiDraft}
-          onChangePoiDraft={updatePoiDraft}
-          onSelectPoiDraftForMap={setActivePoiDraftId}
-        />
-      )}
+      {parsed && !validationError ? (
+        <>
+          <CourseMetadataForm
+            form={form}
+            startPoints={startPoints}
+            recommendedStartPoint={recommendedStartPoint}
+            uploaderName={uploaderName}
+            submitError={submitError}
+            validationErrors={formErrors}
+            isSubmitting={isSubmitting}
+            submitLabel="코스 업로드"
+            submittingLabel="업로드 중..."
+            onSubmit={handleSubmit}
+            onChangeForm={updateForm}
+          />
+          <p className="mt-4 text-xs text-muted-foreground">
+            POI는 코스를 업로드한 뒤 상세 패널의 `들를만한 곳` 섹션에서 장소 검색으로 추가할 수 있습니다.
+          </p>
+        </>
+      ) : null}
     </div>
   )
 }

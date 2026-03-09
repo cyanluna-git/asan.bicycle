@@ -49,6 +49,22 @@ export function getPoiMeta(category: string | null | undefined): PoiMeta {
   return POI_META[normalizePoiCategory(category)]
 }
 
+export function suggestPoiCategoryFromSearch(categoryName: string | null | undefined): PoiCategory {
+  const normalized = (categoryName ?? '').toLowerCase()
+
+  if (normalized.includes('카페')) return 'cafe'
+  if (normalized.includes('음식점') || normalized.includes('식당') || normalized.includes('맛집')) return 'restaurant'
+  if (normalized.includes('편의점')) return 'convenience_store'
+  if (normalized.includes('휴게소') || normalized.includes('쉼터')) return 'rest_area'
+  if (normalized.includes('자전거') || normalized.includes('수리')) return 'repair_shop'
+  if (normalized.includes('공원') || normalized.includes('전망') || normalized.includes('관광') || normalized.includes('사진')) return 'photo_spot'
+  if (normalized.includes('주차')) return 'parking'
+  if (normalized.includes('화장실')) return 'restroom'
+  if (normalized.includes('약수') || normalized.includes('음수')) return 'water_fountain'
+
+  return 'other'
+}
+
 function comparePoiName(a: PoiMapItem, b: PoiMapItem) {
   return a.name.localeCompare(b.name, 'ko')
 }

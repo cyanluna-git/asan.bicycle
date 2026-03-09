@@ -16,15 +16,11 @@ import type { RouteGeoJSON } from '@/types/course'
 interface CourseRoutePreviewMapProps {
   geojson: RouteGeoJSON
   poiDrafts: PoiDraft[]
-  activePoiDraftId: string | null
-  onPickPoiLocation?: (draftId: string, lat: number, lng: number) => void
 }
 
 export function CourseRoutePreviewMap({
   geojson,
   poiDrafts,
-  activePoiDraftId,
-  onPickPoiLocation,
 }: CourseRoutePreviewMapProps) {
   const appkey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY
   if (!appkey) {
@@ -40,8 +36,6 @@ export function CourseRoutePreviewMap({
       appkey={appkey}
       geojson={geojson}
       poiDrafts={poiDrafts}
-      activePoiDraftId={activePoiDraftId}
-      onPickPoiLocation={onPickPoiLocation}
     />
   )
 }
@@ -50,8 +44,6 @@ function CourseRoutePreviewMapInner({
   appkey,
   geojson,
   poiDrafts,
-  activePoiDraftId,
-  onPickPoiLocation,
 }: CourseRoutePreviewMapProps & { appkey: string }) {
   const [loading, error] = useKakaoLoader({
     appkey,
@@ -90,15 +82,6 @@ function CourseRoutePreviewMapInner({
       center={center}
       style={{ width: '100%', height: '100%' }}
       level={7}
-      onClick={(_, mouseEvent) => {
-        if (!activePoiDraftId || !onPickPoiLocation) return
-
-        onPickPoiLocation(
-          activePoiDraftId,
-          mouseEvent.latLng.getLat(),
-          mouseEvent.latLng.getLng(),
-        )
-      }}
     >
       {coords.length > 1 && (
         <Polyline
@@ -136,7 +119,6 @@ function CourseRoutePreviewMapInner({
         .filter((draft) => draft.lat != null && draft.lng != null)
         .map((draft) => {
           const meta = getPoiMeta(draft.category)
-          const isActive = draft.id === activePoiDraftId
 
           return (
             <CustomOverlayMap
@@ -144,21 +126,19 @@ function CourseRoutePreviewMapInner({
               position={{ lat: draft.lat as number, lng: draft.lng as number }}
               yAnchor={1}
               xAnchor={0.5}
-              zIndex={isActive ? 5 : 4}
+              zIndex={4}
             >
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: isActive ? 34 : 28,
-                  height: isActive ? 34 : 28,
+                  width: 28,
+                  height: 28,
                   borderRadius: '50%',
                   backgroundColor: meta.color,
-                  border: isActive ? '3px solid #0f172a' : '2px solid white',
-                  boxShadow: isActive
-                    ? '0 0 0 6px rgba(15,23,42,0.12), 0 4px 12px rgba(0,0,0,0.22)'
-                    : '0 2px 6px rgba(0,0,0,0.35)',
+                  border: '2px solid white',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.35)',
                   color: 'white',
                   fontSize: 13,
                   lineHeight: 1,

@@ -3,6 +3,7 @@ import {
   getPoiCategoryTabs,
   normalizePoiCategory,
   sortPoisForRail,
+  suggestPoiCategoryFromSearch,
 } from '@/lib/poi'
 import type { PoiMapItem } from '@/types/course'
 
@@ -63,5 +64,19 @@ describe('sortPoisForRail', () => {
 
   it('filters category tabs and sorts by name', () => {
     expect(sortPoisForRail(POIS, 'restaurant').map((poi) => poi.id)).toEqual(['1'])
+  })
+})
+
+describe('suggestPoiCategoryFromSearch', () => {
+  it('maps common Kakao place categories to internal POI categories', () => {
+    expect(suggestPoiCategoryFromSearch('음식점 > 한식')).toBe('restaurant')
+    expect(suggestPoiCategoryFromSearch('카페')).toBe('cafe')
+    expect(suggestPoiCategoryFromSearch('관광명소')).toBe('photo_spot')
+    expect(suggestPoiCategoryFromSearch('화장실')).toBe('restroom')
+  })
+
+  it('falls back to other for unknown search categories', () => {
+    expect(suggestPoiCategoryFromSearch('은행')).toBe('other')
+    expect(suggestPoiCategoryFromSearch(null)).toBe('other')
   })
 })

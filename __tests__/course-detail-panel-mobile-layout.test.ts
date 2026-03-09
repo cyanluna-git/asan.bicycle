@@ -53,6 +53,10 @@ vi.mock('@/lib/auth', () => ({
   signInWithGoogle: vi.fn(),
 }))
 
+vi.mock('react-kakao-maps-sdk', () => ({
+  useKakaoLoader: () => [false, null],
+}))
+
 vi.mock('@/lib/supabase', () => ({
   supabase: {
     auth: {
@@ -186,6 +190,7 @@ describe('CourseDetailPanel mobile layout', () => {
     expect(document.body.textContent).toContain('사진 추가')
     expect(document.body.textContent).toContain('들를만한 곳')
     expect(document.body.textContent).toContain('카카오 공유')
+    expect(document.querySelector('button[aria-label=\"POI 추가\"]')).not.toBeNull()
     expect(markup).toContain('h-10 w-full rounded-full sm:h-9 sm:w-auto sm:shrink-0')
     expect(markup).toContain('px-3.5 py-2 text-sm')
     expect(markup).toContain('w-[17rem]')
@@ -240,6 +245,14 @@ describe('CourseDetailPanel mobile layout', () => {
     expect(document.body.textContent).not.toContain('내 코스')
     expect(document.body.textContent).not.toContain('수정 가능')
     expect(document.body.textContent).not.toContain('권한 확인됨')
+  })
+
+  it('hides the POI add affordance when the viewer cannot edit the course', () => {
+    const { document } = renderPanel({
+      canEditCourse: false,
+    })
+
+    expect(document.querySelector('button[aria-label=\"POI 추가\"]')).toBeNull()
   })
 
   it('shows uphill gradient metrics when route and uphill segments are available', () => {

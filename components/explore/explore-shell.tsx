@@ -64,6 +64,7 @@ export function ExploreShell({
   reviewStats,
 }: ExploreShellProps) {
   const [user, setUser] = useState<User | null>(null)
+  const [localPois, setLocalPois] = useState<PoiMapItem[]>(pois)
   const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null)
   const [hoveredRoutePoint, setHoveredRoutePoint] = useState<RouteHoverPoint | null>(null)
   const [albumPhotos, setAlbumPhotos] = useState<CourseAlbumPhoto[]>([])
@@ -111,10 +112,14 @@ export function ExploreShell({
   }, [selectedCourseId])
 
   useEffect(() => {
-    if (selectedPoiId && !pois.some((poi) => poi.id === selectedPoiId)) {
+    setLocalPois(pois)
+  }, [pois, selectedCourseId])
+
+  useEffect(() => {
+    if (selectedPoiId && !localPois.some((poi) => poi.id === selectedPoiId)) {
       setSelectedPoiId(null)
     }
-  }, [pois, selectedPoiId])
+  }, [localPois, selectedPoiId])
 
   useEffect(() => {
     if (selectedAlbumPhotoId && !albumPhotos.some((photo) => photo.id === selectedAlbumPhotoId)) {
@@ -227,6 +232,11 @@ export function ExploreShell({
     [],
   )
 
+  const handlePoiCreated = useCallback((poi: PoiMapItem) => {
+    setLocalPois((prev) => prev.some((item) => item.id === poi.id) ? prev : [...prev, poi])
+    setSelectedPoiId(poi.id)
+  }, [])
+
   const canShowMapFullscreen = canEnterMapFullscreen({
     hasSelectedCourse: Boolean(selectedCourse),
     activeSurfaceKind,
@@ -329,7 +339,7 @@ export function ExploreShell({
         themes={themes}
         hasActiveFilters={hasActiveFilters}
         selectedCourse={selectedCourse}
-        pois={pois}
+        pois={localPois}
         selectedPoiId={selectedPoiId}
         onSelectPoi={setSelectedPoiId}
         uphillSegments={uphillSegments}
@@ -345,6 +355,7 @@ export function ExploreShell({
           openSurface({ kind: 'album', source: 'sidebar', triggerEl })
         }
         onAlbumPhotoUploaded={handleInlineAlbumPhotoUploaded}
+        onPoiCreated={handlePoiCreated}
       />
       <main className="flex-1 flex flex-col min-h-0">
         <div className="relative flex-1 min-h-0">
@@ -352,7 +363,7 @@ export function ExploreShell({
             routeQueryString={routeQueryString}
             selectedCourseId={selectedCourseId}
             selectedCourseRouteGeoJSON={selectedCourse?.route_geojson ?? null}
-            pois={pois}
+            pois={localPois}
             selectedPoiId={selectedPoiId}
             onSelectPoi={setSelectedPoiId}
             albumPhotos={safeAlbumPhotos}
@@ -411,7 +422,7 @@ export function ExploreShell({
             themes={themes}
             hasActiveFilters={hasActiveFilters}
             selectedCourse={selectedCourse}
-            pois={pois}
+            pois={localPois}
             selectedPoiId={selectedPoiId}
             onSelectPoi={setSelectedPoiId}
             uphillSegments={uphillSegments}
@@ -430,6 +441,7 @@ export function ExploreShell({
               openSurface({ kind: 'album', source: 'bottom-sheet', triggerEl })
             }
             onAlbumPhotoUploaded={handleInlineAlbumPhotoUploaded}
+            onPoiCreated={handlePoiCreated}
           />
           {selectedCourse && surfaceSource === 'bottom-sheet' && activeSurfaceKind ? (
             <Drawer

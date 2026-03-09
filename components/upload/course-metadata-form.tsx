@@ -3,10 +3,8 @@
 import { AlertCircle, Loader2, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { PoiDraftEditor } from '@/components/upload/poi-draft-editor'
 import type {
   Difficulty,
-  PoiDraft,
   StartPointOption,
   UploadMetadataFormData,
 } from '@/lib/course-upload'
@@ -26,21 +24,11 @@ interface CourseMetadataFormProps {
   isSubmitting: boolean
   submitLabel?: string
   submittingLabel?: string
-  poiDrafts: PoiDraft[]
-  activePoiDraftId: string | null
   onSubmit: (event: React.FormEvent) => void
   onChangeForm: <K extends keyof UploadMetadataFormData>(
     key: K,
     value: UploadMetadataFormData[K],
   ) => void
-  onAddPoiDraft: () => void
-  onRemovePoiDraft: (id: string) => void
-  onChangePoiDraft: <K extends keyof PoiDraft>(
-    id: string,
-    key: K,
-    value: PoiDraft[K],
-  ) => void
-  onSelectPoiDraftForMap: (id: string) => void
 }
 
 const DIFFICULTY_OPTIONS: Array<{ value: Difficulty; label: string }> = [
@@ -59,14 +47,8 @@ export function CourseMetadataForm({
   isSubmitting,
   submitLabel = '코스 저장',
   submittingLabel = '저장 중...',
-  poiDrafts,
-  activePoiDraftId,
   onSubmit,
   onChangeForm,
-  onAddPoiDraft,
-  onRemovePoiDraft,
-  onChangePoiDraft,
-  onSelectPoiDraftForMap,
 }: CourseMetadataFormProps) {
   return (
     <form onSubmit={onSubmit} className="space-y-5">
@@ -180,15 +162,6 @@ export function CourseMetadataForm({
           className="mt-1.5 h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
-
-      <PoiDraftEditor
-        drafts={poiDrafts}
-        activeDraftId={activePoiDraftId}
-        onAddDraft={onAddPoiDraft}
-        onRemoveDraft={onRemovePoiDraft}
-        onChangeDraft={onChangePoiDraft}
-        onSelectDraftForMap={onSelectPoiDraftForMap}
-      />
 
       {submitError && (
         <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">

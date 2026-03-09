@@ -168,7 +168,6 @@ export function CourseEditPageClient({
   const [form, setForm] = useState<UploadMetadataFormData>(EMPTY_FORM)
   const [formErrors, setFormErrors] = useState<{ title?: string; startPointId?: string }>({})
   const [poiDrafts, setPoiDrafts] = useState<PoiDraft[]>([])
-  const [activePoiDraftId, setActivePoiDraftId] = useState<string | null>(null)
   const [uphillSegments, setUphillSegments] = useState<UphillSegmentDraft[]>([])
   const latestPoiDraftsRef = useRef<PoiDraft[]>([])
 
@@ -296,7 +295,6 @@ export function CourseEditPageClient({
       setStartPoints(nextStartPoints)
       setForm(toInitialForm(loadedCourse))
       setPoiDrafts(nextPoiDrafts)
-      setActivePoiDraftId(null)
       setUphillSegments(nextUphillSegments)
 
       const routeCoordinates = loadedCourse.route_geojson?.features
@@ -355,64 +353,6 @@ export function CourseEditPageClient({
   ) => {
     setForm((prev) => ({ ...prev, [key]: value }))
     setFormErrors((prev) => ({ ...prev, [key]: undefined }))
-  }
-
-  const updatePoiDraft = <K extends keyof PoiDraft>(
-    id: string,
-    key: K,
-    value: PoiDraft[K],
-  ) => {
-    setPoiDrafts((prev) => prev.map((draft) => {
-      if (draft.id !== id) return draft
-
-      if (
-        key === 'photoPreviewUrl'
-        && isObjectUrl(draft.photoPreviewUrl)
-        && draft.photoPreviewUrl !== value
-      ) {
-        const previewUrl = draft.photoPreviewUrl
-        URL.revokeObjectURL(previewUrl)
-      }
-
-      return { ...draft, [key]: value }
-    }))
-  }
-
-  const addPoiDraft = () => {
-    const nextDraft: PoiDraft = {
-      id: crypto.randomUUID(),
-      persistedId: null,
-      name: '',
-      category: 'other',
-      description: '',
-      lat: null,
-      lng: null,
-      photoUrl: null,
-      photoFile: null,
-      photoPreviewUrl: null,
-    }
-
-    setPoiDrafts((prev) => [...prev, nextDraft])
-    setActivePoiDraftId(nextDraft.id)
-  }
-
-  const removePoiDraft = (id: string) => {
-    setPoiDrafts((prev) => {
-      const target = prev.find((draft) => draft.id === id)
-      const previewUrl = target?.photoPreviewUrl
-      if (isObjectUrl(previewUrl)) {
-        URL.revokeObjectURL(previewUrl)
-      }
-
-      return prev.filter((draft) => draft.id !== id)
-    })
-
-    setActivePoiDraftId((prev) => prev === id ? null : prev)
-  }
-
-  const handlePoiLocationPick = (draftId: string, lat: number, lng: number) => {
-    updatePoiDraft(draftId, 'lat', lat)
-    updatePoiDraft(draftId, 'lng', lng)
   }
 
   const validateBeforeSubmit = () => {
@@ -655,7 +595,7 @@ export function CourseEditPageClient({
         <div>
           <h1 className="text-2xl font-bold">코스 수정</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            메타데이터, POI, 업힐 구간을 수정하면 즉시 공개 데이터에 반영됩니다.
+            메타데이터와 업힐 구간을 수정하면 즉시 공개 데이터에 반영됩니다.
           </p>
         </div>
         <Button asChild variant="outline">
@@ -677,8 +617,6 @@ export function CourseEditPageClient({
           <CourseRoutePreviewMap
             geojson={course.route_geojson}
             poiDrafts={poiDrafts}
-            activePoiDraftId={activePoiDraftId}
-            onPickPoiLocation={handlePoiLocationPick}
           />
         </div>
       )}
@@ -703,14 +641,8 @@ export function CourseEditPageClient({
         isSubmitting={isSubmitting}
         submitLabel="변경 저장"
         submittingLabel="저장 중..."
-        poiDrafts={poiDrafts}
-        activePoiDraftId={activePoiDraftId}
         onSubmit={handleSubmit}
         onChangeForm={updateForm}
-        onAddPoiDraft={addPoiDraft}
-        onRemovePoiDraft={removePoiDraft}
-        onChangePoiDraft={updatePoiDraft}
-        onSelectPoiDraftForMap={setActivePoiDraftId}
       />
 
       <div className="mt-6 rounded-xl border bg-muted/20 px-4 py-3 text-xs text-muted-foreground">

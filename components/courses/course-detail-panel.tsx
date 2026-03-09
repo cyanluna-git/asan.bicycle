@@ -7,6 +7,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, ArrowRight, Download, ImagePlus, Loader2, LogIn, Pencil, Send, Star } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { CoursePoiAddPanel } from '@/components/courses/course-poi-add-panel'
 import { CourseShareButton } from '@/components/courses/course-share-button'
 import { signInWithGoogle } from '@/lib/auth'
 import { difficultyLabel, difficultyVariant } from '@/lib/difficulty'
@@ -61,6 +62,7 @@ interface CourseDetailPanelProps {
   onOpenAlbum?: (triggerEl?: HTMLButtonElement | null) => void
   albumTriggerId?: string
   onAlbumPhotoUploaded?: (photo: CourseAlbumPhoto) => void
+  onPoiCreated?: (poi: PoiMapItem) => void
 }
 
 export function CourseDetailPanel({
@@ -79,6 +81,7 @@ export function CourseDetailPanel({
   onOpenAlbum,
   albumTriggerId,
   onAlbumPhotoUploaded,
+  onPoiCreated,
 }: CourseDetailPanelProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -145,6 +148,12 @@ export function CourseDetailPanel({
       onSelectPoi?.(null)
     }
   }, [onSelectPoi, selectedPoiId, visiblePois])
+
+  const handlePoiCreated = useCallback((poi: PoiMapItem) => {
+    setActiveCategory('all')
+    onPoiCreated?.(poi)
+    onSelectPoi?.(poi.id)
+  }, [onPoiCreated, onSelectPoi])
 
   return (
     <div className="flex flex-col gap-4">
@@ -353,9 +362,17 @@ export function CourseDetailPanel({
           <h3 className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
             들를만한 곳
           </h3>
-          <span className="text-xs text-muted-foreground">
-            {pois.length}개
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              {pois.length}개
+            </span>
+            {canEditCourse ? (
+              <CoursePoiAddPanel
+                courseId={course.id}
+                onCreated={handlePoiCreated}
+              />
+            ) : null}
+          </div>
         </div>
 
         {categoryTabs.length > 0 && (

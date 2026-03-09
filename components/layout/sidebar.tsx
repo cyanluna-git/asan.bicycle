@@ -31,6 +31,7 @@ interface SidebarProps {
   onOpenReviews?: (triggerEl?: HTMLButtonElement | null) => void
   onOpenAlbum?: (triggerEl?: HTMLButtonElement | null) => void
   onAlbumPhotoUploaded?: (photo: CourseAlbumPhoto) => void
+  onPoiCreated?: (poi: PoiMapItem) => void
 }
 
 export function Sidebar({
@@ -51,6 +52,7 @@ export function Sidebar({
   onOpenReviews,
   onOpenAlbum,
   onAlbumPhotoUploaded,
+  onPoiCreated,
 }: SidebarProps) {
   return (
     <aside className="hidden md:flex flex-col w-[280px] border-r bg-background">
@@ -73,6 +75,7 @@ export function Sidebar({
               onOpenReviews={onOpenReviews}
               onOpenAlbum={onOpenAlbum}
               onAlbumPhotoUploaded={onAlbumPhotoUploaded}
+              onPoiCreated={onPoiCreated}
             />
           </Suspense>
         ) : (

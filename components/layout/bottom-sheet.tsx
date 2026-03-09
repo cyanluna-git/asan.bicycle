@@ -46,6 +46,7 @@ interface BottomSheetProps {
   onOpenReviews?: (triggerEl?: HTMLButtonElement | null) => void
   onOpenAlbum?: (triggerEl?: HTMLButtonElement | null) => void
   onAlbumPhotoUploaded?: (photo: CourseAlbumPhoto) => void
+  onPoiCreated?: (poi: PoiMapItem) => void
   open: boolean
   showTrigger?: boolean
   onOpenChange: (open: boolean) => void
@@ -69,6 +70,7 @@ export function BottomSheet({
   onOpenReviews,
   onOpenAlbum,
   onAlbumPhotoUploaded,
+  onPoiCreated,
   open,
   showTrigger = true,
   onOpenChange,
@@ -160,6 +162,7 @@ export function BottomSheet({
                   onOpenReviews={handleOpenReviews}
                   onOpenAlbum={handleOpenAlbum}
                   onAlbumPhotoUploaded={onAlbumPhotoUploaded}
+                  onPoiCreated={onPoiCreated}
                 />
               </Suspense>
             ) : (
