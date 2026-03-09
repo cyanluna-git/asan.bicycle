@@ -116,7 +116,7 @@ export async function PATCH(request: Request, context: PatchContext) {
 
   if (
     courseQuery.error
-    && /(uploader_name|uploader_emoji|metadata_history)/i.test(courseQuery.error.message)
+    && /(uploader_name|uploader_emoji|metadata_history|route_render_metadata)/i.test(courseQuery.error.message)
   ) {
     courseQuery = await authClient
       .from('courses')
@@ -203,11 +203,14 @@ export async function PATCH(request: Request, context: PatchContext) {
 
   if (
     updateResponse.error
-    && /(uploader_name|uploader_emoji|metadata_history)/i.test(updateResponse.error.message)
+    && /(uploader_name|uploader_emoji|metadata_history|route_render_metadata)/i.test(updateResponse.error.message)
   ) {
     updateResponse = await writeClient
       .from('courses')
-      .update(baseUpdate)
+      .update({
+        ...baseUpdate,
+        route_render_metadata: undefined,
+      })
       .eq('id', id)
       .select('id')
       .single()

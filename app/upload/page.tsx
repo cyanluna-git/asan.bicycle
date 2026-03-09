@@ -279,11 +279,14 @@ export default function UploadPage() {
 
       if (
         insertResponse.error
-        && /(uploader_name|uploader_emoji|metadata_history)/i.test(insertResponse.error.message)
+        && /(uploader_name|uploader_emoji|metadata_history|route_render_metadata)/i.test(insertResponse.error.message)
       ) {
         insertResponse = await supabase
           .from('courses')
-          .insert(baseCourseInsert)
+          .insert({
+            ...baseCourseInsert,
+            route_render_metadata: undefined,
+          })
           .select('id')
           .single()
       }

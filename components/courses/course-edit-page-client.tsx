@@ -79,7 +79,7 @@ const EMPTY_FORM: UploadMetadataFormData = {
 }
 
 const COURSE_FIELDS = 'id, title, description, difficulty, distance_km, elevation_gain_m, theme, tags, start_point_id, route_geojson, route_render_metadata, created_by, uploader_name, uploader_emoji'
-const COURSE_FIELDS_FALLBACK = 'id, title, description, difficulty, distance_km, elevation_gain_m, theme, tags, start_point_id, route_geojson, route_render_metadata, created_by'
+const COURSE_FIELDS_FALLBACK = 'id, title, description, difficulty, distance_km, elevation_gain_m, theme, tags, start_point_id, route_geojson, created_by'
 
 function toInitialForm(course: EditableCourseRow): UploadMetadataFormData {
   return {

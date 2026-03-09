@@ -15,6 +15,8 @@ const COURSE_LIST_FIELDS = 'id, title, difficulty, distance_km, elevation_gain_m
 const COURSE_LIST_FIELDS_WITH_UPLOADER = `${COURSE_LIST_FIELDS}, uploader_name, uploader_emoji`
 const COURSE_DETAIL_FIELDS = 'id, title, description, difficulty, distance_km, elevation_gain_m, gpx_url, theme, tags, route_geojson, route_preview_points, route_render_metadata, created_by, start_point_id'
 const COURSE_DETAIL_FIELDS_WITH_UPLOADER = `${COURSE_DETAIL_FIELDS}, uploader_name, uploader_emoji`
+const COURSE_DETAIL_FIELDS_FALLBACK = 'id, title, description, difficulty, distance_km, elevation_gain_m, gpx_url, theme, tags, route_geojson, route_preview_points, created_by, start_point_id'
+const COURSE_DETAIL_FIELDS_FALLBACK_WITH_UPLOADER = `${COURSE_DETAIL_FIELDS_FALLBACK}, uploader_name, uploader_emoji`
 
 type ExploreSearchParams = Record<string, string | string[] | undefined>
 
@@ -177,10 +179,18 @@ export async function loadExplorePageData({
       .eq('id', selectedCourseId)
       .single()
 
-    if (selectedCourseQuery.error && /(uploader_name|uploader_emoji)/i.test(selectedCourseQuery.error.message)) {
+    if (selectedCourseQuery.error && /(uploader_name|uploader_emoji|route_render_metadata)/i.test(selectedCourseQuery.error.message)) {
       selectedCourseQuery = await supabase
         .from('courses')
-        .select(COURSE_DETAIL_FIELDS)
+        .select(COURSE_DETAIL_FIELDS_FALLBACK_WITH_UPLOADER)
+        .eq('id', selectedCourseId)
+        .single()
+    }
+
+    if (selectedCourseQuery.error && /route_render_metadata/i.test(selectedCourseQuery.error.message)) {
+      selectedCourseQuery = await supabase
+        .from('courses')
+        .select(COURSE_DETAIL_FIELDS_FALLBACK)
         .eq('id', selectedCourseId)
         .single()
     }

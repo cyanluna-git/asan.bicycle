@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import type { RoutePreviewPoint } from '@/types/course'
 
 const ROUTE_FIELDS = 'id, route_preview_points, route_render_metadata'
+const ROUTE_FIELDS_FALLBACK = 'id, route_preview_points'
 
 type CourseRouteRow = {
   id: string
@@ -14,10 +15,11 @@ type CourseRouteRow = {
 
 function buildCourseRoutesQuery(
   filters: ReturnType<typeof parseFilterParams>,
+  selectFields = ROUTE_FIELDS,
 ) {
   let query = supabase
     .from('courses')
-    .select(ROUTE_FIELDS)
+    .select(selectFields)
     .order('created_at', { ascending: false })
 
   if (filters.startPoint) {
@@ -46,14 +48,20 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const filters = parseFilterParams(searchParams)
 
-  const { data, error } = await buildCourseRoutesQuery(filters)
+  let { data, error } = await buildCourseRoutesQuery(filters)
+
+  if (error && /route_render_metadata/i.test(error.message)) {
+    const fallback = await buildCourseRoutesQuery(filters, ROUTE_FIELDS_FALLBACK)
+    data = fallback.data
+    error = fallback.error
+  }
 
   if (error) {
     console.error('[api/courses/routes] query error:', error.message, error.details)
     return NextResponse.json({ error: 'Failed to load course routes.' }, { status: 500 })
   }
 
-  const routes = ((data ?? []) as CourseRouteRow[]).map((course) => {
+  const routes = ((data ?? []) as unknown as CourseRouteRow[]).map((course) => {
     const previewPoints = Array.isArray(course.route_preview_points)
       ? (course.route_preview_points as RoutePreviewPoint[])
       : []
