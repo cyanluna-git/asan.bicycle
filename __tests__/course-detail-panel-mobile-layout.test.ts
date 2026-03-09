@@ -5,6 +5,7 @@ import type {
   CourseAlbumPhoto,
   CourseDetail,
   CourseReview,
+  UphillSegment,
   PoiMapItem,
 } from '@/types/course'
 
@@ -139,6 +140,18 @@ function makeAlbumPhoto(overrides: Partial<CourseAlbumPhoto> = {}): CourseAlbumP
   }
 }
 
+function makeUphillSegment(overrides: Partial<UphillSegment> = {}): UphillSegment {
+  return {
+    id: 'uphill-1',
+    course_id: 'course-1',
+    name: '예당호 업힐',
+    start_km: 0,
+    end_km: 0.27,
+    created_at: '2026-03-09T00:00:00Z',
+    ...overrides,
+  }
+}
+
 function renderPanel(props: Partial<React.ComponentProps<typeof CourseDetailPanel>> = {}) {
   const markup = renderToStaticMarkup(
     React.createElement(CourseDetailPanel, {
@@ -202,5 +215,36 @@ describe('CourseDetailPanel mobile layout', () => {
       (anchor) => anchor.textContent?.includes('GPX 다운로드'),
     )
     expect(downloadLink).toBeUndefined()
+  })
+
+  it('shows uphill gradient metrics when route and uphill segments are available', () => {
+    const { document } = renderPanel({
+      course: makeCourse({
+        route_geojson: {
+          type: 'FeatureCollection',
+          features: [
+            {
+              type: 'Feature',
+              properties: {},
+              geometry: {
+                type: 'LineString',
+                coordinates: [
+                  [127.0, 36.0, 100],
+                  [127.001, 36.0, 110],
+                  [127.002, 36.0, 120],
+                  [127.003, 36.0, 126],
+                ],
+              },
+            },
+          ],
+        },
+      }),
+      uphillSegments: [makeUphillSegment()],
+    })
+
+    expect(document.body.textContent).toContain('예당호 업힐')
+    expect(document.body.textContent).toContain('평균 경사도 9.6%')
+    expect(document.body.textContent).toContain('상승 26m')
+    expect(document.body.textContent).toContain('길이 0.27km')
   })
 })

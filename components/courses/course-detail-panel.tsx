@@ -35,6 +35,7 @@ import {
 import { uploadCourseAlbumPhoto } from '@/lib/course-album-upload'
 import { supabase } from '@/lib/supabase'
 import { getUploaderDisplayName } from '@/lib/user-display-name'
+import { getUphillMetricsMap } from '@/lib/uphill-metrics'
 import type {
   CourseAlbumPhoto,
   CourseDetail,
@@ -131,6 +132,10 @@ export function CourseDetailPanel({
     isAdmin: isAdminUser(user),
     uploaderName: course.uploader_name,
   })
+  const uphillMetricsById = React.useMemo(
+    () => getUphillMetricsMap(course.route_geojson ?? null, uphillSegments),
+    [course.route_geojson, uphillSegments],
+  )
 
   useEffect(() => {
     setActiveCategory('all')
@@ -420,14 +425,29 @@ export function CourseDetailPanel({
             {uphillSegments.map((seg) => (
               <div
                 key={seg.id}
-                className="flex items-center justify-between rounded-xl border bg-card px-3 py-2.5"
+                className="rounded-xl border bg-card px-3 py-2.5"
               >
-                <span className="truncate text-sm font-medium text-foreground">
-                  {seg.name || '이름 없음'}
-                </span>
-                <span className="ml-2 shrink-0 text-xs text-muted-foreground">
-                  {seg.start_km}~{seg.end_km} km
-                </span>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="truncate text-sm font-medium text-foreground">
+                    {seg.name || '이름 없음'}
+                  </span>
+                  <span className="ml-2 shrink-0 text-xs text-muted-foreground">
+                    {seg.start_km}~{seg.end_km} km
+                  </span>
+                </div>
+                {uphillMetricsById.get(seg.id) ? (
+                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                    <span>
+                      평균 경사도 {uphillMetricsById.get(seg.id)?.averageGradientPct.toFixed(1)}%
+                    </span>
+                    <span>
+                      상승 {uphillMetricsById.get(seg.id)?.elevationGainM.toLocaleString('ko-KR')}m
+                    </span>
+                    <span>
+                      길이 {uphillMetricsById.get(seg.id)?.lengthKm.toFixed(2)}km
+                    </span>
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>

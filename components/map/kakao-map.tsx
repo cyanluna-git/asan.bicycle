@@ -10,6 +10,7 @@ import {
   useMap,
 } from "react-kakao-maps-sdk"
 import type { CourseAlbumPhoto, CourseMapItem, RouteGeoJSON, PoiMapItem } from "@/types/course"
+import type { RouteHoverPoint } from '@/lib/elevation-hover-sync'
 import { getPoiMeta } from '@/lib/poi'
 
 // ---------------------------------------------------------------------------
@@ -103,6 +104,7 @@ interface KakaoMapProps {
   albumPhotos?: CourseAlbumPhoto[]
   selectedAlbumPhotoId?: string | null
   onSelectAlbumPhoto?: (id: string | null) => void
+  hoveredRoutePoint?: RouteHoverPoint | null
 }
 
 // ---------------------------------------------------------------------------
@@ -118,6 +120,7 @@ export default function KakaoMap({
   albumPhotos,
   selectedAlbumPhotoId,
   onSelectAlbumPhoto,
+  hoveredRoutePoint,
 }: KakaoMapProps) {
   const appkey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY
   if (!appkey) {
@@ -137,6 +140,7 @@ export default function KakaoMap({
       albumPhotos={albumPhotos}
       selectedAlbumPhotoId={selectedAlbumPhotoId}
       onSelectAlbumPhoto={onSelectAlbumPhoto}
+      hoveredRoutePoint={hoveredRoutePoint}
     />
   )
 }
@@ -155,6 +159,7 @@ function KakaoMapInner({
   albumPhotos,
   selectedAlbumPhotoId,
   onSelectAlbumPhoto,
+  hoveredRoutePoint,
 }: { appkey: string } & KakaoMapProps) {
   const [loading, error] = useKakaoLoader({
     appkey,
@@ -240,6 +245,7 @@ function KakaoMapInner({
           selectedPhotoId={selectedAlbumPhotoId}
           onSelectPhoto={onSelectAlbumPhoto}
         />
+        <HoveredRouteMarker point={hoveredRoutePoint ?? null} />
       </Map>
       {isRoutesLoading ? (
         <div className="pointer-events-none absolute right-4 top-4 rounded-full bg-background/90 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm ring-1 ring-black/5 backdrop-blur">
@@ -247,6 +253,34 @@ function KakaoMapInner({
         </div>
       ) : null}
     </div>
+  )
+}
+
+function HoveredRouteMarker({ point }: { point: RouteHoverPoint | null }) {
+  if (!point) return null
+
+  return (
+    <CustomOverlayMap
+      position={{ lat: point.lat, lng: point.lng }}
+      yAnchor={0.5}
+      xAnchor={0.5}
+      zIndex={6}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 18,
+          height: 18,
+          borderRadius: '999px',
+          backgroundColor: '#f97316',
+          border: '3px solid white',
+          boxShadow: '0 0 0 6px rgba(249,115,22,0.18), 0 4px 10px rgba(0,0,0,0.18)',
+        }}
+        aria-label={`${point.distanceKm.toFixed(2)}km 지점`}
+      />
+    </CustomOverlayMap>
   )
 }
 

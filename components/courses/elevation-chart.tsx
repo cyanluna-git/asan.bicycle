@@ -8,6 +8,7 @@ import {
   CartesianGrid,
   Tooltip,
   ReferenceArea,
+  ReferenceLine,
   ResponsiveContainer,
 } from 'recharts'
 import type { ElevationPoint, UphillSegment } from '@/types/course'
@@ -18,6 +19,8 @@ interface ElevationChartProps {
   segments?: (UphillSegment | UphillSegmentDraft)[]
   onChartClick?: (distanceKm: number) => void
   clickState?: { firstKm: number | null }
+  onHoverDistanceChange?: (distanceKm: number | null) => void
+  hoveredDistanceKm?: number | null
 }
 
 export function ElevationChart({
@@ -25,6 +28,8 @@ export function ElevationChart({
   segments = [],
   onChartClick,
   clickState,
+  onHoverDistanceChange,
+  hoveredDistanceKm,
 }: ElevationChartProps) {
   if (data.length === 0) return null
 
@@ -37,6 +42,20 @@ export function ElevationChart({
     if (!isNaN(km)) onChartClick(km)
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleMouseMove = (e: any) => {
+    if (!onHoverDistanceChange) return
+    const label = e?.activeLabel
+
+    if (label == null) {
+      onHoverDistanceChange(null)
+      return
+    }
+
+    const km = typeof label === 'number' ? label : parseFloat(label)
+    onHoverDistanceChange(Number.isNaN(km) ? null : km)
+  }
+
   const minEle = Math.floor(Math.min(...data.map((d) => d.elevationM)) / 10) * 10
   const maxEle = Math.ceil(Math.max(...data.map((d) => d.elevationM)) / 10) * 10
 
@@ -47,7 +66,9 @@ export function ElevationChart({
           data={data}
           margin={{ top: 5, right: 10, left: -10, bottom: 0 }}
           onClick={onChartClick ? handleClick : undefined}
-          style={onChartClick ? { cursor: 'crosshair' } : undefined}
+          onMouseMove={onHoverDistanceChange ? handleMouseMove : undefined}
+          onMouseLeave={onHoverDistanceChange ? () => onHoverDistanceChange(null) : undefined}
+          style={onChartClick || onHoverDistanceChange ? { cursor: 'crosshair' } : undefined}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
           <XAxis
@@ -88,6 +109,14 @@ export function ElevationChart({
               strokeOpacity={0.3}
             />
           ))}
+          {hoveredDistanceKm != null ? (
+            <ReferenceLine
+              x={hoveredDistanceKm}
+              stroke="#f97316"
+              strokeWidth={2}
+              strokeDasharray="4 2"
+            />
+          ) : null}
           {/* Pending first click marker */}
           {clickState?.firstKm !== null && clickState?.firstKm !== undefined && (
             <ReferenceArea

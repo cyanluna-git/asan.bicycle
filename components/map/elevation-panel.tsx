@@ -1,8 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import { buildRouteHoverProfile, findNearestRouteHoverPoint, type RouteHoverPoint } from '@/lib/elevation-hover-sync'
 import type { RouteGeoJSON, ElevationPoint, UphillSegment } from '@/types/course'
 
 const ElevationChart = dynamic(
@@ -14,42 +15,38 @@ interface ElevationPanelProps {
   routeGeoJSON: RouteGeoJSON | null | undefined
   uphillSegments?: UphillSegment[]
   courseTitle?: string
+  onHoverPointChange?: (point: RouteHoverPoint | null) => void
 }
 
-export function ElevationPanel({ routeGeoJSON, uphillSegments = [], courseTitle }: ElevationPanelProps) {
+export function ElevationPanel({
+  routeGeoJSON,
+  uphillSegments = [],
+  courseTitle,
+  onHoverPointChange,
+}: ElevationPanelProps) {
   const [collapsed, setCollapsed] = useState(false)
+  const [hoveredDistanceKm, setHoveredDistanceKm] = useState<number | null>(null)
 
-  const elevationProfile = useMemo<ElevationPoint[]>(() => {
-    if (!routeGeoJSON) return []
-    const points: ElevationPoint[] = []
-    let cumKm = 0
+  const hoverProfile = useMemo(
+    () => buildRouteHoverProfile(routeGeoJSON),
+    [routeGeoJSON],
+  )
+  const elevationProfile = useMemo<ElevationPoint[]>(
+    () => hoverProfile.map(({ distanceKm, elevationM }) => ({ distanceKm, elevationM })),
+    [hoverProfile],
+  )
 
-    for (const feature of routeGeoJSON.features) {
-      if (feature.geometry?.type !== 'LineString') continue
-      const coords = feature.geometry.coordinates
-
-      for (let i = 0; i < coords.length; i++) {
-        const c = coords[i]
-        if (c.length < 3 || c[2] == null) continue
-        if (i > 0) {
-          const p = coords[i - 1]
-          const R = 6371
-          const dLat = ((c[1] - p[1]) * Math.PI) / 180
-          const dLng = ((c[0] - p[0]) * Math.PI) / 180
-          const a =
-            Math.sin(dLat / 2) ** 2 +
-            Math.cos((p[1] * Math.PI) / 180) *
-              Math.cos((c[1] * Math.PI) / 180) *
-              Math.sin(dLng / 2) ** 2
-          cumKm += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-        }
-        points.push({
-          distanceKm: Math.round(cumKm * 100) / 100,
-          elevationM: Math.round(c[2] * 10) / 10,
-        })
-      }
+  useEffect(() => {
+    if (!onHoverPointChange || collapsed) {
+      onHoverPointChange?.(null)
+      return
     }
-    return points
+
+    onHoverPointChange(findNearestRouteHoverPoint(hoverProfile, hoveredDistanceKm))
+  }, [collapsed, hoverProfile, hoveredDistanceKm, onHoverPointChange])
+
+  useEffect(() => {
+    setHoveredDistanceKm(null)
   }, [routeGeoJSON])
 
   if (elevationProfile.length === 0) return null
@@ -77,7 +74,12 @@ export function ElevationPanel({ routeGeoJSON, uphillSegments = [], courseTitle 
       {/* Chart */}
       {!collapsed && (
         <div className="px-2 pb-2">
-          <ElevationChart data={elevationProfile} segments={uphillSegments} />
+          <ElevationChart
+            data={elevationProfile}
+            segments={uphillSegments}
+            hoveredDistanceKm={hoveredDistanceKm}
+            onHoverDistanceChange={setHoveredDistanceKm}
+          />
         </div>
       )}
     </div>

@@ -21,6 +21,7 @@ import {
   shouldRestoreCourseSheet,
   type ReviewSurfaceSource,
 } from '@/lib/course-reviews-surface-ui'
+import type { RouteHoverPoint } from '@/lib/elevation-hover-sync'
 import { supabase } from '@/lib/supabase'
 import type {
   CourseAlbumPhoto,
@@ -64,6 +65,7 @@ export function ExploreShell({
 }: ExploreShellProps) {
   const [user, setUser] = useState<User | null>(null)
   const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null)
+  const [hoveredRoutePoint, setHoveredRoutePoint] = useState<RouteHoverPoint | null>(null)
   const [albumPhotos, setAlbumPhotos] = useState<CourseAlbumPhoto[]>([])
   const [albumPreviewPhotos, setAlbumPreviewPhotos] = useState<CourseAlbumPhoto[]>([])
   const [albumLoading, setAlbumLoading] = useState(false)
@@ -93,6 +95,7 @@ export function ExploreShell({
 
   useEffect(() => {
     setSelectedPoiId(null)
+    setHoveredRoutePoint(null)
     setAlbumPreviewPhotos([])
     setAlbumPhotos([])
     setAlbumLoading(false)
@@ -354,6 +357,7 @@ export function ExploreShell({
             albumPhotos={safeAlbumPhotos}
             selectedAlbumPhotoId={selectedAlbumPhotoId}
             onSelectAlbumPhoto={setSelectedAlbumPhotoId}
+            hoveredRoutePoint={hoveredRoutePoint}
           />
           {selectedCourse && canShowMapFullscreen && !isMapFullscreen ? (
             <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-end px-4 pt-4 md:hidden">
@@ -484,6 +488,7 @@ export function ExploreShell({
             routeGeoJSON={selectedCourse.route_geojson}
             uphillSegments={uphillSegments}
             courseTitle={selectedCourse.title}
+            onHoverPointChange={setHoveredRoutePoint}
           />
         )}
       </main>
