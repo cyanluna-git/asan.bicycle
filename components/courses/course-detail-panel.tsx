@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import React, { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { ArrowRight, Camera, Download, ImagePlus, Loader2, LogIn, Pencil, Quote, Send, Star, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Camera, Download, ImagePlus, Loader2, LogIn, Pencil, Quote, Send, Star } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { signInWithGoogle } from '@/lib/auth'
@@ -147,9 +147,9 @@ export function CourseDetailPanel({
           size="icon"
           className="absolute right-2 top-2 z-10 h-9 w-9 rounded-full bg-background/80 shadow-sm backdrop-blur"
           onClick={handleClose}
-          aria-label="닫기"
+          aria-label="돌아가기"
         >
-          <X className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4" />
         </Button>
 
         <div className="relative space-y-4 pr-12">
@@ -182,7 +182,7 @@ export function CourseDetailPanel({
             </p>
           ) : null}
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-2 sm:grid sm:grid-cols-2">
             <SummaryMetric label="거리" value={`${course.distance_km} km`} />
             <SummaryMetric
               label="획득고도"
@@ -190,7 +190,7 @@ export function CourseDetailPanel({
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="flex flex-col gap-2 sm:grid sm:grid-cols-3">
             {durations.map(({ label, speed }) => (
               <DurationTile
                 key={label}
@@ -465,7 +465,7 @@ function SummaryMetric({
       <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-foreground/45">
         {label}
       </p>
-      <p className="mt-1 text-sm font-semibold text-foreground">
+      <p className="mt-1 text-2xl font-semibold text-foreground sm:text-sm">
         {value}
       </p>
     </div>
@@ -482,9 +482,9 @@ function DurationTile({
   value: string
 }) {
   return (
-    <div className="rounded-2xl bg-black/5 px-2.5 py-3 text-center">
+    <div className="rounded-2xl bg-black/5 px-3 py-3 text-left sm:px-2.5 sm:text-center">
       <p className="text-[11px] font-medium text-foreground/45">{label}</p>
-      <p className="mt-1 text-xs font-semibold text-foreground">{value}</p>
+      <p className="mt-1 text-xl font-semibold text-foreground sm:text-xs">{value}</p>
       <p className="mt-1 text-[10px] text-muted-foreground">{speed}</p>
     </div>
   )
