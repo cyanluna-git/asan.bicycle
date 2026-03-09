@@ -10,6 +10,10 @@ const ElevationChart = dynamic(
   () => import('@/components/courses/elevation-chart').then((m) => m.ElevationChart),
   { ssr: false },
 )
+const SlopeStripChart = dynamic(
+  () => import('@/components/courses/slope-strip-chart').then((m) => m.SlopeStripChart),
+  { ssr: false },
+)
 
 interface ElevationPanelProps {
   routeGeoJSON: RouteGeoJSON | null | undefined
@@ -74,6 +78,13 @@ export function ElevationPanel({
       {/* Chart */}
       {!collapsed && (
         <div className="px-2 pb-2">
+          <div className="mb-2">
+            <SlopeStripChart
+              profile={elevationProfile}
+              hoveredDistanceKm={hoveredDistanceKm}
+              onHoverDistanceChange={setHoveredDistanceKm}
+            />
+          </div>
           <ElevationChart
             data={elevationProfile}
             segments={uphillSegments}

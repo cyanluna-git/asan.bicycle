@@ -30,6 +30,14 @@ export type SlopeGradientStop = {
   opacity?: number
 }
 
+export type SlopeDistanceSegment = {
+  startKm: number
+  endKm: number
+  slopePct: number
+  band: SlopeBandKey
+  color: string
+}
+
 const TO_RAD = Math.PI / 180
 const EARTH_RADIUS_KM = 6371
 const SMOOTHING_WINDOW = 1
@@ -125,7 +133,7 @@ function smoothSlopeValues(values: number[]) {
   })
 }
 
-function buildSmoothedSlopeSegments(profile: ElevationPoint[]) {
+export function buildSlopeDistanceSegments(profile: ElevationPoint[]): SlopeDistanceSegment[] {
   const rawSegments: Array<{
     startKm: number
     endKm: number
@@ -220,7 +228,7 @@ export function getSlopeBandMeta(slopePct: number) {
 }
 
 export function buildSlopeGradientStops(profile: ElevationPoint[], opacity = 1): SlopeGradientStop[] {
-  const segments = buildSmoothedSlopeSegments(profile)
+  const segments = buildSlopeDistanceSegments(profile)
   if (segments.length === 0) return []
 
   const startKm = segments[0].startKm

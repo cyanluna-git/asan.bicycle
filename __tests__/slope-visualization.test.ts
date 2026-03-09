@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildSlopeDistanceSegments,
   buildSlopeGradientStops,
   buildSlopePolylineSegments,
   classifySlopeBand,
@@ -34,6 +35,28 @@ describe('buildSlopeGradientStops', () => {
     expect(stops.at(-1)).toMatchObject({
       offset: '100%',
       color: expect.any(String),
+    })
+  })
+})
+
+describe('buildSlopeDistanceSegments', () => {
+  it('returns distance-based colored segments for compact strip rendering', () => {
+    const segments = buildSlopeDistanceSegments([
+      { distanceKm: 0, elevationM: 100 },
+      { distanceKm: 0.5, elevationM: 100.5 },
+      { distanceKm: 1, elevationM: 110.5 },
+    ])
+
+    expect(segments).toHaveLength(2)
+    expect(segments[0]).toMatchObject({
+      startKm: 0,
+      endKm: 0.5,
+      band: 'gentle',
+    })
+    expect(segments[1]).toMatchObject({
+      startKm: 0.5,
+      endKm: 1,
+      band: 'gentle',
     })
   })
 })
