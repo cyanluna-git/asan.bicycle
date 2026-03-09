@@ -30,7 +30,6 @@ describe('filterSafeAlbumPhotos', () => {
 
   it('returns photos when all conditions are met', () => {
     const result = filterSafeAlbumPhotos({
-      activeSurfaceKind: 'album',
       albumPhotos: matchingPhotos,
       selectedCourseId: 'course-1',
     })
@@ -39,30 +38,9 @@ describe('filterSafeAlbumPhotos', () => {
     expect(result).toHaveLength(2)
   })
 
-  it('returns [] when activeSurfaceKind is not "album"', () => {
-    expect(
-      filterSafeAlbumPhotos({
-        activeSurfaceKind: 'review',
-        albumPhotos: matchingPhotos,
-        selectedCourseId: 'course-1',
-      }),
-    ).toEqual([])
-  })
-
-  it('returns [] when activeSurfaceKind is null', () => {
-    expect(
-      filterSafeAlbumPhotos({
-        activeSurfaceKind: null,
-        albumPhotos: matchingPhotos,
-        selectedCourseId: 'course-1',
-      }),
-    ).toEqual([])
-  })
-
   it('returns [] when albumPhotos is empty', () => {
     expect(
       filterSafeAlbumPhotos({
-        activeSurfaceKind: 'album',
         albumPhotos: [],
         selectedCourseId: 'course-1',
       }),
@@ -77,7 +55,6 @@ describe('filterSafeAlbumPhotos', () => {
 
     expect(
       filterSafeAlbumPhotos({
-        activeSurfaceKind: 'album',
         albumPhotos: stalePhotos,
         selectedCourseId: 'new-course',
       }),
@@ -87,7 +64,6 @@ describe('filterSafeAlbumPhotos', () => {
   it('returns [] when selectedCourseId is null', () => {
     expect(
       filterSafeAlbumPhotos({
-        activeSurfaceKind: 'album',
         albumPhotos: matchingPhotos,
         selectedCourseId: null,
       }),
@@ -102,7 +78,6 @@ describe('filterSafeAlbumPhotos', () => {
 
     // First photo matches => returns all photos (guard only checks [0])
     const result = filterSafeAlbumPhotos({
-      activeSurfaceKind: 'album',
       albumPhotos: mixedPhotos,
       selectedCourseId: 'course-1',
     })

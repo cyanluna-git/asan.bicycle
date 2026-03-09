@@ -150,7 +150,7 @@ export function ExploreShell({
   }, [selectedCourse])
 
   useEffect(() => {
-    if (!selectedCourse || activeSurfaceKind !== 'album') {
+    if (!selectedCourse) {
       return
     }
 
@@ -192,7 +192,7 @@ export function ExploreShell({
     void loadAlbum()
 
     return () => controller.abort()
-  }, [activeSurfaceKind, albumReloadToken, selectedCourse])
+  }, [albumReloadToken, selectedCourse])
 
   const canEditSelectedCourse = selectedCourse
     ? canEditCourse({
@@ -212,8 +212,8 @@ export function ExploreShell({
   )
 
   const safeAlbumPhotos = useMemo(
-    () => filterSafeAlbumPhotos({ activeSurfaceKind, albumPhotos, selectedCourseId }),
-    [activeSurfaceKind, albumPhotos, selectedCourseId],
+    () => filterSafeAlbumPhotos({ albumPhotos, selectedCourseId }),
+    [albumPhotos, selectedCourseId],
   )
 
   const handleInlineAlbumPhotoUploaded = useCallback(

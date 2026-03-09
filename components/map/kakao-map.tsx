@@ -313,25 +313,25 @@ function AlbumPhotoMarkers({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: isOpen ? 34 : 28,
-                  height: isOpen ? 34 : 28,
+                  width: isOpen ? 42 : 34,
+                  height: isOpen ? 42 : 34,
                   borderRadius: '999px',
-                  backgroundColor: isOpen ? '#111827' : '#f97316',
-                  border: '2px solid white',
+                  backgroundColor: '#e2e8f0',
+                  backgroundImage: `url(${photo.public_url})`,
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundSize: 'cover',
+                  border: isOpen ? '3px solid white' : '2px solid white',
                   boxShadow: isOpen
                     ? '0 0 0 6px rgba(249,115,22,0.22), 0 8px 18px rgba(0,0,0,0.28)'
                     : '0 2px 6px rgba(0,0,0,0.35)',
                   cursor: 'pointer',
-                  color: 'white',
-                  fontSize: 13,
-                  lineHeight: 1,
                   transform: isOpen ? 'translateY(-2px)' : 'none',
                   transition: 'all 160ms ease',
+                  overflow: 'hidden',
                 }}
                 aria-label={photo.caption ?? '라이드 사진'}
-              >
-                📷
-              </button>
+              />
 
               {isOpen && (
                 <div
