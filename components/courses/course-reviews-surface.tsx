@@ -70,9 +70,11 @@ export function CourseReviewsSurface({
             >
               {courseTitle}
             </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {introCopy}
-            </p>
+            {introCopy ? (
+              <p className="mt-1 text-sm text-muted-foreground">
+                {introCopy}
+              </p>
+            ) : null}
           </div>
           {onClose ? (
             <Button

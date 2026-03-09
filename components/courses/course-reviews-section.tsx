@@ -187,7 +187,7 @@ export function CourseReviewsSection({
     }
 
     if (hasOwnReview && editingReviewId !== ownReview?.id) {
-      setSubmitError('이미 이 코스에 후기를 남겼습니다. 기존 후기를 수정하거나 삭제해주세요.')
+      setSubmitError('후기는 1개만 작성할 수 있습니다. 기존 후기를 수정하거나 삭제해주세요.')
       return
     }
 
@@ -331,45 +331,46 @@ export function CourseReviewsSection({
         </div>
       ) : hasOwnReview && !showComposer ? (
         <div className="rounded-[24px] border bg-card p-4 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                <MessageSquarePlus className="h-3.5 w-3.5" />
-                My Review
+          <div className="flex flex-col gap-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  <MessageSquarePlus className="h-3.5 w-3.5" />
+                  My Review
+                </div>
               </div>
-              <p className="mt-2 text-sm font-semibold text-foreground">
-                이미 이 코스에 후기를 남겼습니다.
-              </p>
-              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                {summarizeText(ownReview?.content ?? '', 96) ?? '내 후기를 수정하거나 삭제할 수 있습니다.'}
-              </p>
+              <div className="flex shrink-0 gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={startEditOwnReview}
+                  className="rounded-full"
+                >
+                  <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                  수정
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="rounded-full"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  삭제
+                </Button>
+              </div>
             </div>
-            <div className="flex shrink-0 gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={startEditOwnReview}
-                className="rounded-full"
-              >
-                <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                수정
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="rounded-full"
-              >
-                {isDeleting ? (
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                )}
-                삭제
-              </Button>
+            <div className="w-full space-y-2">
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {summarizeText(ownReview?.content ?? '', 180) ?? '내 후기를 수정하거나 삭제할 수 있습니다.'}
+              </p>
             </div>
           </div>
         </div>
@@ -625,4 +626,3 @@ function MetaChip({
     </span>
   )
 }
-

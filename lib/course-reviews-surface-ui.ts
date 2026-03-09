@@ -29,7 +29,7 @@ export function getReviewSurfaceIntroCopy({
   }
 
   if (viewerState === 'own-review') {
-    return '내 후기와 다른 라이더 반응을 한 흐름에서 비교하고 바로 다듬을 수 있습니다.'
+    return ''
   }
 
   if (reviewCount === 0) {
