@@ -177,7 +177,7 @@ export function CourseDetailPanel({
           </div>
 
           {compactDescription ? (
-            <p className="max-w-[26ch] text-sm leading-relaxed text-foreground/75">
+            <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm text-foreground/75 sm:max-w-[26ch] sm:whitespace-normal sm:leading-relaxed">
               {compactDescription}
             </p>
           ) : null}
@@ -195,6 +195,7 @@ export function CourseDetailPanel({
               <DurationTile
                 key={label}
                 label={label}
+                speed={`${speed} km/h`}
                 value={calcDuration(
                   course.distance_km,
                   course.elevation_gain_m,
@@ -289,9 +290,6 @@ export function CourseDetailPanel({
               <Camera className="h-3.5 w-3.5" />
               라이드 앨범
             </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              최근 사진과 업로드 진입을 모바일에서 더 빠르게 확인할 수 있게 정리했습니다.
-            </p>
           </div>
           <Button
             type="button"
@@ -476,15 +474,18 @@ function SummaryMetric({
 
 function DurationTile({
   label,
+  speed,
   value,
 }: {
   label: string
+  speed: string
   value: string
 }) {
   return (
     <div className="rounded-2xl bg-black/5 px-2.5 py-3 text-center">
       <p className="text-[11px] font-medium text-foreground/45">{label}</p>
       <p className="mt-1 text-xs font-semibold text-foreground">{value}</p>
+      <p className="mt-1 text-[10px] text-muted-foreground">{speed}</p>
     </div>
   )
 }
