@@ -12,6 +12,7 @@ import {
 import type { CourseAlbumPhoto, CourseMapItem, RouteGeoJSON, PoiMapItem } from "@/types/course"
 import type { RouteHoverPoint } from '@/lib/elevation-hover-sync'
 import { getPoiMeta } from '@/lib/poi'
+import { buildSlopePolylineSegments, SLOPE_BANDS, SLOPE_LEGEND_ORDER } from '@/lib/slope-visualization'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -247,11 +248,39 @@ function KakaoMapInner({
         />
         <HoveredRouteMarker point={hoveredRoutePoint ?? null} />
       </Map>
+      {effectiveSelectedId ? (
+        <SlopeLegend />
+      ) : null}
       {isRoutesLoading ? (
         <div className="pointer-events-none absolute right-4 top-4 rounded-full bg-background/90 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm ring-1 ring-black/5 backdrop-blur">
           경로 불러오는 중
         </div>
       ) : null}
+    </div>
+  )
+}
+
+function SlopeLegend() {
+  return (
+    <div className="pointer-events-none absolute bottom-4 left-4 z-20 max-w-[calc(100%-5rem)] rounded-2xl bg-background/92 px-3 py-2.5 shadow-lg ring-1 ring-black/5 backdrop-blur">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        경사도
+      </p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {SLOPE_LEGEND_ORDER.map((key) => (
+          <span
+            key={key}
+            className="inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium text-foreground/80 ring-1 ring-black/5"
+          >
+            <span
+              className="block h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: SLOPE_BANDS[key].color }}
+              aria-hidden
+            />
+            {SLOPE_BANDS[key].rangeLabel}
+          </span>
+        ))}
+      </div>
     </div>
   )
 }
@@ -469,6 +498,7 @@ function RoutePolylines({
     () => courses.map((course) => ({
       id: course.id,
       coords: course.route_geojson ? extractCoordinates(course.route_geojson) : [],
+      slopeSegments: course.route_geojson ? buildSlopePolylineSegments(course.route_geojson) : [],
     })),
     [courses],
   )
@@ -483,6 +513,32 @@ function RoutePolylines({
         const coords = course.coords
         if (coords.length < 2) return null
         const isSelected = course.id === selectedCourseId
+
+        if (isSelected && course.slopeSegments.length > 0) {
+          return [
+            <Polyline
+              key={`${course.id}-slope-base`}
+              path={coords}
+              strokeWeight={7}
+              strokeColor="#ffffff"
+              strokeOpacity={0.92 * fadeOpacity}
+              strokeStyle="solid"
+              zIndex={2}
+            />,
+            ...course.slopeSegments.map((segment, index) => (
+              <Polyline
+                key={`${course.id}-slope-${index}`}
+                path={segment.path}
+                strokeWeight={5}
+                strokeColor={segment.color}
+                strokeOpacity={fadeOpacity}
+                strokeStyle="solid"
+                zIndex={3}
+              />
+            )),
+          ]
+        }
+
         return (
           <Polyline
             key={course.id}
