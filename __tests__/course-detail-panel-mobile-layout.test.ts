@@ -217,6 +217,18 @@ describe('CourseDetailPanel mobile layout', () => {
     expect(downloadLink).toBeUndefined()
   })
 
+  it('hides the ownership panel when the viewer cannot edit the course', () => {
+    const { document } = renderPanel({
+      canEditCourse: false,
+      user: {
+        id: 'user-2',
+      } as never,
+    })
+
+    expect(document.body.textContent).not.toContain('수정 불가')
+    expect(document.body.textContent).not.toContain('권한 확인됨')
+  })
+
   it('shows uphill gradient metrics when route and uphill segments are available', () => {
     const { document } = renderPanel({
       course: makeCourse({

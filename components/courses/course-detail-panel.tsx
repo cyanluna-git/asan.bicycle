@@ -403,19 +403,21 @@ export function CourseDetailPanel({
         )}
       </div>
 
-      <div className="rounded-[24px] border bg-card p-4 shadow-sm">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={ownershipDiagnosis.badgeVariant}>
-            {ownershipDiagnosis.badgeLabel}
-          </Badge>
-          <span className="text-sm font-semibold text-foreground">
-            {ownershipDiagnosis.statusLabel}
-          </span>
+      {canEditCourse ? (
+        <div className="rounded-[24px] border bg-card p-4 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={ownershipDiagnosis.badgeVariant}>
+              {ownershipDiagnosis.badgeLabel}
+            </Badge>
+            <span className="text-sm font-semibold text-foreground">
+              {ownershipDiagnosis.statusLabel}
+            </span>
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            {ownershipDiagnosis.description}
+          </p>
         </div>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {ownershipDiagnosis.description}
-        </p>
-      </div>
+      ) : null}
 
       {uphillSegments.length > 0 && (
         <div>
