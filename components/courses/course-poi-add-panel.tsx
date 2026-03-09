@@ -264,8 +264,8 @@ function CoursePoiAddLoadedForm({
   }
 
   return (
-    <div className="rounded-2xl border border-dashed bg-muted/20 p-3">
-      <div className="flex flex-col gap-2 sm:flex-row">
+    <div className="w-full min-w-0 rounded-2xl border border-dashed bg-muted/20 p-3">
+      <div className="flex min-w-0 flex-col gap-2">
         <input
           type="search"
           value={keyword}
@@ -277,9 +277,9 @@ function CoursePoiAddLoadedForm({
             }
           }}
           placeholder="상호나 명소 이름 검색"
-          className="h-10 flex-1 rounded-full border bg-background px-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-10 min-w-0 w-full rounded-full border bg-background px-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             type="button"
             className="h-10 rounded-full"
@@ -358,7 +358,7 @@ function CoursePoiAddLoadedForm({
             <p className="text-xs text-muted-foreground">{selectedPlaceAddress}</p>
           </div>
 
-          <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]">
+          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]">
             <div>
               <label
                 htmlFor="poi-category"

@@ -362,18 +362,19 @@ export function CourseDetailPanel({
           <h3 className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
             들를만한 곳
           </h3>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">
-              {pois.length}개
-            </span>
-            {canEditCourse ? (
-              <CoursePoiAddPanel
-                courseId={course.id}
-                onCreated={handlePoiCreated}
-              />
-            ) : null}
-          </div>
+          <span className="text-xs text-muted-foreground">
+            {pois.length}개
+          </span>
         </div>
+
+        {canEditCourse ? (
+          <div className="mb-3">
+            <CoursePoiAddPanel
+              courseId={course.id}
+              onCreated={handlePoiCreated}
+            />
+          </div>
+        ) : null}
 
         {categoryTabs.length > 0 && (
           <div className="-mx-1 mb-3 flex gap-2 overflow-x-auto px-1 pb-1.5 touch-pan-x">

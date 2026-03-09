@@ -36,6 +36,9 @@ import type { User } from '@supabase/supabase-js'
 
 type ExploreSurfaceKind = 'review' | 'album'
 
+const MIN_SIDEBAR_WIDTH = 280
+const MAX_SIDEBAR_WIDTH = 520
+
 interface ExploreShellProps {
   courses: CourseListItem[]
   routeQueryString: string
@@ -63,6 +66,7 @@ export function ExploreShell({
   reviews,
   reviewStats,
 }: ExploreShellProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [localPois, setLocalPois] = useState<PoiMapItem[]>(pois)
   const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null)
@@ -78,6 +82,8 @@ export function ExploreShell({
   const [activeSurfaceKind, setActiveSurfaceKind] = useState<ExploreSurfaceKind | null>(null)
   const [surfaceSource, setSurfaceSource] = useState<ReviewSurfaceSource>(null)
   const [shouldReopenCourseSheet, setShouldReopenCourseSheet] = useState(false)
+  const [sidebarWidth, setSidebarWidth] = useState(320)
+  const [isResizingSidebar, setIsResizingSidebar] = useState(false)
   const lastSurfaceTriggerIdRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -331,8 +337,41 @@ export function ExploreShell({
     })
   }, [activeSurfaceKind, shouldReopenCourseSheet])
 
+  useEffect(() => {
+    if (!isResizingSidebar) {
+      return
+    }
+
+    const handlePointerMove = (event: MouseEvent) => {
+      const containerLeft = containerRef.current?.getBoundingClientRect().left ?? 0
+      const nextWidth = Math.min(
+        MAX_SIDEBAR_WIDTH,
+        Math.max(MIN_SIDEBAR_WIDTH, event.clientX - containerLeft),
+      )
+      setSidebarWidth(nextWidth)
+    }
+
+    const handlePointerUp = () => {
+      setIsResizingSidebar(false)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    window.addEventListener('mousemove', handlePointerMove)
+    window.addEventListener('mouseup', handlePointerUp)
+
+    return () => {
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      window.removeEventListener('mousemove', handlePointerMove)
+      window.removeEventListener('mouseup', handlePointerUp)
+    }
+  }, [isResizingSidebar])
+
   return (
-    <div className="flex h-[calc(100vh-64px)]">
+    <div ref={containerRef} className="flex h-[calc(100vh-64px)]">
       <Sidebar
         courses={courses}
         startPoints={startPoints}
@@ -356,7 +395,20 @@ export function ExploreShell({
         }
         onAlbumPhotoUploaded={handleInlineAlbumPhotoUploaded}
         onPoiCreated={handlePoiCreated}
+        width={sidebarWidth}
       />
+      <div className="relative hidden w-3 shrink-0 md:block">
+        <button
+          type="button"
+          className="absolute inset-y-0 left-1/2 w-3 -translate-x-1/2 cursor-col-resize group"
+          onMouseDown={() => setIsResizingSidebar(true)}
+          onDoubleClick={() => setSidebarWidth(320)}
+          aria-label="사이드 패널 너비 조절"
+        >
+          <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border transition-colors group-hover:bg-foreground/35" />
+          <span className="absolute left-1/2 top-1/2 h-16 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-muted-foreground/20 transition-colors group-hover:bg-muted-foreground/40" />
+        </button>
+      </div>
       <main className="flex-1 flex flex-col min-h-0">
         <div className="relative flex-1 min-h-0">
           <KakaoMap

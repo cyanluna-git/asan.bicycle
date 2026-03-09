@@ -32,6 +32,7 @@ interface SidebarProps {
   onOpenAlbum?: (triggerEl?: HTMLButtonElement | null) => void
   onAlbumPhotoUploaded?: (photo: CourseAlbumPhoto) => void
   onPoiCreated?: (poi: PoiMapItem) => void
+  width?: number
 }
 
 export function Sidebar({
@@ -53,9 +54,13 @@ export function Sidebar({
   onOpenAlbum,
   onAlbumPhotoUploaded,
   onPoiCreated,
+  width = 320,
 }: SidebarProps) {
   return (
-    <aside className="hidden md:flex flex-col w-[280px] border-r bg-background">
+    <aside
+      className="hidden shrink-0 md:flex md:flex-col md:border-r md:bg-background"
+      style={{ width }}
+    >
       <div className="overflow-y-auto h-full p-4">
         {selectedCourse ? (
           <Suspense fallback={<CourseDetailSkeleton />}>
