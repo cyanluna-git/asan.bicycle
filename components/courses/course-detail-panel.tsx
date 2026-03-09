@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
+import React, { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight, Camera, Download, ImagePlus, Loader2, LogIn, Pencil, Quote, Send, Star, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -220,13 +220,13 @@ export function CourseDetailPanel({
       </div>
 
       <div className="rounded-[24px] border bg-card p-4 shadow-sm">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
               <Quote className="h-3.5 w-3.5" />
               라이더 반응
             </div>
-            <div className="mt-2 flex items-center gap-3">
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
               <div className="flex items-center gap-1 text-sm font-semibold text-foreground">
                 <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
                 <span>{reviewStats?.avg_rating?.toFixed(1) ?? '-'}</span>
@@ -244,7 +244,7 @@ export function CourseDetailPanel({
               id={reviewTriggerId}
               onClick={(event) => onOpenReviews?.(event.currentTarget)}
               disabled={!onOpenReviews}
-              className="shrink-0 rounded-full"
+              className="h-10 w-full rounded-full sm:h-9 sm:w-auto sm:shrink-0"
               aria-haspopup="dialog"
               aria-label={`${course.title} 후기 더보기`}
             >
@@ -255,7 +255,7 @@ export function CourseDetailPanel({
         </div>
 
         {previewReviews.length > 0 ? (
-          <div className="mt-3 flex flex-col gap-2">
+          <div className="mt-3 flex flex-col gap-2.5">
             {previewReviews.map((review) => (
               <ReviewPreviewCard key={review.id} review={review} />
             ))}
@@ -283,12 +283,15 @@ export function CourseDetailPanel({
       </div>
 
       <div className="rounded-[24px] border bg-card p-4 shadow-sm">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
               <Camera className="h-3.5 w-3.5" />
               라이드 앨범
             </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              최근 사진과 업로드 진입을 모바일에서 더 빠르게 확인할 수 있게 정리했습니다.
+            </p>
           </div>
           <Button
             type="button"
@@ -297,7 +300,7 @@ export function CourseDetailPanel({
             id={albumTriggerId}
             onClick={(event) => onOpenAlbum?.(event.currentTarget)}
             disabled={!onOpenAlbum}
-            className="shrink-0 rounded-full"
+            className="h-10 w-full rounded-full sm:h-9 sm:w-auto sm:shrink-0"
             aria-haspopup="dialog"
             aria-label={`${course.title} 앨범 보기`}
           >
@@ -307,12 +310,12 @@ export function CourseDetailPanel({
         </div>
 
         {albumPreviewPhotos.length > 0 ? (
-          <div className="mt-3 grid grid-cols-2 gap-1">
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-1.5">
             {albumPreviewPhotos.slice(0, 4).map((photo) => (
               <button
                 key={photo.id}
                 type="button"
-                className="relative aspect-square overflow-hidden rounded-lg"
+                className="relative aspect-square overflow-hidden rounded-xl ring-1 ring-black/5"
                 onClick={() => onOpenAlbum?.()}
                 aria-label="앨범 사진 보기"
               >
@@ -342,18 +345,18 @@ export function CourseDetailPanel({
         )}
       </div>
 
-      <div>
-        <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="rounded-[24px] border bg-card p-4 shadow-sm">
+        <div className="mb-3 flex items-end justify-between gap-3">
           <h3 className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
             들를만한 곳
           </h3>
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             {pois.length}개
           </span>
         </div>
 
         {categoryTabs.length > 0 && (
-          <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+          <div className="-mx-1 mb-3 flex gap-2 overflow-x-auto px-1 pb-1.5 touch-pan-x">
             <PoiFilterChip
               label="전체"
               isActive={activeCategory === 'all'}
@@ -371,7 +374,7 @@ export function CourseDetailPanel({
         )}
 
         {visiblePois.length > 0 ? (
-          <div className="flex gap-3 overflow-x-auto pb-2">
+          <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 touch-pan-x">
             {visiblePois.map((poi) => (
               <PoiCard
                 key={poi.id}
@@ -411,31 +414,41 @@ export function CourseDetailPanel({
         </div>
       )}
 
-      <div className="grid gap-2 sm:grid-cols-2">
-        {canEditCourse ? (
-          <Button asChild variant="outline" className="w-full">
-            <Link href={`/courses/${course.id}/edit`}>
-              <Pencil className="mr-2 h-4 w-4" />
-              코스 수정
-            </Link>
-          </Button>
-        ) : (
-          <div className="hidden sm:block" />
-        )}
+      <div className="rounded-[24px] border bg-card p-4 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold text-foreground">
+              GPX 가져가기
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              모바일에서도 바로 다운로드 링크를 열 수 있게 아래에 고정 액션으로 배치했습니다.
+            </p>
+          </div>
+          <div className={`grid w-full gap-2 sm:w-auto ${canEditCourse ? 'sm:grid-cols-2' : ''}`}>
+            {canEditCourse ? (
+              <Button asChild variant="outline" className="h-11 w-full">
+                <Link href={`/courses/${course.id}/edit`}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  코스 수정
+                </Link>
+              </Button>
+            ) : null}
 
-        {course.gpx_url ? (
-          <Button asChild className="w-full">
-            <a href={`/api/courses/${course.id}/download`}>
-              <Download className="mr-2 h-4 w-4" />
-              GPX 다운로드
-            </a>
-          </Button>
-        ) : (
-          <Button className="w-full" disabled>
-            <Download className="mr-2 h-4 w-4" />
-            GPX 다운로드
-          </Button>
-        )}
+            {course.gpx_url ? (
+              <Button asChild className="h-11 w-full">
+                <a href={`/api/courses/${course.id}/download`}>
+                  <Download className="mr-2 h-4 w-4" />
+                  GPX 다운로드
+                </a>
+              </Button>
+            ) : (
+              <Button className="h-11 w-full" disabled>
+                <Download className="mr-2 h-4 w-4" />
+                GPX 다운로드
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -479,7 +492,7 @@ function ReviewPreviewCard({ review }: { review: CourseReview }) {
   const excerpt = summarizeText(review.content, 92)
   const author = getReviewAuthorDisplay(review)
   return (
-    <div className="rounded-2xl bg-muted/45 px-3 py-3">
+    <div className="rounded-2xl bg-muted/45 px-3.5 py-3.5">
       <div className="flex items-center gap-1">
         {Array.from({ length: 5 }, (_, i) => (
           <Star
@@ -510,7 +523,7 @@ function ReviewPreviewCard({ review }: { review: CourseReview }) {
 
 function InlineLoginPrompt() {
   return (
-    <div className="mt-3 flex items-center justify-between rounded-2xl bg-muted/45 px-3 py-3">
+    <div className="mt-3 flex flex-col gap-3 rounded-2xl bg-muted/45 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
       <span className="text-sm text-muted-foreground">
         후기를 남기려면 로그인하세요
       </span>
@@ -518,7 +531,7 @@ function InlineLoginPrompt() {
         type="button"
         variant="outline"
         size="sm"
-        className="shrink-0 rounded-full"
+        className="h-10 w-full rounded-full sm:h-9 sm:w-auto sm:shrink-0"
         onClick={async () => {
           await signInWithGoogle()
         }}
@@ -538,7 +551,7 @@ function InlineOwnReviewNotice({
   reviewTriggerId?: string
 }) {
   return (
-    <div className="mt-3 flex items-center justify-between rounded-2xl bg-muted/45 px-3 py-3">
+    <div className="mt-3 flex flex-col gap-3 rounded-2xl bg-muted/45 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
       <span className="text-sm text-muted-foreground">
         이미 후기를 작성했습니다
       </span>
@@ -548,7 +561,7 @@ function InlineOwnReviewNotice({
           variant="outline"
           size="sm"
           id={reviewTriggerId ? `${reviewTriggerId}-notice` : undefined}
-          className="shrink-0 rounded-full"
+          className="h-10 w-full rounded-full sm:h-9 sm:w-auto sm:shrink-0"
           onClick={(event) => onOpenReviews(event.currentTarget)}
           aria-haspopup="dialog"
         >
@@ -637,12 +650,12 @@ function InlineReviewForm({
 
   return (
     <div className="mt-3 space-y-2 rounded-2xl bg-muted/45 px-3 py-3">
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         {Array.from({ length: 5 }, (_, i) => (
           <button
             key={i}
             type="button"
-            className="p-0.5"
+            className="rounded-full p-1"
             onMouseEnter={() => setHoverRating(i + 1)}
             onMouseLeave={() => setHoverRating(0)}
             onClick={() => setRating(i + 1)}
@@ -663,7 +676,7 @@ function InlineReviewForm({
           </span>
         )}
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <input
           ref={inputRef}
           type="text"
@@ -682,11 +695,12 @@ function InlineReviewForm({
         <Button
           type="button"
           size="sm"
-          className="shrink-0 rounded-full"
+          className="h-10 rounded-xl sm:h-9 sm:shrink-0 sm:rounded-full"
           disabled={isPending || rating < 1 || !content.trim()}
           onClick={handleSubmit}
         >
-          <Send className="h-3.5 w-3.5" />
+          <Send className="mr-1.5 h-3.5 w-3.5" />
+          등록
         </Button>
       </div>
       {error && (
@@ -698,7 +712,7 @@ function InlineReviewForm({
 
 function InlineAlbumLoginPrompt() {
   return (
-    <div className="mt-3 flex items-center justify-between rounded-2xl bg-muted/45 px-3 py-3">
+    <div className="mt-3 flex flex-col gap-3 rounded-2xl bg-muted/45 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
       <span className="text-sm text-muted-foreground">
         사진을 올리려면 로그인하세요
       </span>
@@ -706,7 +720,7 @@ function InlineAlbumLoginPrompt() {
         type="button"
         variant="outline"
         size="sm"
-        className="shrink-0 rounded-full"
+        className="h-10 w-full rounded-full sm:h-9 sm:w-auto sm:shrink-0"
         onClick={async () => {
           await signInWithGoogle()
         }}
@@ -816,7 +830,7 @@ function PoiFilterChip({
     <button
       type="button"
       onClick={onClick}
-      className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+      className={`shrink-0 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors sm:px-3 sm:py-1 sm:text-xs ${
         isActive
           ? 'border-foreground bg-foreground text-background'
           : 'border-border bg-background text-muted-foreground hover:bg-muted'
@@ -845,13 +859,13 @@ function PoiCard({
     <button
       type="button"
       onClick={onClick}
-      className={`w-[216px] shrink-0 snap-start overflow-hidden rounded-2xl border text-left transition-all ${
+      className={`w-[17rem] shrink-0 snap-start overflow-hidden rounded-2xl border text-left transition-all sm:w-[216px] ${
         isSelected
           ? 'border-foreground bg-muted/50 shadow-md'
           : 'border-border bg-card hover:border-foreground/30 hover:bg-muted/30'
       }`}
     >
-      <div className="relative h-28 w-full overflow-hidden bg-muted">
+      <div className="relative h-32 w-full overflow-hidden bg-muted sm:h-28">
         {showImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img

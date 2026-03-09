@@ -220,7 +220,10 @@ function KakaoMapInner({
       : []
 
   return (
-    <div className="relative h-full w-full">
+    <div
+      className="relative h-full w-full [touch-action:pan-x_pan-y_pinch-zoom]"
+      data-map-interaction-surface="true"
+    >
       <Map center={ASAN_CENTER} style={{ width: "100%", height: "100%" }} level={8}>
         <ZoomControl position="RIGHT" />
         <RoutePolylines

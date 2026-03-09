@@ -1,15 +1,21 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronUp, Maximize2, Minimize2 } from 'lucide-react'
 import { CourseAlbumSurface } from '@/components/courses/course-album-surface'
 import { CourseReviewsSurface } from '@/components/courses/course-reviews-surface'
 import { Sidebar } from '@/components/layout/sidebar'
 import { BottomSheet } from '@/components/layout/bottom-sheet'
 import KakaoMap from '@/components/map/kakao-map'
 import { ElevationPanel } from '@/components/map/elevation-panel'
+import { Button } from '@/components/ui/button'
 import { Drawer, DrawerContent } from '@/components/ui/drawer'
 import { canEditCourse, isAdminUser } from '@/lib/admin'
 import { filterSafeAlbumPhotos } from '@/lib/course-album'
+import {
+  canEnterMapFullscreen,
+  shouldExitMapFullscreen,
+} from '@/lib/explore-map-fullscreen-ui'
 import {
   getReviewSurfaceViewerState,
   shouldRestoreCourseSheet,
@@ -65,6 +71,7 @@ export function ExploreShell({
   const [albumReloadToken, setAlbumReloadToken] = useState(0)
   const [selectedAlbumPhotoId, setSelectedAlbumPhotoId] = useState<string | null>(null)
   const [isCourseSheetOpen, setIsCourseSheetOpen] = useState(false)
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false)
   const [activeSurfaceKind, setActiveSurfaceKind] = useState<ExploreSurfaceKind | null>(null)
   const [surfaceSource, setSurfaceSource] = useState<ReviewSurfaceSource>(null)
   const [shouldReopenCourseSheet, setShouldReopenCourseSheet] = useState(false)
@@ -93,6 +100,7 @@ export function ExploreShell({
     setAlbumReloadToken(0)
     setSelectedAlbumPhotoId(null)
     setIsCourseSheetOpen(false)
+    setIsMapFullscreen(false)
     setActiveSurfaceKind(null)
     setSurfaceSource(null)
     setShouldReopenCourseSheet(false)
@@ -216,6 +224,25 @@ export function ExploreShell({
     [],
   )
 
+  const canShowMapFullscreen = canEnterMapFullscreen({
+    hasSelectedCourse: Boolean(selectedCourse),
+    activeSurfaceKind,
+  })
+
+  useEffect(() => {
+    if (!isMapFullscreen) {
+      return
+    }
+
+    if (shouldExitMapFullscreen({
+      hasSelectedCourse: Boolean(selectedCourse),
+      activeSurfaceKind,
+      isCourseSheetOpen,
+    })) {
+      setIsMapFullscreen(false)
+    }
+  }, [activeSurfaceKind, isCourseSheetOpen, isMapFullscreen, selectedCourse])
+
   const restoreFocusToSurfaceTrigger = () => {
     const triggerId = lastSurfaceTriggerIdRef.current
     if (!triggerId) {
@@ -244,6 +271,23 @@ export function ExploreShell({
     setActiveSurfaceKind(kind)
   }
 
+  const handleOpenMapFullscreen = () => {
+    setIsCourseSheetOpen(false)
+    setIsMapFullscreen(true)
+  }
+
+  const handleOpenCourseSheet = () => {
+    setIsMapFullscreen(false)
+    setIsCourseSheetOpen(true)
+  }
+
+  const handleCourseSheetOpenChange = (open: boolean) => {
+    setIsCourseSheetOpen(open)
+    if (open) {
+      setIsMapFullscreen(false)
+    }
+  }
+
   const handleCloseSurface = () => {
     const shouldRestore = shouldRestoreCourseSheet({
       source: surfaceSource,
@@ -267,6 +311,7 @@ export function ExploreShell({
     }
 
     window.requestAnimationFrame(() => {
+      setIsMapFullscreen(false)
       setIsCourseSheetOpen(true)
       setShouldReopenCourseSheet(false)
       restoreFocusToSurfaceTrigger()
@@ -310,6 +355,51 @@ export function ExploreShell({
             selectedAlbumPhotoId={selectedAlbumPhotoId}
             onSelectAlbumPhoto={setSelectedAlbumPhotoId}
           />
+          {selectedCourse && canShowMapFullscreen && !isMapFullscreen ? (
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-end px-4 pt-4 md:hidden">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="pointer-events-auto rounded-full bg-background/92 shadow-lg backdrop-blur"
+                onClick={handleOpenMapFullscreen}
+              >
+                <Maximize2 className="h-4 w-4" />
+                지도 크게 보기
+              </Button>
+            </div>
+          ) : null}
+          {selectedCourse && isMapFullscreen ? (
+            <>
+              <div className="pointer-events-none absolute inset-x-0 top-0 z-30 h-24 bg-gradient-to-b from-black/35 to-transparent md:hidden" />
+              <div className="absolute inset-x-0 top-4 z-40 flex items-start justify-between px-4 md:hidden">
+                <div className="max-w-[calc(100%-4.5rem)] rounded-full bg-background/92 px-3 py-2 text-sm font-medium text-foreground shadow-lg backdrop-blur">
+                  {selectedCourse.title}
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon-sm"
+                  className="rounded-full bg-background/92 shadow-lg backdrop-blur"
+                  onClick={() => setIsMapFullscreen(false)}
+                  aria-label="지도 전체화면 해제"
+                >
+                  <Minimize2 className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="absolute inset-x-0 bottom-6 z-40 flex justify-center px-4 md:hidden">
+                <Button
+                  type="button"
+                  size="lg"
+                  className="w-full max-w-xs rounded-full shadow-lg"
+                  onClick={handleOpenCourseSheet}
+                >
+                  <ChevronUp className="h-4 w-4" />
+                  코스 정보 보기
+                </Button>
+              </div>
+            </>
+          ) : null}
           <BottomSheet
             courses={courses}
             startPoints={startPoints}
@@ -326,7 +416,8 @@ export function ExploreShell({
             albumPreviewPhotos={albumPreviewPhotos}
             user={user}
             open={isCourseSheetOpen}
-            onOpenChange={setIsCourseSheetOpen}
+            showTrigger={!isMapFullscreen}
+            onOpenChange={handleCourseSheetOpenChange}
             onOpenReviews={(triggerEl) =>
               openSurface({ kind: 'review', source: 'bottom-sheet', triggerEl })
             }
@@ -388,7 +479,7 @@ export function ExploreShell({
             </Drawer>
           ) : null}
         </div>
-        {selectedCourse && (
+        {selectedCourse && !isMapFullscreen && (
           <ElevationPanel
             routeGeoJSON={selectedCourse.route_geojson}
             uphillSegments={uphillSegments}

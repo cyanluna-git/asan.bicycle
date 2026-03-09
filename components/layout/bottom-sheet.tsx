@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import {
   Drawer,
   DrawerContent,
+  DrawerHandle,
   DrawerHeader,
   DrawerTitle,
   DrawerDescription,
@@ -14,6 +15,8 @@ import {
 import { CourseFilter } from '@/components/filter/course-filter'
 import { CourseListClient } from '@/components/courses/course-list-client'
 import { CourseDetailPanel } from '@/components/courses/course-detail-panel'
+import { getCourseSheetTriggerLabel } from '@/lib/explore-map-fullscreen-ui'
+import { getSheetGestureHint, shouldUseHandleOnlySheet } from '@/lib/mobile-map-gesture-ui'
 import type {
   CourseAlbumPhoto,
   CourseListItem,
@@ -44,6 +47,7 @@ interface BottomSheetProps {
   onOpenAlbum?: (triggerEl?: HTMLButtonElement | null) => void
   onAlbumPhotoUploaded?: (photo: CourseAlbumPhoto) => void
   open: boolean
+  showTrigger?: boolean
   onOpenChange: (open: boolean) => void
 }
 
@@ -66,6 +70,7 @@ export function BottomSheet({
   onOpenAlbum,
   onAlbumPhotoUploaded,
   open,
+  showTrigger = true,
   onOpenChange,
 }: BottomSheetProps) {
   const [pendingSurfaceOpen, setPendingSurfaceOpen] = useState<'review' | 'album' | null>(null)
@@ -100,17 +105,32 @@ export function BottomSheet({
 
   return (
     <div className="md:hidden">
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerTrigger asChild>
-          <Button
-            className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 shadow-lg"
-            size="lg"
-          >
-            <List />
-            코스 목록 보기
-          </Button>
-        </DrawerTrigger>
+      <Drawer
+        open={open}
+        onOpenChange={onOpenChange}
+        handleOnly={shouldUseHandleOnlySheet(Boolean(selectedCourse))}
+        scrollLockTimeout={120}
+      >
+        {showTrigger ? (
+          <DrawerTrigger asChild>
+            <Button
+              className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 shadow-lg"
+              size="lg"
+            >
+              <List />
+              {getCourseSheetTriggerLabel(Boolean(selectedCourse))}
+            </Button>
+          </DrawerTrigger>
+        ) : null}
         <DrawerContent>
+          {getSheetGestureHint(Boolean(selectedCourse)) ? (
+            <div className="px-4 pt-3">
+              <DrawerHandle />
+              <p className="mt-2 text-center text-[11px] text-muted-foreground">
+                {getSheetGestureHint(Boolean(selectedCourse))}
+              </p>
+            </div>
+          ) : null}
           <DrawerHeader>
             <DrawerTitle>
               {selectedCourse ? selectedCourse.title : '코스 목록'}
@@ -121,7 +141,7 @@ export function BottomSheet({
                 : '아산시 자전거 코스를 탐색하세요'}
             </DrawerDescription>
           </DrawerHeader>
-          <div className="overflow-y-auto overscroll-contain px-4 pb-6">
+          <div className="overflow-y-auto overscroll-contain px-4 pb-6 [touch-action:pan-y]">
             {selectedCourse ? (
               <Suspense fallback={<CourseDetailSkeleton />}>
                 <CourseDetailPanel
