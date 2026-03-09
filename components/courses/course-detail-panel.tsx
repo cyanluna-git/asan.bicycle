@@ -143,16 +143,17 @@ export function CourseDetailPanel({
       >
         <div className="absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.9),_transparent_58%)]" />
         <Button
-          variant="ghost"
-          size="icon"
-          className="absolute right-2 top-2 z-10 h-9 w-9 rounded-full bg-background/80 shadow-sm backdrop-blur"
+          variant="outline"
+          size="sm"
+          className="absolute right-2 top-2 z-10 h-10 rounded-full bg-background/88 px-3 shadow-sm backdrop-blur"
           onClick={handleClose}
           aria-label="돌아가기"
         >
           <ArrowLeft className="h-4 w-4" />
+          돌아가기
         </Button>
 
-        <div className="relative space-y-4 pr-12">
+        <div className="relative space-y-4 pr-16">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={difficultyVariant[course.difficulty]}>
               {difficultyLabel[course.difficulty]}
@@ -182,7 +183,7 @@ export function CourseDetailPanel({
             </p>
           ) : null}
 
-          <div className="flex flex-col gap-2 sm:grid sm:grid-cols-2">
+          <div className="flex flex-col gap-2">
             <SummaryMetric label="거리" value={`${course.distance_km} km`} />
             <SummaryMetric
               label="획득고도"
@@ -190,7 +191,7 @@ export function CourseDetailPanel({
             />
           </div>
 
-          <div className="flex flex-col gap-2 sm:grid sm:grid-cols-3">
+          <div className="flex flex-col gap-2">
             {durations.map(({ label, speed }) => (
               <DurationTile
                 key={label}
@@ -461,11 +462,11 @@ function SummaryMetric({
   value: string
 }) {
   return (
-    <div className="rounded-2xl border border-black/5 bg-white/75 px-3 py-3">
+    <div className="rounded-2xl border border-black/5 bg-white/75 px-3 py-3 text-left">
       <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-foreground/45">
         {label}
       </p>
-      <p className="mt-1 text-2xl font-semibold text-foreground sm:text-sm">
+      <p className="mt-1 text-2xl font-semibold text-foreground">
         {value}
       </p>
     </div>
@@ -482,9 +483,9 @@ function DurationTile({
   value: string
 }) {
   return (
-    <div className="rounded-2xl bg-black/5 px-3 py-3 text-left sm:px-2.5 sm:text-center">
+    <div className="rounded-2xl bg-black/5 px-3 py-3 text-left">
       <p className="text-[11px] font-medium text-foreground/45">{label}</p>
-      <p className="mt-1 text-xl font-semibold text-foreground sm:text-xs">{value}</p>
+      <p className="mt-1 text-xl font-semibold text-foreground">{value}</p>
       <p className="mt-1 text-[10px] text-muted-foreground">{speed}</p>
     </div>
   )
