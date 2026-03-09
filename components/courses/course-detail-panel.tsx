@@ -192,7 +192,7 @@ export function CourseDetailPanel({
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="flex flex-col gap-2">
             {durations.map(({ label, speed }) => (
               <DurationTile
                 key={label}
@@ -484,10 +484,16 @@ function DurationTile({
   value: string
 }) {
   return (
-    <div className="rounded-2xl bg-black/5 px-3 py-2.5 text-left">
-      <p className="text-[11px] font-medium text-foreground/45">{label}</p>
-      <p className="mt-1 text-[1.05rem] font-semibold text-foreground sm:text-xl">{value}</p>
-      <p className="mt-1 text-[10px] text-muted-foreground">{speed}</p>
+    <div className="rounded-2xl bg-black/5 px-3.5 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium text-foreground/45">{label}</p>
+          <p className="mt-1 text-[10px] text-muted-foreground">{speed}</p>
+        </div>
+        <p className="shrink-0 whitespace-nowrap text-xl font-semibold text-foreground">
+          {value}
+        </p>
+      </div>
     </div>
   )
 }
