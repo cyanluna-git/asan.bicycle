@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { canEditCourse, isAdminUser } from '@/lib/admin'
+import { extractPoiPhotoPath, POI_PHOTO_BUCKET } from '@/lib/poi-photo-storage'
 import { normalizePoiCategory } from '@/lib/poi'
 import { createAnonServerClient, createServiceRoleClient } from '@/lib/supabase-server'
 
@@ -11,6 +12,8 @@ type CreatePoiPayload = {
   name?: string
   category?: string | null
   description?: string | null
+  photoPath?: string | null
+  photoUrl?: string | null
   lat?: number | null
   lng?: number | null
 }
@@ -68,6 +71,8 @@ export async function POST(request: Request, context: RouteContext) {
 
   const name = body.name?.trim() || ''
   const description = body.description?.trim() || null
+  const photoPath = body.photoPath?.trim() || null
+  const photoUrl = body.photoUrl?.trim() || null
   const lat = body.lat
   const lng = body.lng
 
@@ -114,6 +119,33 @@ export async function POST(request: Request, context: RouteContext) {
     return jsonError('이 코스에 POI를 추가할 권한이 없습니다.', 403)
   }
 
+  if (photoPath || photoUrl) {
+    if (!photoPath || !photoUrl) {
+      return jsonError('POI 사진 경로 정보가 완전하지 않습니다.', 400)
+    }
+
+    const publicUrlPath = extractPoiPhotoPath(photoUrl)
+    if (publicUrlPath !== photoPath) {
+      return jsonError('POI 사진 경로가 올바르지 않습니다.', 400)
+    }
+
+    if (photoPath.split('/')[0] !== user.id) {
+      return jsonError('본인 소유 경로의 POI 사진만 등록할 수 있습니다.', 403)
+    }
+
+    const lastSlash = photoPath.lastIndexOf('/')
+    const storageFolder = photoPath.slice(0, lastSlash)
+    const storageFileName = photoPath.slice(lastSlash + 1)
+    const { data: storageFiles, error: storageListError } = await authClient
+      .storage
+      .from(POI_PHOTO_BUCKET)
+      .list(storageFolder, { search: storageFileName, limit: 1 })
+
+    if (storageListError || !storageFiles?.some((file) => file.name === storageFileName)) {
+      return jsonError('업로드된 POI 사진 파일을 찾을 수 없습니다.', 400)
+    }
+  }
+
   const existingPoiResponse = await authClient
     .from('pois_with_coords')
     .select('id, name, lat, lng')
@@ -146,6 +178,7 @@ export async function POST(request: Request, context: RouteContext) {
       name,
       category: normalizePoiCategory(body.category),
       description,
+      photo_url: photoUrl,
       location: `SRID=4326;POINT(${poiLng} ${poiLat})`,
     })
     .select('id, course_id, name, category, description, photo_url')

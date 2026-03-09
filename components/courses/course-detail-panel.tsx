@@ -899,60 +899,90 @@ function PoiCard({
   const showImage = Boolean(poi.photo_url) && !imageFailed
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <div
       className={`w-[17rem] shrink-0 snap-start overflow-hidden rounded-2xl border text-left transition-all sm:w-[216px] ${
         isSelected
           ? 'border-foreground bg-muted/50 shadow-md'
           : 'border-border bg-card hover:border-foreground/30 hover:bg-muted/30'
       }`}
     >
-      <div className="relative h-32 w-full overflow-hidden bg-muted sm:h-28">
-        {showImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={poi.photo_url ?? ''}
-            alt=""
-            className="h-full w-full object-cover"
-            onError={() => setImageFailed(true)}
-          />
-        ) : (
-          <div
-            className="flex h-full w-full flex-col items-center justify-center gap-1 text-center"
+      <button
+        type="button"
+        onClick={onClick}
+        className="block w-full text-left"
+      >
+        <div className="relative h-32 w-full overflow-hidden bg-muted sm:h-28">
+          {showImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={poi.photo_url ?? ''}
+              alt=""
+              className="h-full w-full object-cover"
+              onError={() => setImageFailed(true)}
+            />
+          ) : (
+            <div
+              className="flex h-full w-full flex-col items-center justify-center gap-1 text-center"
+              style={{
+                background: `linear-gradient(135deg, ${meta.color}22, ${meta.color}44)`,
+              }}
+            >
+              <span className="text-2xl" aria-hidden>{meta.emoji}</span>
+              <span className="text-xs font-medium text-foreground/80">
+                {meta.label}
+              </span>
+            </div>
+          )}
+          <span
+            className="absolute left-3 top-3 rounded-full px-2 py-1 text-[11px] font-semibold"
+            style={{ backgroundColor: `${meta.color}22`, color: meta.color }}
+          >
+            {meta.label}
+          </span>
+        </div>
+        <div className="space-y-2 p-3">
+          <p className="truncate text-sm font-semibold text-foreground">
+            {poi.name}
+          </p>
+          <p
+            className="text-xs leading-5 text-muted-foreground"
             style={{
-              background: `linear-gradient(135deg, ${meta.color}22, ${meta.color}44)`,
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
             }}
           >
-            <span className="text-2xl" aria-hidden>{meta.emoji}</span>
-            <span className="text-xs font-medium text-foreground/80">
-              {meta.label}
-            </span>
-          </div>
-        )}
-        <span
-          className="absolute left-3 top-3 rounded-full px-2 py-1 text-[11px] font-semibold"
-          style={{ backgroundColor: `${meta.color}22`, color: meta.color }}
-        >
-          {meta.label}
-        </span>
-      </div>
-      <div className="space-y-2 p-3">
-        <p className="truncate text-sm font-semibold text-foreground">
-          {poi.name}
-        </p>
-        <p
-          className="text-xs leading-5 text-muted-foreground"
-          style={{
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-        >
-          {poi.description?.trim() || `${meta.label} 정보를 확인해보세요.`}
-        </p>
-      </div>
-    </button>
+            {poi.description?.trim() || `${meta.label} 정보를 확인해보세요.`}
+          </p>
+          {poi.address ? (
+            <p
+              className="text-[11px] leading-4 text-muted-foreground"
+              style={{
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+              }}
+            >
+              {poi.address}
+            </p>
+          ) : null}
+        </div>
+      </button>
+      {poi.place_url ? (
+        <div className="px-3 pb-3">
+          <a
+            href={poi.place_url}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex h-8 w-full items-center justify-center rounded-full border text-xs font-medium text-foreground transition-colors hover:bg-muted/50"
+            onClick={(event) => event.stopPropagation()}
+          >
+            카카오맵에서 보기
+          </a>
+        </div>
+      ) : null}
+    </div>
   )
 }

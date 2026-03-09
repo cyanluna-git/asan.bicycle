@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
-import { Loader2, MapPin, Plus, Search } from 'lucide-react'
+import React, { useEffect, useMemo, useState } from 'react'
+import { ImagePlus, Loader2, MapPin, Plus, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { POI_CATEGORY_ORDER, getPoiMeta, suggestPoiCategoryFromSearch, type PoiCategory } from '@/lib/poi'
 import { signInWithGoogle } from '@/lib/auth'
+import { POI_PHOTO_BUCKET } from '@/lib/poi-photo-storage'
 import { supabase } from '@/lib/supabase'
 import type { PoiMapItem } from '@/types/course'
 import { useKakaoLoader } from 'react-kakao-maps-sdk'
@@ -20,6 +21,7 @@ type PlaceSearchResult = {
   address_name: string
   road_address_name: string
   category_name: string
+  place_url: string
   x: string
   y: string
 }
@@ -120,6 +122,8 @@ function CoursePoiAddLoadedForm({
   const [selectedPlace, setSelectedPlace] = useState<PlaceSearchResult | null>(null)
   const [category, setCategory] = useState<PoiCategory>('other')
   const [description, setDescription] = useState('')
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -135,6 +139,14 @@ function CoursePoiAddLoadedForm({
 
     return selectedPlace.road_address_name || selectedPlace.address_name || '주소 정보 없음'
   }, [selectedPlace])
+
+  useEffect(() => {
+    return () => {
+      if (photoPreviewUrl) {
+        URL.revokeObjectURL(photoPreviewUrl)
+      }
+    }
+  }, [photoPreviewUrl])
 
   const handleSearch = async () => {
     const trimmedKeyword = keyword.trim()
@@ -225,6 +237,26 @@ function CoursePoiAddLoadedForm({
         throw new Error('로그인 후 다시 시도해주세요.')
       }
 
+      let photoPath: string | null = null
+      let photoUrl: string | null = null
+
+      if (photoFile) {
+        const safeName = photoFile.name.replace(/[^\w\-_.]/g, '_')
+        photoPath = `${session.user.id}/${courseId}/poi-${Date.now()}_${safeName}`
+        const { error: uploadError } = await supabase.storage
+          .from(POI_PHOTO_BUCKET)
+          .upload(photoPath, photoFile, {
+            contentType: photoFile.type || 'image/jpeg',
+            upsert: true,
+          })
+
+        if (uploadError) {
+          throw new Error(`POI 사진 업로드 실패: ${uploadError.message}`)
+        }
+
+        photoUrl = supabase.storage.from(POI_PHOTO_BUCKET).getPublicUrl(photoPath).data.publicUrl
+      }
+
       const response = await fetch(`/api/courses/${courseId}/pois`, {
         method: 'POST',
         headers: {
@@ -235,6 +267,8 @@ function CoursePoiAddLoadedForm({
           name: selectedPlace.place_name,
           category,
           description: description.trim() || null,
+          photoPath,
+          photoUrl,
           lat,
           lng,
         }),
@@ -250,7 +284,12 @@ function CoursePoiAddLoadedForm({
       }
 
       if (payload?.poi) {
-        onCreated?.(payload.poi as PoiMapItem)
+        onCreated?.({
+          ...(payload.poi as PoiMapItem),
+          address: selectedPlaceAddress,
+          place_url: selectedPlace.place_url ?? null,
+          photo_url: photoUrl ?? (payload.poi as PoiMapItem).photo_url ?? null,
+        })
       }
     } catch (saveError) {
       setError(
@@ -350,7 +389,7 @@ function CoursePoiAddLoadedForm({
       ) : null}
 
       {selectedPlace ? (
-        <div className="mt-3 rounded-2xl border bg-background p-3">
+      <div className="mt-3 rounded-2xl border bg-background p-3">
           <div className="space-y-1">
             <p className="text-sm font-semibold text-foreground">
               {selectedPlace.place_name}
@@ -395,6 +434,65 @@ function CoursePoiAddLoadedForm({
                 className="mt-1.5 w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
+          </div>
+
+          <div className="mt-3">
+            <label
+              htmlFor="poi-photo-upload"
+              className="text-xs font-medium text-muted-foreground"
+            >
+              사진
+            </label>
+            <label
+              htmlFor="poi-photo-upload"
+              className="mt-1.5 flex cursor-pointer items-center justify-between rounded-xl border border-dashed px-3 py-3 text-sm text-muted-foreground hover:bg-muted/30"
+            >
+              <span className="truncate">
+                {photoFile?.name ?? '사진 업로드는 선택사항입니다'}
+              </span>
+              <span className="ml-3 inline-flex items-center text-xs font-medium text-foreground">
+                <ImagePlus className="mr-1.5 h-3.5 w-3.5" />
+                파일 선택
+              </span>
+            </label>
+            <input
+              id="poi-photo-upload"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) => {
+                const nextFile = event.target.files?.[0] ?? null
+                if (photoPreviewUrl) {
+                  URL.revokeObjectURL(photoPreviewUrl)
+                }
+                setPhotoFile(nextFile)
+                setPhotoPreviewUrl(nextFile ? URL.createObjectURL(nextFile) : null)
+              }}
+            />
+            {photoPreviewUrl ? (
+              <div className="relative mt-3 overflow-hidden rounded-xl">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photoPreviewUrl}
+                  alt="POI 사진 미리보기"
+                  className="h-28 w-full object-cover"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon-xs"
+                  className="absolute right-2 top-2"
+                  onClick={() => {
+                    URL.revokeObjectURL(photoPreviewUrl)
+                    setPhotoFile(null)
+                    setPhotoPreviewUrl(null)
+                  }}
+                  aria-label="POI 사진 제거"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-3 flex justify-end">

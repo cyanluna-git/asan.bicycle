@@ -799,7 +799,7 @@ function PoiMarkers({
                     boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
                     padding: "10px 12px",
                     minWidth: 180,
-                    maxWidth: 240,
+                    maxWidth: 260,
                     zIndex: 10,
                     whiteSpace: "normal",
                   }}
@@ -822,6 +822,29 @@ function PoiMarkers({
                   >
                     ✕
                   </button>
+                  {poi.photo_url ? (
+                    <div
+                      style={{
+                        margin: "-10px -12px 8px",
+                        height: 92,
+                        overflow: "hidden",
+                        borderTopLeftRadius: 10,
+                        borderTopRightRadius: 10,
+                        backgroundColor: "#e2e8f0",
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={poi.photo_url}
+                        alt=""
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
+                      />
+                    </div>
+                  ) : null}
                   {/* Category badge */}
                   <div style={{ marginBottom: 4 }}>
                     <span
@@ -864,6 +887,41 @@ function PoiMarkers({
                       {poi.description}
                     </p>
                   )}
+                  {poi.address ? (
+                    <p
+                      style={{
+                        margin: poi.description ? "4px 0 0" : "5px 0 0",
+                        fontSize: 11,
+                        color: "#64748b",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {poi.address}
+                    </p>
+                  ) : null}
+                  {poi.place_url ? (
+                    <a
+                      href={poi.place_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        marginTop: 8,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "100%",
+                        height: 32,
+                        borderRadius: 999,
+                        border: "1px solid #cbd5e1",
+                        color: "#0f172a",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        textDecoration: "none",
+                      }}
+                    >
+                      카카오맵에서 보기
+                    </a>
+                  ) : null}
                   {/* Arrow */}
                   <div
                     style={{

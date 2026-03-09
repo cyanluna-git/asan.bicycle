@@ -100,6 +100,8 @@ export type PoiMapItem = {
   category: string | null
   description: string | null
   photo_url: string | null
+  address?: string | null
+  place_url?: string | null
   lat: number
   lng: number
 }

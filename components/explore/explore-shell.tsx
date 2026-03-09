@@ -22,6 +22,7 @@ import {
   type ReviewSurfaceSource,
 } from '@/lib/course-reviews-surface-ui'
 import type { RouteHoverPoint } from '@/lib/elevation-hover-sync'
+import { usePoiPlaceDetails } from '@/lib/use-poi-place-details'
 import { supabase } from '@/lib/supabase'
 import type {
   CourseAlbumPhoto,
@@ -229,6 +230,7 @@ export function ExploreShell({
     () => filterSafeAlbumPhotos({ albumPhotos, selectedCourseId }),
     [albumPhotos, selectedCourseId],
   )
+  const enrichedPois = usePoiPlaceDetails(localPois)
 
   const handleInlineAlbumPhotoUploaded = useCallback(
     (photo: CourseAlbumPhoto) => {
@@ -378,7 +380,7 @@ export function ExploreShell({
         themes={themes}
         hasActiveFilters={hasActiveFilters}
         selectedCourse={selectedCourse}
-        pois={localPois}
+        pois={enrichedPois}
         selectedPoiId={selectedPoiId}
         onSelectPoi={setSelectedPoiId}
         uphillSegments={uphillSegments}
@@ -415,7 +417,7 @@ export function ExploreShell({
             routeQueryString={routeQueryString}
             selectedCourseId={selectedCourseId}
             selectedCourseRouteGeoJSON={selectedCourse?.route_geojson ?? null}
-            pois={localPois}
+            pois={enrichedPois}
             selectedPoiId={selectedPoiId}
             onSelectPoi={setSelectedPoiId}
             albumPhotos={safeAlbumPhotos}
@@ -474,7 +476,7 @@ export function ExploreShell({
             themes={themes}
             hasActiveFilters={hasActiveFilters}
             selectedCourse={selectedCourse}
-            pois={localPois}
+            pois={enrichedPois}
             selectedPoiId={selectedPoiId}
             onSelectPoi={setSelectedPoiId}
             uphillSegments={uphillSegments}
