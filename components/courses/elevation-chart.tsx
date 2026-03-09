@@ -1,5 +1,6 @@
 'use client'
 
+import { useId, useMemo } from 'react'
 import {
   AreaChart,
   Area,
@@ -13,6 +14,7 @@ import {
 } from 'recharts'
 import type { ElevationPoint, UphillSegment } from '@/types/course'
 import type { UphillSegmentDraft } from '@/lib/uphill-detection'
+import { buildSlopeGradientStops } from '@/lib/slope-visualization'
 
 interface ElevationChartProps {
   data: ElevationPoint[]
@@ -31,6 +33,15 @@ export function ElevationChart({
   onHoverDistanceChange,
   hoveredDistanceKm,
 }: ElevationChartProps) {
+  const gradientId = useId().replace(/:/g, '')
+  const strokeGradientStops = useMemo(
+    () => buildSlopeGradientStops(data, 1),
+    [data],
+  )
+  const fillGradientStops = useMemo(
+    () => buildSlopeGradientStops(data, 0.32),
+    [data],
+  )
   if (data.length === 0) return null
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -70,6 +81,30 @@ export function ElevationChart({
           onMouseLeave={onHoverDistanceChange ? () => onHoverDistanceChange(null) : undefined}
           style={onChartClick || onHoverDistanceChange ? { cursor: 'crosshair' } : undefined}
         >
+          {strokeGradientStops.length > 0 ? (
+            <defs>
+              <linearGradient id={`${gradientId}-stroke`} x1="0%" y1="0%" x2="100%" y2="0%">
+                {strokeGradientStops.map((stop, index) => (
+                  <stop
+                    key={`stroke-${index}-${stop.offset}`}
+                    offset={stop.offset}
+                    stopColor={stop.color}
+                    stopOpacity={stop.opacity ?? 1}
+                  />
+                ))}
+              </linearGradient>
+              <linearGradient id={`${gradientId}-fill`} x1="0%" y1="0%" x2="100%" y2="0%">
+                {fillGradientStops.map((stop, index) => (
+                  <stop
+                    key={`fill-${index}-${stop.offset}`}
+                    offset={stop.offset}
+                    stopColor={stop.color}
+                    stopOpacity={stop.opacity ?? 0.32}
+                  />
+                ))}
+              </linearGradient>
+            </defs>
+          ) : null}
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
           <XAxis
             dataKey="distanceKm"
@@ -92,10 +127,10 @@ export function ElevationChart({
           <Area
             type="monotone"
             dataKey="elevationM"
-            stroke="#3B82F6"
-            fill="#93C5FD"
-            fillOpacity={0.4}
-            strokeWidth={1.5}
+            stroke={strokeGradientStops.length > 0 ? `url(#${gradientId}-stroke)` : '#3B82F6'}
+            fill={fillGradientStops.length > 0 ? `url(#${gradientId}-fill)` : '#93C5FD'}
+            fillOpacity={fillGradientStops.length > 0 ? 1 : 0.4}
+            strokeWidth={1.8}
           />
           {/* Uphill segment highlights */}
           {segments.map((seg, i) => (

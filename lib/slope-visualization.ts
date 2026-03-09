@@ -1,4 +1,4 @@
-import type { RouteGeoJSON } from '@/types/course'
+import type { ElevationPoint, RouteGeoJSON } from '@/types/course'
 
 export type SlopeBandKey =
   | 'descent'
@@ -22,6 +22,12 @@ export type SlopePolylineSegment = {
   slopePct: number
   band: SlopeBandKey
   color: string
+}
+
+export type SlopeGradientStop = {
+  offset: string
+  color: string
+  opacity?: number
 }
 
 const TO_RAD = Math.PI / 180
@@ -119,6 +125,44 @@ function smoothSlopeValues(values: number[]) {
   })
 }
 
+function buildSmoothedSlopeSegments(profile: ElevationPoint[]) {
+  const rawSegments: Array<{
+    startKm: number
+    endKm: number
+    slopePct: number
+  }> = []
+
+  for (let i = 1; i < profile.length; i++) {
+    const previous = profile[i - 1]
+    const current = profile[i]
+    const distanceKm = current.distanceKm - previous.distanceKm
+
+    if (distanceKm <= 0) continue
+
+    rawSegments.push({
+      startKm: previous.distanceKm,
+      endKm: current.distanceKm,
+      slopePct: ((current.elevationM - previous.elevationM) / (distanceKm * 1000)) * 100,
+    })
+  }
+
+  if (rawSegments.length === 0) return []
+
+  const smoothed = smoothSlopeValues(rawSegments.map((segment) => segment.slopePct))
+
+  return rawSegments.map((segment, index) => {
+    const slopePct = smoothed[index]
+    const band = classifySlopeBand(slopePct)
+
+    return {
+      ...segment,
+      slopePct,
+      band,
+      color: SLOPE_BANDS[band].color,
+    }
+  })
+}
+
 export function buildSlopePolylineSegments(routeGeoJSON: RouteGeoJSON | null | undefined): SlopePolylineSegment[] {
   if (!routeGeoJSON) return []
 
@@ -173,4 +217,33 @@ export function buildSlopePolylineSegments(routeGeoJSON: RouteGeoJSON | null | u
 
 export function getSlopeBandMeta(slopePct: number) {
   return SLOPE_BANDS[classifySlopeBand(slopePct)]
+}
+
+export function buildSlopeGradientStops(profile: ElevationPoint[], opacity = 1): SlopeGradientStop[] {
+  const segments = buildSmoothedSlopeSegments(profile)
+  if (segments.length === 0) return []
+
+  const startKm = segments[0].startKm
+  const endKm = segments[segments.length - 1].endKm
+  const totalKm = endKm - startKm
+  if (totalKm <= 0) return []
+
+  const stops: SlopeGradientStop[] = []
+
+  for (const segment of segments) {
+    const startOffset = `${(((segment.startKm - startKm) / totalKm) * 100).toFixed(2)}%`
+    const endOffset = `${(((segment.endKm - startKm) / totalKm) * 100).toFixed(2)}%`
+
+    if (stops.length === 0) {
+      stops.push({ offset: startOffset, color: segment.color, opacity })
+    }
+
+    stops.push({ offset: startOffset, color: segment.color, opacity })
+    stops.push({ offset: endOffset, color: segment.color, opacity })
+  }
+
+  const last = segments[segments.length - 1]
+  stops.push({ offset: '100%', color: last.color, opacity })
+
+  return stops
 }
