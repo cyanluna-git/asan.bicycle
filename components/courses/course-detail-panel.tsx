@@ -142,31 +142,32 @@ export function CourseDetailPanel({
         }}
       >
         <div className="absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.9),_transparent_58%)]" />
-        <Button
-          variant="outline"
-          size="sm"
-          className="absolute right-2 top-2 z-10 h-10 rounded-full bg-background/88 px-3 shadow-sm backdrop-blur"
-          onClick={handleClose}
-          aria-label="돌아가기"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          돌아가기
-        </Button>
-
-        <div className="relative space-y-4 pr-16">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={difficultyVariant[course.difficulty]}>
-              {difficultyLabel[course.difficulty]}
-            </Badge>
-            {course.theme ? (
-              <span className="rounded-full border border-black/10 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-foreground/80">
-                {course.theme}
-              </span>
-            ) : null}
+        <div className="relative space-y-3.5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <Badge variant={difficultyVariant[course.difficulty]}>
+                {difficultyLabel[course.difficulty]}
+              </Badge>
+              {course.theme ? (
+                <span className="rounded-full border border-black/10 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-foreground/80">
+                  {course.theme}
+                </span>
+              ) : null}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-10 shrink-0 rounded-full bg-background/88 px-3 shadow-sm backdrop-blur"
+              onClick={handleClose}
+              aria-label="돌아가기"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              돌아가기
+            </Button>
           </div>
 
           <div className="space-y-1.5">
-            <h2 className="text-lg font-semibold leading-tight text-foreground">
+            <h2 className="text-lg font-semibold leading-tight text-foreground [word-break:keep-all]">
               {course.title}
             </h2>
             {course.uploader_name && (
@@ -178,12 +179,12 @@ export function CourseDetailPanel({
           </div>
 
           {compactDescription ? (
-            <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm text-foreground/75 sm:max-w-[26ch] sm:whitespace-normal sm:leading-relaxed">
+            <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm text-foreground/75">
               {compactDescription}
             </p>
           ) : null}
 
-          <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <SummaryMetric label="거리" value={`${course.distance_km} km`} />
             <SummaryMetric
               label="획득고도"
@@ -191,7 +192,7 @@ export function CourseDetailPanel({
             />
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {durations.map(({ label, speed }) => (
               <DurationTile
                 key={label}
@@ -462,11 +463,11 @@ function SummaryMetric({
   value: string
 }) {
   return (
-    <div className="rounded-2xl border border-black/5 bg-white/75 px-3 py-3 text-left">
+    <div className="rounded-2xl border border-black/5 bg-white/75 px-3.5 py-3 text-left">
       <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-foreground/45">
         {label}
       </p>
-      <p className="mt-1 text-2xl font-semibold text-foreground">
+      <p className="mt-1 text-[1.15rem] font-semibold text-foreground sm:text-2xl">
         {value}
       </p>
     </div>
@@ -483,9 +484,9 @@ function DurationTile({
   value: string
 }) {
   return (
-    <div className="rounded-2xl bg-black/5 px-3 py-3 text-left">
+    <div className="rounded-2xl bg-black/5 px-3 py-2.5 text-left">
       <p className="text-[11px] font-medium text-foreground/45">{label}</p>
-      <p className="mt-1 text-xl font-semibold text-foreground">{value}</p>
+      <p className="mt-1 text-[1.05rem] font-semibold text-foreground sm:text-xl">{value}</p>
       <p className="mt-1 text-[10px] text-muted-foreground">{speed}</p>
     </div>
   )
