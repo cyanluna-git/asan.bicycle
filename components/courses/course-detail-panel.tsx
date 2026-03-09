@@ -321,9 +321,10 @@ export function CourseDetailPanel({
               >
                 <Image
                   src={photo.public_url}
-                  alt={photo.caption || ''}
+                  alt={photo.caption || `${course.title} 라이딩 사진`}
                   fill
-                  sizes="120px"
+                  unoptimized
+                  sizes="(max-width: 768px) 50vw, 120px"
                   className="object-cover"
                 />
               </button>
@@ -509,7 +510,7 @@ function ReviewPreviewCard({ review }: { review: CourseReview }) {
         </span>
       </div>
       {excerpt && (
-        <p className="mt-1.5 text-sm leading-relaxed text-foreground">
+        <p className="mt-1.5 text-[13px] leading-5 text-muted-foreground">
           {excerpt}
         </p>
       )}

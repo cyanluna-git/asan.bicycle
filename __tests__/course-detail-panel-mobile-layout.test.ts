@@ -23,6 +23,7 @@ vi.mock('next/image', async () => {
     default: (input: Record<string, unknown>) => {
       const { src, alt, ...props } = input
       delete props.fill
+      delete props.unoptimized
       return ReactModule.createElement('img', {
         src,
         alt,
