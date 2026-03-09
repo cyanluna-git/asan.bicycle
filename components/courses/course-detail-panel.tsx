@@ -8,9 +8,7 @@ import { ArrowLeft, ArrowRight, Download, ImagePlus, Loader2, LogIn, Pencil, Sen
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { CourseShareButton } from '@/components/courses/course-share-button'
-import { isAdminUser } from '@/lib/admin'
 import { signInWithGoogle } from '@/lib/auth'
-import { getCourseOwnershipDiagnosis } from '@/lib/course-ownership-ui'
 import { difficultyLabel, difficultyVariant } from '@/lib/difficulty'
 import {
   getPoiCategoryTabs,
@@ -126,13 +124,6 @@ export function CourseDetailPanel({
   const compactDescription = summarizeText(course.description, 120)
   const shareDescription = compactDescription
     || `${course.distance_km}km · 획득고도 ${course.elevation_gain_m.toLocaleString('ko-KR')}m`
-  const ownershipDiagnosis = getCourseOwnershipDiagnosis({
-    canEdit: canEditCourse,
-    courseOwnerId: course.created_by,
-    userId: user?.id,
-    isAdmin: isAdminUser(user),
-    uploaderName: course.uploader_name,
-  })
   const uphillMetricsById = React.useMemo(
     () => getUphillMetricsMap(course.route_geojson ?? null, uphillSegments),
     [course.route_geojson, uphillSegments],
@@ -402,22 +393,6 @@ export function CourseDetailPanel({
           </div>
         )}
       </div>
-
-      {canEditCourse ? (
-        <div className="rounded-[24px] border bg-card p-4 shadow-sm">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={ownershipDiagnosis.badgeVariant}>
-              {ownershipDiagnosis.badgeLabel}
-            </Badge>
-            <span className="text-sm font-semibold text-foreground">
-              {ownershipDiagnosis.statusLabel}
-            </span>
-          </div>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {ownershipDiagnosis.description}
-          </p>
-        </div>
-      ) : null}
 
       {uphillSegments.length > 0 && (
         <div>
