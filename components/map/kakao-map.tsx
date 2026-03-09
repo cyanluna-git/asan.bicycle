@@ -169,10 +169,14 @@ function KakaoMapInner({
   onSelectAlbumPhoto,
   hoveredRoutePoint,
 }: { appkey: string } & KakaoMapProps) {
-  const [loading, error] = useKakaoLoader({
-    appkey,
-    libraries: ["services", "clusterer"],
-  })
+  const loaderOptions = useMemo(
+    () => ({
+      appkey,
+      libraries: ["services", "clusterer"] as ("services" | "clusterer")[],
+    }),
+    [appkey],
+  )
+  const [loading, error] = useKakaoLoader(loaderOptions)
   const [backgroundCourses, setBackgroundCourses] = useState<CourseMapItem[]>([])
   const [isRoutesLoading, setIsRoutesLoading] = useState(false)
 

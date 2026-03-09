@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import {
   CustomOverlayMap,
   Map,
@@ -22,9 +22,13 @@ export function CourseRouteSnapshot({
   points,
   className,
 }: CourseRouteSnapshotProps) {
-  const [loading, error] = useKakaoLoader({
-    appkey: process.env.NEXT_PUBLIC_KAKAO_MAP_KEY ?? '',
-  })
+  const loaderOptions = useMemo(
+    () => ({
+      appkey: process.env.NEXT_PUBLIC_KAKAO_MAP_KEY ?? '',
+    }),
+    [],
+  )
+  const [loading, error] = useKakaoLoader(loaderOptions)
   const canRenderMap =
     Boolean(process.env.NEXT_PUBLIC_KAKAO_MAP_KEY) &&
     !loading &&

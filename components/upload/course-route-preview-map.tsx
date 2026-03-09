@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import {
   CustomOverlayMap,
   Map,
@@ -45,10 +45,14 @@ function CourseRoutePreviewMapInner({
   geojson,
   poiDrafts,
 }: CourseRoutePreviewMapProps & { appkey: string }) {
-  const [loading, error] = useKakaoLoader({
-    appkey,
-    libraries: ['services'],
-  })
+  const loaderOptions = useMemo(
+    () => ({
+      appkey,
+      libraries: ['services'] as ('services')[],
+    }),
+    [appkey],
+  )
+  const [loading, error] = useKakaoLoader(loaderOptions)
 
   if (error) {
     return (
