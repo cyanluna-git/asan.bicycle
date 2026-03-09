@@ -250,6 +250,7 @@ export default function UploadPage() {
         gpx_url: publicUrl,
         route_geojson: parsed.geojson as unknown as Json,
         route_preview_points: buildRoutePreview(parsed.geojson) as unknown as Json,
+        route_render_metadata: parsed.renderMetadata as unknown as Json,
         created_by: authData.user.id,
         theme: form.theme.trim() || null,
         tags,

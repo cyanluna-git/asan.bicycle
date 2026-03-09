@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { buildRouteRenderMetadata } from '@/lib/course-render-metadata'
 import { appendMetadataHistoryEntry, buildMetadataHistoryEntry } from '@/lib/course-upload'
 import { buildCoursePoiDiffPlan } from '@/lib/course-poi-diff'
 import { getStalePoiPhotoPaths, POI_PHOTO_BUCKET } from '@/lib/poi-photo-storage'
@@ -39,6 +40,7 @@ type PatchPayload = {
 type ExistingCourseRow = {
   id: string
   created_by: string | null
+  route_geojson?: Json | null
   uploader_name?: string | null
   uploader_emoji?: string | null
   metadata_history?: Json | null
@@ -108,7 +110,7 @@ export async function PATCH(request: Request, context: PatchContext) {
 
   let courseQuery = await authClient
     .from('courses')
-    .select('id, created_by, uploader_name, uploader_emoji, metadata_history')
+    .select('id, created_by, route_geojson, uploader_name, uploader_emoji, metadata_history')
     .eq('id', id)
     .single()
 
@@ -118,7 +120,7 @@ export async function PATCH(request: Request, context: PatchContext) {
   ) {
     courseQuery = await authClient
       .from('courses')
-      .select('id, created_by')
+      .select('id, created_by, route_geojson')
       .eq('id', id)
       .single()
   }
@@ -161,6 +163,9 @@ export async function PATCH(request: Request, context: PatchContext) {
     tags,
     start_point_id: body.startPointId || null,
     updated_at: new Date().toISOString(),
+    route_render_metadata: buildRouteRenderMetadata(
+      (existingCourse.route_geojson as Parameters<typeof buildRouteRenderMetadata>[0]) ?? null,
+    ) as unknown as Json,
   }
 
   const uploaderName = existingCourse.uploader_name

@@ -1,6 +1,5 @@
 import { buildRouteHoverProfile } from '@/lib/elevation-hover-sync'
-import type { RouteHoverPoint } from '@/lib/elevation-hover-sync'
-import type { RouteGeoJSON, UphillSegment } from '@/types/course'
+import type { RouteGeoJSON, RouteHoverPoint, UphillSegment } from '@/types/course'
 
 export type UphillMetrics = {
   lengthKm: number
@@ -52,6 +51,13 @@ export function getUphillMetricsMap(
 ) {
   const profile = buildRouteHoverProfile(routeGeoJSON)
 
+  return getUphillMetricsMapFromProfile(profile, segments)
+}
+
+export function getUphillMetricsMapFromProfile(
+  profile: RouteHoverPoint[],
+  segments: UphillSegment[],
+) {
   return new Map(
     segments
       .map((segment) => [segment.id, getUphillMetrics(profile, segment)] as const)

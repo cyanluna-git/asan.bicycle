@@ -35,7 +35,8 @@ import {
 import { uploadCourseAlbumPhoto } from '@/lib/course-album-upload'
 import { supabase } from '@/lib/supabase'
 import { getUploaderDisplayName } from '@/lib/user-display-name'
-import { getUphillMetricsMap } from '@/lib/uphill-metrics'
+import { normalizeRouteRenderMetadata } from '@/lib/course-render-metadata'
+import { getUphillMetricsMap, getUphillMetricsMapFromProfile } from '@/lib/uphill-metrics'
 import { getSlopeBandMeta } from '@/lib/slope-visualization'
 import type {
   CourseAlbumPhoto,
@@ -128,9 +129,15 @@ export function CourseDetailPanel({
   const compactDescription = summarizeText(course.description, 120)
   const shareDescription = compactDescription
     || `${course.distance_km}km · 획득고도 ${course.elevation_gain_m.toLocaleString('ko-KR')}m`
+  const renderMetadata = React.useMemo(
+    () => normalizeRouteRenderMetadata(course.route_render_metadata),
+    [course.route_render_metadata],
+  )
   const uphillMetricsById = React.useMemo(
-    () => getUphillMetricsMap(course.route_geojson ?? null, uphillSegments),
-    [course.route_geojson, uphillSegments],
+    () => renderMetadata?.hoverProfile
+      ? getUphillMetricsMapFromProfile(renderMetadata.hoverProfile, uphillSegments)
+      : getUphillMetricsMap(course.route_geojson ?? null, uphillSegments),
+    [course.route_geojson, renderMetadata, uphillSegments],
   )
 
   useEffect(() => {

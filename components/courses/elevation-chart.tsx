@@ -13,8 +13,13 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import type { ElevationPoint, UphillSegment } from '@/types/course'
+import type { RouteSlopeSegment } from '@/types/course'
 import type { UphillSegmentDraft } from '@/lib/uphill-detection'
-import { buildSlopeGradientStops } from '@/lib/slope-visualization'
+import {
+  buildSlopeGradientStops,
+  buildSlopeGradientStopsFromSegments,
+  inflateSlopeDistanceSegments,
+} from '@/lib/slope-visualization'
 import {
   ELEVATION_CHART_RIGHT_INSET,
   ELEVATION_CHART_Y_AXIS_WIDTH,
@@ -22,6 +27,7 @@ import {
 
 interface ElevationChartProps {
   data: ElevationPoint[]
+  persistedSegments?: RouteSlopeSegment[]
   segments?: (UphillSegment | UphillSegmentDraft)[]
   onChartClick?: (distanceKm: number) => void
   clickState?: { firstKm: number | null }
@@ -31,6 +37,7 @@ interface ElevationChartProps {
 
 export function ElevationChart({
   data,
+  persistedSegments = [],
   segments = [],
   onChartClick,
   clickState,
@@ -40,13 +47,21 @@ export function ElevationChart({
   const gradientId = useId().replace(/:/g, '')
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [chartSize, setChartSize] = useState({ width: 0, height: 0 })
+  const hydratedSegments = useMemo(
+    () => inflateSlopeDistanceSegments(persistedSegments),
+    [persistedSegments],
+  )
   const strokeGradientStops = useMemo(
-    () => buildSlopeGradientStops(data, 1),
-    [data],
+    () => hydratedSegments.length > 0
+      ? buildSlopeGradientStopsFromSegments(hydratedSegments, 1)
+      : buildSlopeGradientStops(data, 1),
+    [data, hydratedSegments],
   )
   const fillGradientStops = useMemo(
-    () => buildSlopeGradientStops(data, 0.32),
-    [data],
+    () => hydratedSegments.length > 0
+      ? buildSlopeGradientStopsFromSegments(hydratedSegments, 0.32)
+      : buildSlopeGradientStops(data, 0.32),
+    [data, hydratedSegments],
   )
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

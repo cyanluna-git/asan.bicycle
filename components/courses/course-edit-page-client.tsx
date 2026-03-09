@@ -11,6 +11,7 @@ import { CourseRoutePreviewMap } from '@/components/upload/course-route-preview-
 import { UphillEditor } from '@/components/upload/uphill-editor'
 import { canEditCourse, isAdminUser } from '@/lib/admin'
 import { Badge } from '@/components/ui/badge'
+import { buildRouteRenderMetadata, getElevationProfileFromMetadata } from '@/lib/course-render-metadata'
 import { getCourseOwnershipDiagnosis } from '@/lib/course-ownership-ui'
 import {
   buildPoiDraftFromRecord,
@@ -27,7 +28,7 @@ import { normalizePoiCategory } from '@/lib/poi'
 import { supabase } from '@/lib/supabase'
 import { getUploaderDisplayName } from '@/lib/user-display-name'
 import type { UphillSegmentDraft } from '@/lib/uphill-detection'
-import type { ElevationPoint, RouteGeoJSON } from '@/types/course'
+import type { RouteGeoJSON, RouteRenderMetadata } from '@/types/course'
 import type { User } from '@supabase/supabase-js'
 
 interface CourseEditPageClientProps {
@@ -45,6 +46,7 @@ type EditableCourseRow = {
   tags: string[]
   start_point_id: string | null
   route_geojson: RouteGeoJSON | null
+  route_render_metadata?: RouteRenderMetadata | null
   created_by: string | null
   uploader_name?: string | null
   uploader_emoji?: string | null
@@ -76,65 +78,8 @@ const EMPTY_FORM: UploadMetadataFormData = {
   startPointId: '',
 }
 
-const COURSE_FIELDS = 'id, title, description, difficulty, distance_km, elevation_gain_m, theme, tags, start_point_id, route_geojson, created_by, uploader_name, uploader_emoji'
-const COURSE_FIELDS_FALLBACK = 'id, title, description, difficulty, distance_km, elevation_gain_m, theme, tags, start_point_id, route_geojson, created_by'
-
-function haversineKm(
-  aLat: number,
-  aLng: number,
-  bLat: number,
-  bLng: number,
-) {
-  const toRad = (value: number) => value * Math.PI / 180
-  const earthRadiusKm = 6371
-  const dLat = toRad(bLat - aLat)
-  const dLng = toRad(bLng - aLng)
-  const lat1 = toRad(aLat)
-  const lat2 = toRad(bLat)
-
-  const a = Math.sin(dLat / 2) ** 2
-    + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2
-
-  return 2 * earthRadiusKm * Math.asin(Math.sqrt(a))
-}
-
-function buildElevationProfile(geojson: RouteGeoJSON | null): ElevationPoint[] {
-  if (!geojson) return []
-
-  const profile: ElevationPoint[] = []
-  let distanceKm = 0
-  let previous: [number, number, number | undefined] | null = null
-
-  for (const feature of geojson.features) {
-    if (feature.geometry?.type !== 'LineString') continue
-
-    for (const rawCoordinate of feature.geometry.coordinates) {
-      const coordinate = rawCoordinate as [number, number, number | undefined]
-
-      if (previous) {
-        distanceKm += haversineKm(
-          previous[1],
-          previous[0],
-          coordinate[1],
-          coordinate[0],
-        )
-      }
-
-      const elevation = typeof coordinate[2] === 'number'
-        ? coordinate[2]
-        : (profile[profile.length - 1]?.elevationM ?? 0)
-
-      profile.push({
-        distanceKm: Math.round(distanceKm * 1000) / 1000,
-        elevationM: elevation,
-      })
-
-      previous = coordinate
-    }
-  }
-
-  return profile
-}
+const COURSE_FIELDS = 'id, title, description, difficulty, distance_km, elevation_gain_m, theme, tags, start_point_id, route_geojson, route_render_metadata, created_by, uploader_name, uploader_emoji'
+const COURSE_FIELDS_FALLBACK = 'id, title, description, difficulty, distance_km, elevation_gain_m, theme, tags, start_point_id, route_geojson, route_render_metadata, created_by'
 
 function toInitialForm(course: EditableCourseRow): UploadMetadataFormData {
   return {
@@ -343,8 +288,13 @@ export function CourseEditPageClient({
   }, [course?.uploader_name, user])
 
   const elevationProfile = useMemo(
-    () => buildElevationProfile(course?.route_geojson ?? null),
-    [course?.route_geojson],
+    () =>
+      course?.route_render_metadata
+        ? getElevationProfileFromMetadata(course.route_render_metadata)
+        : buildRouteRenderMetadata(course?.route_geojson ?? null)?.hoverProfile.map(
+            ({ distanceKm, elevationM }) => ({ distanceKm, elevationM }),
+          ) ?? [],
+    [course?.route_geojson, course?.route_render_metadata],
   )
 
   const updateForm = <K extends keyof UploadMetadataFormData>(

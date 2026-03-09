@@ -415,6 +415,8 @@ export function ExploreShell({
             routeQueryString={routeQueryString}
             selectedCourseId={selectedCourseId}
             selectedCourseRouteGeoJSON={selectedCourse?.route_geojson ?? null}
+            selectedCourseRoutePreviewPoints={selectedCourse?.route_preview_points ?? null}
+            selectedCourseRouteRenderMetadata={selectedCourse?.route_render_metadata ?? null}
             pois={localPois}
             selectedPoiId={selectedPoiId}
             onSelectPoi={setSelectedPoiId}
@@ -551,6 +553,7 @@ export function ExploreShell({
         {selectedCourse && !isMapFullscreen && (
           <ElevationPanel
             routeGeoJSON={selectedCourse.route_geojson}
+            routeRenderMetadata={selectedCourse.route_render_metadata ?? null}
             uphillSegments={uphillSegments}
             courseTitle={selectedCourse.title}
             onHoverPointChange={setHoveredRoutePoint}

@@ -1,8 +1,8 @@
 'use client'
 
 import { useMemo, useRef } from 'react'
-import type { ElevationPoint } from '@/types/course'
-import { buildSlopeDistanceSegments } from '@/lib/slope-visualization'
+import type { ElevationPoint, RouteSlopeSegment } from '@/types/course'
+import { buildSlopeDistanceSegments, inflateSlopeDistanceSegments } from '@/lib/slope-visualization'
 import {
   ELEVATION_CHART_RIGHT_INSET,
   ELEVATION_CHART_Y_AXIS_WIDTH,
@@ -10,17 +10,24 @@ import {
 
 interface SlopeStripChartProps {
   profile: ElevationPoint[]
+  persistedSegments?: RouteSlopeSegment[]
   hoveredDistanceKm?: number | null
   onHoverDistanceChange?: (distanceKm: number | null) => void
 }
 
 export function SlopeStripChart({
   profile,
+  persistedSegments = [],
   hoveredDistanceKm,
   onHoverDistanceChange,
 }: SlopeStripChartProps) {
   const surfaceRef = useRef<HTMLDivElement | null>(null)
-  const segments = useMemo(() => buildSlopeDistanceSegments(profile), [profile])
+  const segments = useMemo(
+    () => persistedSegments.length > 0
+      ? inflateSlopeDistanceSegments(persistedSegments)
+      : buildSlopeDistanceSegments(profile),
+    [persistedSegments, profile],
+  )
 
   if (segments.length === 0) return null
 

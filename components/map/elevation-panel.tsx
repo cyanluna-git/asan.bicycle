@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import { getElevationProfileFromMetadata, normalizeRouteRenderMetadata } from '@/lib/course-render-metadata'
 import { buildRouteHoverProfile, findNearestRouteHoverPoint, type RouteHoverPoint } from '@/lib/elevation-hover-sync'
-import type { RouteGeoJSON, ElevationPoint, UphillSegment } from '@/types/course'
+import type { RouteGeoJSON, ElevationPoint, RouteRenderMetadata, UphillSegment } from '@/types/course'
 
 const ElevationChart = dynamic(
   () => import('@/components/courses/elevation-chart').then((m) => m.ElevationChart),
@@ -17,6 +18,7 @@ const SlopeStripChart = dynamic(
 
 interface ElevationPanelProps {
   routeGeoJSON: RouteGeoJSON | null | undefined
+  routeRenderMetadata?: RouteRenderMetadata | null
   uphillSegments?: UphillSegment[]
   courseTitle?: string
   onHoverPointChange?: (point: RouteHoverPoint | null) => void
@@ -24,6 +26,7 @@ interface ElevationPanelProps {
 
 export function ElevationPanel({
   routeGeoJSON,
+  routeRenderMetadata,
   uphillSegments = [],
   courseTitle,
   onHoverPointChange,
@@ -31,13 +34,19 @@ export function ElevationPanel({
   const [collapsed, setCollapsed] = useState(false)
   const [hoveredDistanceKm, setHoveredDistanceKm] = useState<number | null>(null)
 
+  const normalizedMetadata = useMemo(
+    () => normalizeRouteRenderMetadata(routeRenderMetadata),
+    [routeRenderMetadata],
+  )
   const hoverProfile = useMemo(
-    () => buildRouteHoverProfile(routeGeoJSON),
-    [routeGeoJSON],
+    () => normalizedMetadata?.hoverProfile ?? buildRouteHoverProfile(routeGeoJSON),
+    [normalizedMetadata, routeGeoJSON],
   )
   const elevationProfile = useMemo<ElevationPoint[]>(
-    () => hoverProfile.map(({ distanceKm, elevationM }) => ({ distanceKm, elevationM })),
-    [hoverProfile],
+    () => normalizedMetadata
+      ? getElevationProfileFromMetadata(normalizedMetadata)
+      : hoverProfile.map(({ distanceKm, elevationM }) => ({ distanceKm, elevationM })),
+    [hoverProfile, normalizedMetadata],
   )
 
   useEffect(() => {
@@ -81,12 +90,14 @@ export function ElevationPanel({
           <div className="mb-2">
             <SlopeStripChart
               profile={elevationProfile}
+              persistedSegments={normalizedMetadata?.slopeSegments ?? []}
               hoveredDistanceKm={hoveredDistanceKm}
               onHoverDistanceChange={setHoveredDistanceKm}
             />
           </div>
           <ElevationChart
             data={elevationProfile}
+            persistedSegments={normalizedMetadata?.slopeSegments ?? []}
             segments={uphillSegments}
             hoveredDistanceKm={hoveredDistanceKm}
             onHoverDistanceChange={setHoveredDistanceKm}

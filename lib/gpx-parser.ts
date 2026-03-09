@@ -6,8 +6,10 @@
  */
 
 import { gpx } from '@tmcw/togeojson'
+import { buildRouteRenderMetadata } from '@/lib/course-render-metadata'
 import type { RouteGeoJSON, ElevationPoint } from '@/types/course'
 import { haversineKm } from '@/lib/validation'
+import type { RouteRenderMetadata } from '@/types/course'
 
 export interface ParsedGpx {
   geojson: RouteGeoJSON
@@ -16,6 +18,7 @@ export interface ParsedGpx {
   distanceKm: number
   elevationGainM: number
   elevationProfile: ElevationPoint[]
+  renderMetadata: RouteRenderMetadata | null
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
@@ -87,7 +90,9 @@ export async function parseGpxToGeoJSON(file: File): Promise<ParsedGpx> {
   const elevationGainM = calculateElevationGain(rawCoords)
   const elevationProfile = buildElevationProfile(rawCoords)
 
-  return { geojson, startLat, startLng, distanceKm, elevationGainM, elevationProfile }
+  const renderMetadata = buildRouteRenderMetadata(geojson)
+
+  return { geojson, startLat, startLng, distanceKm, elevationGainM, elevationProfile, renderMetadata }
 }
 
 /** Sum haversine distances between consecutive coordinates. */

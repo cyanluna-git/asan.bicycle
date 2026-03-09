@@ -62,6 +62,7 @@ export type Database = {
           updated_at: string
           route_geojson: Json | null
           route_preview_points: Json | null
+          route_render_metadata: Json | null
           metadata_history: Json
           download_count: number
         }
@@ -86,6 +87,7 @@ export type Database = {
           updated_at?: string
           route_geojson?: Json | null
           route_preview_points?: Json | null
+          route_render_metadata?: Json | null
           metadata_history?: Json
           download_count?: number
         }
@@ -110,6 +112,7 @@ export type Database = {
           updated_at?: string
           route_geojson?: Json | null
           route_preview_points?: Json | null
+          route_render_metadata?: Json | null
           metadata_history?: Json
           download_count?: number
         }

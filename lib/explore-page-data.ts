@@ -13,7 +13,7 @@ import type {
 
 const COURSE_LIST_FIELDS = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, created_by'
 const COURSE_LIST_FIELDS_WITH_UPLOADER = `${COURSE_LIST_FIELDS}, uploader_name, uploader_emoji`
-const COURSE_DETAIL_FIELDS = 'id, title, description, difficulty, distance_km, elevation_gain_m, gpx_url, theme, tags, route_geojson, created_by, start_point_id'
+const COURSE_DETAIL_FIELDS = 'id, title, description, difficulty, distance_km, elevation_gain_m, gpx_url, theme, tags, route_geojson, route_preview_points, route_render_metadata, created_by, start_point_id'
 const COURSE_DETAIL_FIELDS_WITH_UPLOADER = `${COURSE_DETAIL_FIELDS}, uploader_name, uploader_emoji`
 
 type ExploreSearchParams = Record<string, string | string[] | undefined>
@@ -42,6 +42,8 @@ type CourseDetailRow = {
   theme: string | null
   tags: string[]
   route_geojson: CourseDetail['route_geojson']
+  route_preview_points: CourseDetail['route_preview_points']
+  route_render_metadata: CourseDetail['route_render_metadata']
   created_by: string | null
   start_point_id: string | null
   uploader_name?: string | null
@@ -203,6 +205,8 @@ export async function loadExplorePageData({
         uploader_name: selectedCourseData.uploader_name ?? null,
         uploader_emoji: selectedCourseData.uploader_emoji ?? null,
         route_geojson: selectedCourseData.route_geojson ?? null,
+        route_preview_points: selectedCourseData.route_preview_points ?? null,
+        route_render_metadata: selectedCourseData.route_render_metadata ?? null,
       }
     : null
 

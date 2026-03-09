@@ -1,11 +1,6 @@
-import type { RouteGeoJSON } from '@/types/course'
+import type { RouteGeoJSON, RouteHoverPoint } from '@/types/course'
 
-export type RouteHoverPoint = {
-  distanceKm: number
-  elevationM: number
-  lat: number
-  lng: number
-}
+export type { RouteHoverPoint } from '@/types/course'
 
 function haversineKm(
   aLat: number,

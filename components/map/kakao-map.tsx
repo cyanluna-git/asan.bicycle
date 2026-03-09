@@ -11,6 +11,7 @@ import {
 } from "react-kakao-maps-sdk"
 import type { CourseAlbumPhoto, CourseMapItem, RouteGeoJSON, PoiMapItem } from "@/types/course"
 import type { RouteHoverPoint } from '@/lib/elevation-hover-sync'
+import { computeRouteBounds, normalizeRouteRenderMetadata } from '@/lib/course-render-metadata'
 import { mergeSelectedAndBackgroundRoutes } from '@/lib/map-route-display'
 import { getPoiMeta } from '@/lib/poi'
 import { buildSlopePolylineSegments, SLOPE_BANDS, SLOPE_LEGEND_ORDER } from '@/lib/slope-visualization'
@@ -77,18 +78,25 @@ function extractCoordinates(geojson: RouteGeoJSON): LatLng[] {
  * Returns null if array is empty.
  */
 function computeBounds(coords: LatLng[]) {
-  if (coords.length === 0) return null
-  let minLat = coords[0].lat
-  let maxLat = coords[0].lat
-  let minLng = coords[0].lng
-  let maxLng = coords[0].lng
-  for (const c of coords) {
-    if (c.lat < minLat) minLat = c.lat
-    if (c.lat > maxLat) maxLat = c.lat
-    if (c.lng < minLng) minLng = c.lng
-    if (c.lng > maxLng) maxLng = c.lng
+  return computeRouteBounds(
+    coords.map((coord) => ({ lat: coord.lat, lng: coord.lng })),
+  )
+}
+
+function toKakaoBounds(bounds: ReturnType<typeof computeBounds>) {
+  if (!bounds) return null
+  return { sw: { lat: bounds.minLat, lng: bounds.minLng }, ne: { lat: bounds.maxLat, lng: bounds.maxLng } }
+}
+
+function getCoursePath(course: CourseMapItem): LatLng[] {
+  if (course.route_geojson) {
+    return extractCoordinates(course.route_geojson)
   }
-  return { sw: { lat: minLat, lng: minLng }, ne: { lat: maxLat, lng: maxLng } }
+
+  return (course.route_preview_points ?? []).map((point) => ({
+    lat: point.lat,
+    lng: point.lng,
+  }))
 }
 
 // ---------------------------------------------------------------------------
@@ -103,6 +111,8 @@ interface KakaoMapProps {
   routeQueryString?: string
   selectedCourseId?: string | null
   selectedCourseRouteGeoJSON?: RouteGeoJSON | null
+  selectedCourseRoutePreviewPoints?: CourseMapItem['route_preview_points']
+  selectedCourseRouteRenderMetadata?: CourseMapItem['route_render_metadata']
   pois?: PoiMapItem[]
   selectedPoiId?: string | null
   onSelectPoi?: (id: string | null) => void
@@ -120,6 +130,8 @@ export default function KakaoMap({
   routeQueryString,
   selectedCourseId,
   selectedCourseRouteGeoJSON,
+  selectedCourseRoutePreviewPoints,
+  selectedCourseRouteRenderMetadata,
   pois,
   selectedPoiId,
   onSelectPoi,
@@ -141,6 +153,8 @@ export default function KakaoMap({
       routeQueryString={routeQueryString}
       selectedCourseId={selectedCourseId}
       selectedCourseRouteGeoJSON={selectedCourseRouteGeoJSON}
+      selectedCourseRoutePreviewPoints={selectedCourseRoutePreviewPoints}
+      selectedCourseRouteRenderMetadata={selectedCourseRouteRenderMetadata}
       pois={pois}
       selectedPoiId={selectedPoiId}
       onSelectPoi={onSelectPoi}
@@ -161,6 +175,8 @@ function KakaoMapInner({
   routeQueryString,
   selectedCourseId,
   selectedCourseRouteGeoJSON,
+  selectedCourseRoutePreviewPoints,
+  selectedCourseRouteRenderMetadata,
   pois,
   selectedPoiId,
   onSelectPoi,
@@ -191,9 +207,17 @@ function KakaoMapInner({
       mergeSelectedAndBackgroundRoutes({
         selectedCourseId,
         selectedCourseRouteGeoJSON,
+        selectedCourseRoutePreviewPoints,
+        selectedCourseRouteRenderMetadata: normalizeRouteRenderMetadata(selectedCourseRouteRenderMetadata),
         backgroundCourses,
       }),
-    [backgroundCourses, selectedCourseId, selectedCourseRouteGeoJSON],
+    [
+      backgroundCourses,
+      selectedCourseId,
+      selectedCourseRouteGeoJSON,
+      selectedCourseRoutePreviewPoints,
+      selectedCourseRouteRenderMetadata,
+    ],
   )
 
   useEffect(() => {
@@ -286,6 +310,7 @@ function KakaoMapInner({
         <RoutePolylines
           courses={effectiveCourses}
           selectedCourseId={effectiveSelectedId ?? null}
+          selectedCourseBounds={normalizeRouteRenderMetadata(selectedCourseRouteRenderMetadata)?.bounds ?? null}
         />
         <PoiMarkers
           pois={visiblePois}
@@ -527,9 +552,11 @@ function AlbumPhotoMarkers({
 function RoutePolylines({
   courses,
   selectedCourseId,
+  selectedCourseBounds,
 }: {
   courses: CourseMapItem[]
   selectedCourseId: string | null
+  selectedCourseBounds: NonNullable<ReturnType<typeof normalizeRouteRenderMetadata>>['bounds']
 }) {
   // Fade-in: track opacity via state, animate strokeOpacity 0 -> target
   const [fadeOpacity, setFadeOpacity] = useState(0)
@@ -548,7 +575,7 @@ function RoutePolylines({
   const routePaths = useMemo(
     () => courses.map((course) => ({
       id: course.id,
-      coords: course.route_geojson ? extractCoordinates(course.route_geojson) : [],
+      coords: getCoursePath(course),
       slopeSegments:
         course.id === selectedCourseId && course.route_geojson
           ? buildSlopePolylineSegments(course.route_geojson)
@@ -666,6 +693,7 @@ function RoutePolylines({
       <BoundsController
         selectedCoords={selectedCoords}
         selectedCourseId={selectedCourseId}
+        selectedCourseBounds={selectedCourseBounds}
       />
     </>
   )
@@ -678,15 +706,17 @@ function RoutePolylines({
 function BoundsController({
   selectedCoords,
   selectedCourseId,
+  selectedCourseBounds,
 }: {
   selectedCoords: LatLng[]
   selectedCourseId: string | null
+  selectedCourseBounds: NonNullable<ReturnType<typeof normalizeRouteRenderMetadata>>['bounds']
 }) {
   const map = useMap()
 
   const fitBounds = useCallback(() => {
     if (selectedCoords.length < 2) return
-    const b = computeBounds(selectedCoords)
+    const b = toKakaoBounds(selectedCourseBounds ?? computeBounds(selectedCoords))
     if (!b) return
 
     const bounds = new kakao.maps.LatLngBounds(
@@ -694,7 +724,7 @@ function BoundsController({
       new kakao.maps.LatLng(b.ne.lat, b.ne.lng),
     )
     map.setBounds(bounds, 50)
-  }, [map, selectedCoords])
+  }, [map, selectedCoords, selectedCourseBounds])
 
   useEffect(() => {
     fitBounds()

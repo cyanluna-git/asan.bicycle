@@ -1,4 +1,4 @@
-import type { ElevationPoint, RouteGeoJSON } from '@/types/course'
+import type { ElevationPoint, RouteGeoJSON, RouteSlopeSegment } from '@/types/course'
 
 export type SlopeBandKey =
   | 'descent'
@@ -171,6 +171,23 @@ export function buildSlopeDistanceSegments(profile: ElevationPoint[]): SlopeDist
   })
 }
 
+export function inflateSlopeDistanceSegments(
+  segments: RouteSlopeSegment[],
+): SlopeDistanceSegment[] {
+  return segments
+    .filter((segment) => segment.endKm > segment.startKm)
+    .map((segment) => {
+      const band = classifySlopeBand(segment.slopePct)
+      return {
+        startKm: segment.startKm,
+        endKm: segment.endKm,
+        slopePct: segment.slopePct,
+        band,
+        color: SLOPE_BANDS[band].color,
+      }
+    })
+}
+
 export function buildSlopePolylineSegments(routeGeoJSON: RouteGeoJSON | null | undefined): SlopePolylineSegment[] {
   if (!routeGeoJSON) return []
 
@@ -228,7 +245,13 @@ export function getSlopeBandMeta(slopePct: number) {
 }
 
 export function buildSlopeGradientStops(profile: ElevationPoint[], opacity = 1): SlopeGradientStop[] {
-  const segments = buildSlopeDistanceSegments(profile)
+  return buildSlopeGradientStopsFromSegments(buildSlopeDistanceSegments(profile), opacity)
+}
+
+export function buildSlopeGradientStopsFromSegments(
+  segments: Array<Pick<SlopeDistanceSegment, 'startKm' | 'endKm' | 'color'>>,
+  opacity = 1,
+): SlopeGradientStop[] {
   if (segments.length === 0) return []
 
   const startKm = segments[0].startKm

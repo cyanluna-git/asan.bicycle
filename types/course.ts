@@ -20,6 +20,26 @@ export type RoutePreviewPoint = {
   lng: number
 }
 
+export type RouteBounds = {
+  minLat: number
+  maxLat: number
+  minLng: number
+  maxLng: number
+}
+
+export type RouteSlopeSegment = {
+  startKm: number
+  endKm: number
+  slopePct: number
+}
+
+export type RouteRenderMetadata = {
+  version: number
+  bounds: RouteBounds | null
+  hoverProfile: RouteHoverPoint[]
+  slopeSegments: RouteSlopeSegment[]
+}
+
 export type CourseBrowseItem = CourseListItem & {
   review_count: number
   avg_rating: number | null
@@ -44,9 +64,12 @@ export type CourseDetail = Pick<
   | 'uploader_name'
   | 'created_by'
   | 'start_point_id'
+  | 'route_preview_points'
 > & {
   uploader_emoji?: string | null
   route_geojson?: RouteGeoJSON | null
+  route_preview_points?: RoutePreviewPoint[] | null
+  route_render_metadata?: RouteRenderMetadata | null
   uphill_segments?: UphillSegment[]
 }
 
@@ -90,6 +113,15 @@ export type RouteGeoJSON = {
 export type CourseMapItem = {
   id: string
   route_geojson: RouteGeoJSON | null
+  route_preview_points?: RoutePreviewPoint[] | null
+  route_render_metadata?: RouteRenderMetadata | null
+}
+
+export type RouteHoverPoint = {
+  distanceKm: number
+  elevationM: number
+  lat: number
+  lng: number
 }
 
 /** POI item for map display (lat/lng already extracted via pois_with_coords view). */
