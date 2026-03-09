@@ -15,6 +15,10 @@ import {
 import type { ElevationPoint, UphillSegment } from '@/types/course'
 import type { UphillSegmentDraft } from '@/lib/uphill-detection'
 import { buildSlopeGradientStops } from '@/lib/slope-visualization'
+import {
+  ELEVATION_CHART_RIGHT_INSET,
+  ELEVATION_CHART_Y_AXIS_WIDTH,
+} from '@/lib/elevation-chart-layout'
 
 interface ElevationChartProps {
   data: ElevationPoint[]
@@ -75,7 +79,7 @@ export function ElevationChart({
       <ResponsiveContainer width="100%" height="100%" debounce={50}>
         <AreaChart
           data={data}
-          margin={{ top: 5, right: 10, left: -10, bottom: 0 }}
+          margin={{ top: 5, right: ELEVATION_CHART_RIGHT_INSET, left: 0, bottom: 0 }}
           onClick={onChartClick ? handleClick : undefined}
           onMouseMove={onHoverDistanceChange ? handleMouseMove : undefined}
           onMouseLeave={onHoverDistanceChange ? () => onHoverDistanceChange(null) : undefined}
@@ -118,6 +122,7 @@ export function ElevationChart({
             domain={[minEle, maxEle]}
             tickFormatter={(v: number) => `${v}`}
             fontSize={11}
+            width={ELEVATION_CHART_Y_AXIS_WIDTH}
             label={{ value: 'm', position: 'insideTopLeft', offset: 10, fontSize: 11 }}
           />
           <Tooltip

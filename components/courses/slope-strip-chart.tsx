@@ -3,6 +3,10 @@
 import { useMemo, useRef } from 'react'
 import type { ElevationPoint } from '@/types/course'
 import { buildSlopeDistanceSegments } from '@/lib/slope-visualization'
+import {
+  ELEVATION_CHART_RIGHT_INSET,
+  ELEVATION_CHART_Y_AXIS_WIDTH,
+} from '@/lib/elevation-chart-layout'
 
 interface SlopeStripChartProps {
   profile: ElevationPoint[]
@@ -41,42 +45,63 @@ export function SlopeStripChart({
 
   return (
     <div className="rounded-xl border bg-card/70 px-2.5 py-2 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          경사도 스트립
-        </span>
-        <span className="text-[11px] text-muted-foreground">
-          {endKm.toFixed(1)} km
-        </span>
+      <div
+        style={{
+          paddingLeft: ELEVATION_CHART_Y_AXIS_WIDTH,
+          paddingRight: ELEVATION_CHART_RIGHT_INSET,
+        }}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            경사도 스트립
+          </span>
+          <span className="text-[11px] text-muted-foreground">
+            {endKm.toFixed(1)} km
+          </span>
+        </div>
       </div>
       <div
-        ref={surfaceRef}
-        className="relative mt-2 h-3 overflow-hidden rounded-full bg-slate-100 ring-1 ring-black/5"
-        onMouseMove={(event) => updateHoveredDistance(event.clientX)}
-        onMouseLeave={onHoverDistanceChange ? () => onHoverDistanceChange(null) : undefined}
-        onPointerMove={(event) => updateHoveredDistance(event.clientX)}
+        className="mt-2"
+        style={{
+          paddingLeft: ELEVATION_CHART_Y_AXIS_WIDTH,
+          paddingRight: ELEVATION_CHART_RIGHT_INSET,
+        }}
       >
-        {segments.map((segment, index) => (
-          <div
-            key={`${segment.startKm}-${segment.endKm}-${index}`}
-            className="absolute inset-y-0"
-            style={{
-              left: `${((segment.startKm - startKm) / totalKm) * 100}%`,
-              width: `${Math.max(1.2, ((segment.endKm - segment.startKm) / totalKm) * 100)}%`,
-              backgroundColor: segment.color,
-            }}
-            aria-hidden
-          />
-        ))}
-        {markerOffsetPct != null ? (
-          <div
-            className="absolute inset-y-[-2px] w-[2px] -translate-x-1/2 rounded-full bg-black/85 shadow-[0_0_0_2px_rgba(255,255,255,0.7)]"
-            style={{ left: `${markerOffsetPct}%` }}
-            aria-hidden
-          />
-        ) : null}
+        <div
+          ref={surfaceRef}
+          className="relative h-3 overflow-hidden rounded-full bg-slate-100 ring-1 ring-black/5"
+          onMouseMove={(event) => updateHoveredDistance(event.clientX)}
+          onMouseLeave={onHoverDistanceChange ? () => onHoverDistanceChange(null) : undefined}
+          onPointerMove={(event) => updateHoveredDistance(event.clientX)}
+        >
+          {segments.map((segment, index) => (
+            <div
+              key={`${segment.startKm}-${segment.endKm}-${index}`}
+              className="absolute inset-y-0"
+              style={{
+                left: `${((segment.startKm - startKm) / totalKm) * 100}%`,
+                width: `${Math.max(1.2, ((segment.endKm - segment.startKm) / totalKm) * 100)}%`,
+                backgroundColor: segment.color,
+              }}
+              aria-hidden
+            />
+          ))}
+          {markerOffsetPct != null ? (
+            <div
+              className="absolute inset-y-[-2px] w-[2px] -translate-x-1/2 rounded-full bg-black/85 shadow-[0_0_0_2px_rgba(255,255,255,0.7)]"
+              style={{ left: `${markerOffsetPct}%` }}
+              aria-hidden
+            />
+          ) : null}
+        </div>
       </div>
-      <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
+      <div
+        className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground"
+        style={{
+          paddingLeft: ELEVATION_CHART_Y_AXIS_WIDTH,
+          paddingRight: ELEVATION_CHART_RIGHT_INSET,
+        }}
+      >
         <span>시작</span>
         <span>도착</span>
       </div>
