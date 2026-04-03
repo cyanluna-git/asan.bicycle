@@ -5,6 +5,8 @@ import {
   isNighttime,
   getWeatherIconName,
   getSuitabilityMeta,
+  enrichForecast,
+  getDateRangeForForecast,
 } from '@/lib/weather-ui'
 import type { HourlyForecast } from '@/types/weather'
 
@@ -289,5 +291,91 @@ describe('getSuitabilityMeta', () => {
       expect(typeof meta.className).toBe('string')
       expect(meta.label.length).toBeGreaterThan(0)
     }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// enrichForecast
+// ---------------------------------------------------------------------------
+
+describe('enrichForecast', () => {
+  it('adds suitability field based on weather conditions (good)', () => {
+    const f = makeForecast({ temperature: 15, windSpeed: 3, precipitationProbability: 10 })
+    const enriched = enrichForecast(f)
+    expect(enriched.suitability).toBe('good')
+  })
+
+  it('adds suitability=not_recommended for sub-zero temperature', () => {
+    const f = makeForecast({ temperature: -3, windSpeed: 2, precipitationProbability: 5 })
+    const enriched = enrichForecast(f)
+    expect(enriched.suitability).toBe('not_recommended')
+  })
+
+  it('adds suitability=moderate for borderline conditions', () => {
+    const f = makeForecast({ temperature: 3, windSpeed: 3, precipitationProbability: 10 })
+    const enriched = enrichForecast(f)
+    expect(enriched.suitability).toBe('moderate')
+  })
+
+  it('adds windDirectionLabel as Korean compass direction', () => {
+    const f = makeForecast({ windDirection: 90 })
+    const enriched = enrichForecast(f)
+    expect(enriched.windDirectionLabel).toBe('동')
+  })
+
+  it('adds windDirectionLabel for south wind (180)', () => {
+    const f = makeForecast({ windDirection: 180 })
+    const enriched = enrichForecast(f)
+    expect(enriched.windDirectionLabel).toBe('남')
+  })
+
+  it('adds isNighttime=true for night hours', () => {
+    const f = makeForecast({ datetime: '2026-04-02T03:00:00' })
+    const enriched = enrichForecast(f)
+    expect(enriched.isNighttime).toBe(true)
+  })
+
+  it('adds isNighttime=false for daytime hours', () => {
+    const f = makeForecast({ datetime: '2026-04-02T12:00:00' })
+    const enriched = enrichForecast(f)
+    expect(enriched.isNighttime).toBe(false)
+  })
+
+  it('preserves all original forecast fields', () => {
+    const f = makeForecast({ temperature: 20, windSpeed: 5, windDirection: 270 })
+    const enriched = enrichForecast(f)
+    expect(enriched.temperature).toBe(20)
+    expect(enriched.windSpeed).toBe(5)
+    expect(enriched.windDirection).toBe(270)
+    expect(enriched.datetime).toBe(f.datetime)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// getDateRangeForForecast
+// ---------------------------------------------------------------------------
+
+describe('getDateRangeForForecast', () => {
+  it('returns object with min and max strings in YYYY-MM-DD format', () => {
+    const { min, max } = getDateRangeForForecast()
+    expect(min).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(max).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
+  it('max is 2 days after min', () => {
+    const { min, max } = getDateRangeForForecast()
+    const minDate = new Date(`${min}T00:00:00Z`)
+    const maxDate = new Date(`${max}T00:00:00Z`)
+    const diffDays = (maxDate.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24)
+    expect(diffDays).toBe(2)
+  })
+
+  it('min is today in KST', () => {
+    const { min } = getDateRangeForForecast()
+    const now = new Date()
+    const koreaMs = now.getTime() + 9 * 60 * 60 * 1000
+    const kst = new Date(koreaMs)
+    const expectedMin = `${kst.getUTCFullYear()}-${String(kst.getUTCMonth() + 1).padStart(2, '0')}-${String(kst.getUTCDate()).padStart(2, '0')}`
+    expect(min).toBe(expectedMin)
   })
 })
