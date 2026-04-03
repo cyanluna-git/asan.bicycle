@@ -71,6 +71,8 @@ export function ExploreShell({
   const [localPois, setLocalPois] = useState<PoiMapItem[]>(pois)
   const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null)
   const [hoveredRoutePoint, setHoveredRoutePoint] = useState<RouteHoverPoint | null>(null)
+  const [windDirection, setWindDirection] = useState<number | null>(null)
+  const [windSpeed, setWindSpeed] = useState<number | null>(null)
   const [albumPhotos, setAlbumPhotos] = useState<CourseAlbumPhoto[]>([])
   const [albumPreviewPhotos, setAlbumPreviewPhotos] = useState<CourseAlbumPhoto[]>([])
   const [albumLoading, setAlbumLoading] = useState(false)
@@ -103,6 +105,8 @@ export function ExploreShell({
   useEffect(() => {
     setSelectedPoiId(null)
     setHoveredRoutePoint(null)
+    setWindDirection(null)
+    setWindSpeed(null)
     setAlbumPreviewPhotos([])
     setAlbumPhotos([])
     setAlbumLoading(false)
@@ -228,6 +232,14 @@ export function ExploreShell({
   const safeAlbumPhotos = useMemo(
     () => filterSafeAlbumPhotos({ albumPhotos, selectedCourseId }),
     [albumPhotos, selectedCourseId],
+  )
+
+  const handleWindDataChange = useCallback(
+    (dir: number | null, spd: number | null) => {
+      setWindDirection(dir)
+      setWindSpeed(spd)
+    },
+    [],
   )
 
   const handleInlineAlbumPhotoUploaded = useCallback(
@@ -395,6 +407,7 @@ export function ExploreShell({
         }
         onAlbumPhotoUploaded={handleInlineAlbumPhotoUploaded}
         onPoiCreated={handlePoiCreated}
+        onWindDataChange={handleWindDataChange}
         width={sidebarWidth}
       />
       <div className="relative hidden w-3 shrink-0 md:block">
@@ -496,6 +509,7 @@ export function ExploreShell({
             }
             onAlbumPhotoUploaded={handleInlineAlbumPhotoUploaded}
             onPoiCreated={handlePoiCreated}
+            onWindDataChange={handleWindDataChange}
           />
           {selectedCourse && surfaceSource === 'bottom-sheet' && activeSurfaceKind ? (
             <Drawer
@@ -556,6 +570,8 @@ export function ExploreShell({
             routeRenderMetadata={selectedCourse.route_render_metadata ?? null}
             uphillSegments={uphillSegments}
             courseTitle={selectedCourse.title}
+            windDirection={windDirection}
+            windSpeed={windSpeed}
             onHoverPointChange={setHoveredRoutePoint}
           />
         )}

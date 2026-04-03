@@ -20,6 +20,13 @@ import {
   getSuitabilityMeta,
   getWeatherIconName,
 } from '@/lib/weather-ui'
+import {
+  buildWindSegments,
+  summarizeWind,
+  WIND_COLORS,
+  WIND_LABELS,
+} from '@/lib/wind-analysis'
+import type { RouteGeoJSON } from '@/types/course'
 import type { HourlyForecastWithMeta, WeatherForecastResponse } from '@/types/weather'
 
 // ---------------------------------------------------------------------------
@@ -60,9 +67,11 @@ function WeatherIcon({
 interface WeatherSectionProps {
   lat: number
   lng: number
+  routeGeoJSON?: RouteGeoJSON | null
+  onWindDataChange?: (windDirection: number | null, windSpeed: number | null) => void
 }
 
-export function WeatherSection({ lat, lng }: WeatherSectionProps) {
+export function WeatherSection({ lat, lng, routeGeoJSON, onWindDataChange }: WeatherSectionProps) {
   const dateRange = useMemo(() => getDateRangeForForecast(), [])
   const [selectedDate, setSelectedDate] = useState(dateRange.min)
   const [data, setData] = useState<WeatherForecastResponse | null>(null)
@@ -111,6 +120,34 @@ export function WeatherSection({ lat, lng }: WeatherSectionProps) {
       .map(enrichForecast)
   }, [data, selectedDate])
 
+  // Compute average wind for the selected date's daytime hours (6-21)
+  const averageWind = useMemo(() => {
+    const daytime = enrichedForecasts.filter((f) => !f.isNighttime)
+    if (daytime.length === 0) return null
+
+    const avgDir = daytime.reduce((sum, f) => sum + f.windDirection, 0) / daytime.length
+    const avgSpd = daytime.reduce((sum, f) => sum + f.windSpeed, 0) / daytime.length
+    return { direction: Math.round(avgDir), speed: Math.round(avgSpd * 10) / 10 }
+  }, [enrichedForecasts])
+
+  // Notify parent of wind data for elevation panel integration
+  useEffect(() => {
+    if (!onWindDataChange) return
+    if (averageWind) {
+      onWindDataChange(averageWind.direction, averageWind.speed)
+    } else {
+      onWindDataChange(null, null)
+    }
+  }, [averageWind, onWindDataChange])
+
+  // Wind summary for this route + current wind
+  const windSummary = useMemo(() => {
+    if (!routeGeoJSON || !averageWind || averageWind.speed <= 0) return null
+    const segments = buildWindSegments(routeGeoJSON, averageWind.direction, averageWind.speed)
+    if (segments.length === 0) return null
+    return summarizeWind(segments)
+  }, [routeGeoJSON, averageWind])
+
   return (
     <div className="rounded-[24px] border bg-card p-4 shadow-sm">
       <div className="mb-3 flex items-end justify-between gap-3">
@@ -155,6 +192,10 @@ export function WeatherSection({ lat, lng }: WeatherSectionProps) {
             <HourlyCard key={f.datetime} forecast={f} />
           ))}
         </div>
+      )}
+
+      {windSummary && (
+        <WindSummaryBar summary={windSummary} />
       )}
     </div>
   )
@@ -214,6 +255,51 @@ function HourlyCard({ forecast }: { forecast: HourlyForecastWithMeta }) {
       >
         {suitability.label}
       </span>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Loading skeleton
+// ---------------------------------------------------------------------------
+
+function WindSummaryBar({ summary }: { summary: { headwindPercent: number; tailwindPercent: number; crosswindPercent: number } }) {
+  const entries = [
+    { key: 'headwind' as const, pct: summary.headwindPercent },
+    { key: 'tailwind' as const, pct: summary.tailwindPercent },
+    { key: 'crosswind' as const, pct: summary.crosswindPercent },
+  ]
+
+  return (
+    <div className="mt-3 rounded-xl border bg-background px-3 py-2.5">
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          코스 바람 분석
+        </span>
+        <div className="flex items-center gap-2">
+          {entries.map(({ key, pct }) => (
+            <span key={key} className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <span
+                className="inline-block h-1.5 w-1.5 rounded-full"
+                style={{ backgroundColor: WIND_COLORS[key] }}
+                aria-hidden
+              />
+              {WIND_LABELS[key]} {pct}%
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="flex h-2 overflow-hidden rounded-full">
+        {entries
+          .filter(({ pct }) => pct > 0)
+          .map(({ key, pct }) => (
+            <div
+              key={key}
+              style={{ width: `${pct}%`, backgroundColor: WIND_COLORS[key] }}
+              aria-label={`${WIND_LABELS[key]} ${pct}%`}
+            />
+          ))}
+      </div>
     </div>
   )
 }

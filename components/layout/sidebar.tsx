@@ -32,6 +32,7 @@ interface SidebarProps {
   onOpenAlbum?: (triggerEl?: HTMLButtonElement | null) => void
   onAlbumPhotoUploaded?: (photo: CourseAlbumPhoto) => void
   onPoiCreated?: (poi: PoiMapItem) => void
+  onWindDataChange?: (windDirection: number | null, windSpeed: number | null) => void
   width?: number
 }
 
@@ -54,6 +55,7 @@ export function Sidebar({
   onOpenAlbum,
   onAlbumPhotoUploaded,
   onPoiCreated,
+  onWindDataChange,
   width = 320,
 }: SidebarProps) {
   return (
@@ -81,6 +83,7 @@ export function Sidebar({
               onOpenAlbum={onOpenAlbum}
               onAlbumPhotoUploaded={onAlbumPhotoUploaded}
               onPoiCreated={onPoiCreated}
+              onWindDataChange={onWindDataChange}
             />
           </Suspense>
         ) : (

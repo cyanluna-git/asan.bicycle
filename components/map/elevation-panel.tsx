@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { getElevationProfileFromMetadata, normalizeRouteRenderMetadata } from '@/lib/course-render-metadata'
 import { buildRouteHoverProfile, findNearestRouteHoverPoint, type RouteHoverPoint } from '@/lib/elevation-hover-sync'
+import { buildWindSegments, type WindSegment } from '@/lib/wind-analysis'
 import type { RouteGeoJSON, ElevationPoint, RouteRenderMetadata, UphillSegment } from '@/types/course'
 
 const ElevationChart = dynamic(
@@ -15,12 +16,18 @@ const SlopeStripChart = dynamic(
   () => import('@/components/courses/slope-strip-chart').then((m) => m.SlopeStripChart),
   { ssr: false },
 )
+const WindStripChart = dynamic(
+  () => import('@/components/courses/wind-strip-chart').then((m) => m.WindStripChart),
+  { ssr: false },
+)
 
 interface ElevationPanelProps {
   routeGeoJSON: RouteGeoJSON | null | undefined
   routeRenderMetadata?: RouteRenderMetadata | null
   uphillSegments?: UphillSegment[]
   courseTitle?: string
+  windDirection?: number | null
+  windSpeed?: number | null
   onHoverPointChange?: (point: RouteHoverPoint | null) => void
 }
 
@@ -29,6 +36,8 @@ export function ElevationPanel({
   routeRenderMetadata,
   uphillSegments = [],
   courseTitle,
+  windDirection,
+  windSpeed,
   onHoverPointChange,
 }: ElevationPanelProps) {
   const [collapsed, setCollapsed] = useState(false)
@@ -47,6 +56,12 @@ export function ElevationPanel({
       ? getElevationProfileFromMetadata(normalizedMetadata)
       : hoverProfile.map(({ distanceKm, elevationM }) => ({ distanceKm, elevationM })),
     [hoverProfile, normalizedMetadata],
+  )
+  const windSegments = useMemo<WindSegment[]>(
+    () => (windDirection != null && windSpeed != null)
+      ? buildWindSegments(routeGeoJSON, windDirection, windSpeed)
+      : [],
+    [routeGeoJSON, windDirection, windSpeed],
   )
 
   useEffect(() => {
@@ -95,6 +110,15 @@ export function ElevationPanel({
               onHoverDistanceChange={setHoveredDistanceKm}
             />
           </div>
+          {windSegments.length > 0 && (
+            <div className="mb-2">
+              <WindStripChart
+                segments={windSegments}
+                hoveredDistanceKm={hoveredDistanceKm}
+                onHoverDistanceChange={setHoveredDistanceKm}
+              />
+            </div>
+          )}
           <ElevationChart
             data={elevationProfile}
             persistedSegments={normalizedMetadata?.slopeSegments ?? []}

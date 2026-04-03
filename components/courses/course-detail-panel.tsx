@@ -66,6 +66,7 @@ interface CourseDetailPanelProps {
   albumTriggerId?: string
   onAlbumPhotoUploaded?: (photo: CourseAlbumPhoto) => void
   onPoiCreated?: (poi: PoiMapItem) => void
+  onWindDataChange?: (windDirection: number | null, windSpeed: number | null) => void
 }
 
 export function CourseDetailPanel({
@@ -85,6 +86,7 @@ export function CourseDetailPanel({
   albumTriggerId,
   onAlbumPhotoUploaded,
   onPoiCreated,
+  onWindDataChange,
 }: CourseDetailPanelProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -438,7 +440,12 @@ export function CourseDetailPanel({
       {startCoords && (
         <div className="rounded-[24px] border bg-card p-4 shadow-sm">
           {weatherExpanded ? (
-            <WeatherSection lat={startCoords.lat} lng={startCoords.lng} />
+            <WeatherSection
+              lat={startCoords.lat}
+              lng={startCoords.lng}
+              routeGeoJSON={course.route_geojson}
+              onWindDataChange={onWindDataChange}
+            />
           ) : (
             <Button
               type="button"
