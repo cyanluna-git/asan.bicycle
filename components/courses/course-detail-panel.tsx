@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useRef, useState, useTransition } from '
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, ArrowRight, Download, ImagePlus, Loader2, LogIn, Pencil, Send, Star } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { WeatherSection } from '@/components/courses/weather-section'
 import { Button } from '@/components/ui/button'
 import { CoursePoiAddPanel } from '@/components/courses/course-poi-add-panel'
 import { CourseShareButton } from '@/components/courses/course-share-button'
@@ -139,6 +140,18 @@ export function CourseDetailPanel({
       : getUphillMetricsMap(course.route_geojson ?? null, uphillSegments),
     [course.route_geojson, renderMetadata, uphillSegments],
   )
+
+  const startCoords = React.useMemo<{ lat: number; lng: number } | null>(() => {
+    const pts = course.route_preview_points
+    if (pts && pts.length > 0) {
+      return { lat: pts[0].lat, lng: pts[0].lng }
+    }
+    const coords = course.route_geojson?.features?.[0]?.geometry?.coordinates
+    if (coords && coords.length > 0) {
+      return { lat: coords[0][1], lng: coords[0][0] }
+    }
+    return null
+  }, [course.route_preview_points, course.route_geojson])
 
   useEffect(() => {
     setActiveCategory('all')
@@ -419,6 +432,10 @@ export function CourseDetailPanel({
           </div>
         )}
       </div>
+
+      {startCoords && (
+        <WeatherSection lat={startCoords.lat} lng={startCoords.lng} />
+      )}
 
       {uphillSegments.length > 0 && (
         <div>

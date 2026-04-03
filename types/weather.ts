@@ -23,3 +23,17 @@ export type WeatherForecastResponse = {
   forecasts: HourlyForecast[]
   mock: boolean
 }
+
+export type RidingSuitability = 'good' | 'moderate' | 'not_recommended'
+
+export type WindDirection16 =
+  | '북' | '북북동' | '북동' | '동북동'
+  | '동' | '동남동' | '남동' | '남남동'
+  | '남' | '남남서' | '남서' | '서남서'
+  | '서' | '서북서' | '북서' | '북북서'
+
+export type HourlyForecastWithMeta = HourlyForecast & {
+  suitability: RidingSuitability
+  windDirectionLabel: WindDirection16
+  isNighttime: boolean
+}
