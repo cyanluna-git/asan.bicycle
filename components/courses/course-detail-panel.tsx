@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import React, { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, ArrowRight, Download, ImagePlus, Loader2, LogIn, Pencil, Send, Star } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Cloud, Download, ImagePlus, Loader2, LogIn, Pencil, Send, Star } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { WeatherSection } from '@/components/courses/weather-section'
 import { Button } from '@/components/ui/button'
@@ -91,6 +91,7 @@ export function CourseDetailPanel({
   const searchParams = useSearchParams()
   const [activeCategory, setActiveCategory] = useState<PoiCategoryFilter>('all')
   const [optimisticReview, setOptimisticReview] = useState<CourseReview | null>(null)
+  const [weatherExpanded, setWeatherExpanded] = useState(false)
 
   const allReviews = optimisticReview
     ? [optimisticReview, ...reviews.filter((r) => r.id !== optimisticReview.id)]
@@ -156,6 +157,7 @@ export function CourseDetailPanel({
   useEffect(() => {
     setActiveCategory('all')
     setOptimisticReview(null)
+    setWeatherExpanded(false)
   }, [course.id])
 
   useEffect(() => {
@@ -434,7 +436,21 @@ export function CourseDetailPanel({
       </div>
 
       {startCoords && (
-        <WeatherSection lat={startCoords.lat} lng={startCoords.lng} />
+        <div className="rounded-[24px] border bg-card p-4 shadow-sm">
+          {weatherExpanded ? (
+            <WeatherSection lat={startCoords.lat} lng={startCoords.lng} />
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 w-full rounded-full"
+              onClick={() => setWeatherExpanded(true)}
+            >
+              <Cloud className="mr-1.5 h-4 w-4" />
+              날씨 확인
+            </Button>
+          )}
+        </div>
       )}
 
       {uphillSegments.length > 0 && (
