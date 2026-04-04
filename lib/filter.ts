@@ -11,6 +11,7 @@ export interface CourseFilterState {
   difficulty: Enums<'course_difficulty'>[]
   distance: DistancePreset | null
   themes: string[]
+  regionId: string | null
 }
 
 // ---------------------------------------------------------------------------
@@ -88,7 +89,14 @@ export function parseFilterParams(
     ? rawTheme.split(',').filter((t) => t.length > 0)
     : []
 
-  return { startPoint, difficulty, distance, themes }
+  // regionId — validate UUID format
+  const rawRegionId = get('region')
+  const regionId =
+    typeof rawRegionId === 'string' && UUID_REGEX.test(rawRegionId)
+      ? rawRegionId
+      : null
+
+  return { startPoint, difficulty, distance, themes, regionId }
 }
 
 /**
@@ -103,6 +111,7 @@ export function buildFilterQuery(state: CourseFilterState): string {
     params.set('difficulty', state.difficulty.join(','))
   if (state.distance) params.set('distance', state.distance)
   if (state.themes.length > 0) params.set('theme', state.themes.join(','))
+  if (state.regionId) params.set('region', state.regionId)
 
   return params.toString()
 }
@@ -116,6 +125,7 @@ export function countActiveFilters(state: CourseFilterState): number {
   if (state.difficulty.length > 0) count++
   if (state.distance) count++
   if (state.themes.length > 0) count++
+  if (state.regionId) count++
   return count
 }
 
@@ -123,5 +133,5 @@ export function countActiveFilters(state: CourseFilterState): number {
  * Returns the default (empty) filter state.
  */
 export function defaultFilterState(): CourseFilterState {
-  return { startPoint: null, difficulty: [], distance: null, themes: [] }
+  return { startPoint: null, difficulty: [], distance: null, themes: [], regionId: null }
 }

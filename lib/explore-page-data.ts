@@ -95,6 +95,10 @@ function buildCoursesQuery(
     query = query.in('theme', filters.themes)
   }
 
+  if (filters.regionId) {
+    query = query.eq('region_id', filters.regionId)
+  }
+
   return query
 }
 
