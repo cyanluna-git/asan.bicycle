@@ -25,6 +25,7 @@ import {
   type UploadMetadataFormData,
 } from '@/lib/course-upload'
 import { normalizePoiCategory } from '@/lib/poi'
+import { type RegionInfo } from '@/lib/region-detect'
 import { supabase } from '@/lib/supabase'
 import { getUploaderDisplayName } from '@/lib/user-display-name'
 import type { UphillSegmentDraft } from '@/lib/uphill-detection'
@@ -45,6 +46,7 @@ type EditableCourseRow = {
   theme: string | null
   tags: string[]
   start_point_id: string | null
+  region_id: string | null
   route_geojson: RouteGeoJSON | null
   route_render_metadata?: RouteRenderMetadata | null
   created_by: string | null
@@ -78,8 +80,8 @@ const EMPTY_FORM: UploadMetadataFormData = {
   startPointId: '',
 }
 
-const COURSE_FIELDS = 'id, title, description, difficulty, distance_km, elevation_gain_m, theme, tags, start_point_id, route_geojson, route_render_metadata, created_by, uploader_name, uploader_emoji'
-const COURSE_FIELDS_FALLBACK = 'id, title, description, difficulty, distance_km, elevation_gain_m, theme, tags, start_point_id, route_geojson, created_by'
+const COURSE_FIELDS = 'id, title, description, difficulty, distance_km, elevation_gain_m, theme, tags, start_point_id, region_id, route_geojson, route_render_metadata, created_by, uploader_name, uploader_emoji'
+const COURSE_FIELDS_FALLBACK = 'id, title, description, difficulty, distance_km, elevation_gain_m, theme, tags, start_point_id, region_id, route_geojson, created_by'
 
 function toInitialForm(course: EditableCourseRow): UploadMetadataFormData {
   return {
@@ -112,6 +114,7 @@ export function CourseEditPageClient({
   } | null>(null)
   const [form, setForm] = useState<UploadMetadataFormData>(EMPTY_FORM)
   const [formErrors, setFormErrors] = useState<{ title?: string; startPointId?: string }>({})
+  const [detectedRegion, setDetectedRegion] = useState<RegionInfo | null>(null)
   const [poiDrafts, setPoiDrafts] = useState<PoiDraft[]>([])
   const [uphillSegments, setUphillSegments] = useState<UphillSegmentDraft[]>([])
   const latestPoiDraftsRef = useRef<PoiDraft[]>([])
@@ -241,6 +244,25 @@ export function CourseEditPageClient({
       setForm(toInitialForm(loadedCourse))
       setPoiDrafts(nextPoiDrafts)
       setUphillSegments(nextUphillSegments)
+
+      if (loadedCourse.region_id) {
+        const { data: regionRow } = await supabase
+          .from('regions')
+          .select('id, name, parent:regions!parent_id(name)')
+          .eq('id', loadedCourse.region_id)
+          .single()
+
+        if (regionRow && !cancelled) {
+          const parentRow = Array.isArray(regionRow.parent) ? regionRow.parent[0] : regionRow.parent
+          setDetectedRegion({
+            id: regionRow.id,
+            name: regionRow.name,
+            parentName: (parentRow as { name: string } | null)?.name ?? null,
+          })
+        }
+      } else {
+        setDetectedRegion(null)
+      }
 
       const routeCoordinates = loadedCourse.route_geojson?.features
         .flatMap((feature) => feature.geometry?.type === 'LineString' ? feature.geometry.coordinates : []) ?? []
@@ -433,6 +455,7 @@ export function CourseEditPageClient({
           theme: form.theme.trim() || null,
           tags,
           startPointId: form.startPointId || null,
+          regionId: detectedRegion?.id ?? course.region_id ?? null,
           pois: poiPayload,
           uphillSegments: uphillSegments.map((segment) => ({
             name: segment.name || null,
@@ -585,6 +608,7 @@ export function CourseEditPageClient({
         form={form}
         startPoints={startPoints}
         recommendedStartPoint={recommendedStartPoint}
+        detectedRegion={detectedRegion}
         uploaderName={uploaderName}
         submitError={submitError}
         validationErrors={formErrors}

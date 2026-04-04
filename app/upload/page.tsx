@@ -23,6 +23,7 @@ import { parseGpxToGeoJSON, type ParsedGpx } from '@/lib/gpx-parser'
 import { supabase } from '@/lib/supabase'
 import { getUploaderDisplayName } from '@/lib/user-display-name'
 import { detectUphillSegments, type UphillSegmentDraft } from '@/lib/uphill-detection'
+import { detectRegionByPoint, type RegionInfo } from '@/lib/region-detect'
 import { isValidCourseLocation } from '@/lib/validation'
 import type { Json } from '@/types/database'
 import type { User } from '@supabase/supabase-js'
@@ -46,6 +47,8 @@ export default function UploadPage() {
     name: string
     distanceKm: number
   } | null>(null)
+
+  const [detectedRegion, setDetectedRegion] = useState<RegionInfo | null>(null)
 
   const [file, setFile] = useState<File | null>(null)
   const [parsed, setParsed] = useState<ParsedGpx | null>(null)
@@ -134,6 +137,7 @@ export default function UploadPage() {
     setValidationError(null)
     setSubmitError(null)
     setUphillSegments([])
+    setDetectedRegion(null)
 
     const inferredTitle = nextFile.name
       .replace(/\.gpx$/i, '')
@@ -158,6 +162,10 @@ export default function UploadPage() {
       if (result.elevationProfile.length > 0) {
         setUphillSegments(detectUphillSegments(result.elevationProfile))
       }
+
+      detectRegionByPoint(result.startLat, result.startLng)
+        .then((region) => setDetectedRegion(region))
+        .catch(() => setDetectedRegion(null))
     } catch (error) {
       setParseError(error instanceof Error ? error.message : 'GPX 파싱 오류가 발생했습니다.')
     }
@@ -255,6 +263,7 @@ export default function UploadPage() {
         theme: form.theme.trim() || null,
         tags,
         start_point_id: form.startPointId || null,
+        region_id: detectedRegion?.id ?? null,
       }
 
       const metadataHistory = toMetadataHistoryJson(
@@ -446,6 +455,7 @@ export default function UploadPage() {
             form={form}
             startPoints={startPoints}
             recommendedStartPoint={recommendedStartPoint}
+            detectedRegion={detectedRegion}
             uploaderName={uploaderName}
             submitError={submitError}
             validationErrors={formErrors}

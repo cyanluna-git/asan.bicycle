@@ -1,8 +1,9 @@
 'use client'
 
-import { AlertCircle, Loader2, Upload } from 'lucide-react'
+import { AlertCircle, Loader2, MapPin, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import type { RegionInfo } from '@/lib/region-detect'
 import type {
   Difficulty,
   StartPointOption,
@@ -15,6 +16,7 @@ interface CourseMetadataFormProps {
   recommendedStartPoint:
     | { id: string; name: string; distanceKm: number }
     | null
+  detectedRegion?: RegionInfo | null
   uploaderName: string
   submitError: string | null
   validationErrors: {
@@ -41,6 +43,7 @@ export function CourseMetadataForm({
   form,
   startPoints,
   recommendedStartPoint,
+  detectedRegion,
   uploaderName,
   submitError,
   validationErrors,
@@ -56,6 +59,20 @@ export function CourseMetadataForm({
         <p className="text-xs font-medium text-muted-foreground">업로더</p>
         <p className="mt-1 text-sm font-medium">{uploaderName}</p>
       </div>
+
+      {detectedRegion && (
+        <div className="flex items-center gap-2 rounded-xl border bg-muted/20 px-4 py-3">
+          <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">자동 감지 지역</p>
+            <p className="mt-0.5 text-sm font-medium">
+              {detectedRegion.parentName
+                ? `${detectedRegion.parentName} ${detectedRegion.name}`
+                : detectedRegion.name}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div>
         <Label htmlFor="title">

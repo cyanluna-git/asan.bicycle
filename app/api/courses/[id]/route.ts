@@ -21,6 +21,7 @@ type PatchPayload = {
   theme?: string | null
   tags?: string[]
   startPointId?: string | null
+  regionId?: string | null
   pois?: Array<{
     id?: string | null
     name?: string
@@ -162,6 +163,7 @@ export async function PATCH(request: Request, context: PatchContext) {
     theme: body.theme?.trim() || null,
     tags,
     start_point_id: body.startPointId || null,
+    region_id: body.regionId || null,
     updated_at: new Date().toISOString(),
     route_render_metadata: buildRouteRenderMetadata(
       (existingCourse.route_geojson as Parameters<typeof buildRouteRenderMetadata>[0]) ?? null,

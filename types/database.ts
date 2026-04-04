@@ -50,6 +50,7 @@ export type Database = {
           elevation_gain_m: number
           est_duration_min: number | null
           start_point_id: string | null
+          region_id: string | null
           start_point: unknown | null // PostGIS geography
           route: unknown | null // PostGIS geography
           gpx_url: string | null
@@ -75,6 +76,7 @@ export type Database = {
           elevation_gain_m?: number
           est_duration_min?: number | null
           start_point_id?: string | null
+          region_id?: string | null
           start_point?: unknown | null
           route?: unknown | null
           gpx_url?: string | null
@@ -100,6 +102,7 @@ export type Database = {
           elevation_gain_m?: number
           est_duration_min?: number | null
           start_point_id?: string | null
+          region_id?: string | null
           start_point?: unknown | null
           route?: unknown | null
           gpx_url?: string | null
@@ -122,6 +125,13 @@ export type Database = {
             columns: ['start_point_id']
             isOneToOne: false
             referencedRelation: 'start_points'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'courses_region_id_fkey'
+            columns: ['region_id']
+            isOneToOne: false
+            referencedRelation: 'regions'
             referencedColumns: ['id']
           },
           {
@@ -336,6 +346,47 @@ export type Database = {
           },
         ]
       }
+      regions: {
+        Row: {
+          id: string
+          name: string
+          short_name: string
+          code: string
+          level: 'sido' | 'sigungu'
+          parent_id: string | null
+          geom: unknown | null // PostGIS geography(MultiPolygon, 4326)
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          short_name: string
+          code: string
+          level: 'sido' | 'sigungu'
+          parent_id?: string | null
+          geom?: unknown | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          short_name?: string
+          code?: string
+          level?: 'sido' | 'sigungu'
+          parent_id?: string | null
+          geom?: unknown | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'regions_parent_id_fkey'
+            columns: ['parent_id']
+            isOneToOne: false
+            referencedRelation: 'regions'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Views: {
       course_review_stats: {
@@ -435,6 +486,17 @@ export type Database = {
           p_course_id: string
         }
         Returns: undefined
+      }
+      detect_region_by_point: {
+        Args: {
+          p_lng: number
+          p_lat: number
+        }
+        Returns: Array<{
+          region_id: string
+          region_name: string
+          parent_name: string | null
+        }>
       }
     }
     Enums: {
