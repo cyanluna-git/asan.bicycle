@@ -33,6 +33,7 @@ interface SidebarProps {
   onAlbumPhotoUploaded?: (photo: CourseAlbumPhoto) => void
   onPoiCreated?: (poi: PoiMapItem) => void
   onWindDataChange?: (windDirection: number | null, windSpeed: number | null) => void
+  onWindSegmentsChange?: (segments: import('@/lib/wind-analysis').WindSegment[] | null) => void
   width?: number
 }
 
@@ -56,6 +57,7 @@ export function Sidebar({
   onAlbumPhotoUploaded,
   onPoiCreated,
   onWindDataChange,
+  onWindSegmentsChange,
   width = 320,
 }: SidebarProps) {
   return (
@@ -84,6 +86,7 @@ export function Sidebar({
               onAlbumPhotoUploaded={onAlbumPhotoUploaded}
               onPoiCreated={onPoiCreated}
               onWindDataChange={onWindDataChange}
+              onWindSegmentsChange={onWindSegmentsChange}
             />
           </Suspense>
         ) : (

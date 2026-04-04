@@ -22,6 +22,7 @@ import {
   type ReviewSurfaceSource,
 } from '@/lib/course-reviews-surface-ui'
 import type { RouteHoverPoint } from '@/lib/elevation-hover-sync'
+import type { WindSegment } from '@/lib/wind-analysis'
 import { supabase } from '@/lib/supabase'
 import type {
   CourseAlbumPhoto,
@@ -73,6 +74,7 @@ export function ExploreShell({
   const [hoveredRoutePoint, setHoveredRoutePoint] = useState<RouteHoverPoint | null>(null)
   const [windDirection, setWindDirection] = useState<number | null>(null)
   const [windSpeed, setWindSpeed] = useState<number | null>(null)
+  const [windSegmentsOverride, setWindSegmentsOverride] = useState<WindSegment[] | null>(null)
   const [albumPhotos, setAlbumPhotos] = useState<CourseAlbumPhoto[]>([])
   const [albumPreviewPhotos, setAlbumPreviewPhotos] = useState<CourseAlbumPhoto[]>([])
   const [albumLoading, setAlbumLoading] = useState(false)
@@ -107,6 +109,7 @@ export function ExploreShell({
     setHoveredRoutePoint(null)
     setWindDirection(null)
     setWindSpeed(null)
+    setWindSegmentsOverride(null)
     setAlbumPreviewPhotos([])
     setAlbumPhotos([])
     setAlbumLoading(false)
@@ -238,6 +241,13 @@ export function ExploreShell({
     (dir: number | null, spd: number | null) => {
       setWindDirection(dir)
       setWindSpeed(spd)
+    },
+    [],
+  )
+
+  const handleWindSegmentsChange = useCallback(
+    (segments: WindSegment[] | null) => {
+      setWindSegmentsOverride(segments)
     },
     [],
   )
@@ -408,6 +418,7 @@ export function ExploreShell({
         onAlbumPhotoUploaded={handleInlineAlbumPhotoUploaded}
         onPoiCreated={handlePoiCreated}
         onWindDataChange={handleWindDataChange}
+        onWindSegmentsChange={handleWindSegmentsChange}
         width={sidebarWidth}
       />
       <div className="relative hidden w-3 shrink-0 md:block">
@@ -510,6 +521,7 @@ export function ExploreShell({
             onAlbumPhotoUploaded={handleInlineAlbumPhotoUploaded}
             onPoiCreated={handlePoiCreated}
             onWindDataChange={handleWindDataChange}
+            onWindSegmentsChange={handleWindSegmentsChange}
           />
           {selectedCourse && surfaceSource === 'bottom-sheet' && activeSurfaceKind ? (
             <Drawer
@@ -572,6 +584,7 @@ export function ExploreShell({
             courseTitle={selectedCourse.title}
             windDirection={windDirection}
             windSpeed={windSpeed}
+            windSegmentsOverride={windSegmentsOverride}
             onHoverPointChange={setHoveredRoutePoint}
           />
         )}

@@ -22,9 +22,11 @@ import {
 } from '@/lib/weather-ui'
 import {
   buildWindSegments,
+  buildTimeAwareWindSegments,
   summarizeWind,
   WIND_COLORS,
   WIND_LABELS,
+  type WindSegment,
 } from '@/lib/wind-analysis'
 import type { RouteGeoJSON } from '@/types/course'
 import type { HourlyForecastWithMeta, WeatherForecastResponse } from '@/types/weather'
@@ -64,19 +66,47 @@ function WeatherIcon({
 // WeatherSection component
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Default speed helpers
+// ---------------------------------------------------------------------------
+
+function getDefaultSpeed(theme: string | null | undefined): number {
+  if (!theme) return 25
+  const lower = theme.toLowerCase()
+  if (lower.includes('로드') || lower.includes('road')) return 28
+  if (lower.includes('mtb') || lower.includes('산악')) return 18
+  return 25
+}
+
+// ---------------------------------------------------------------------------
+// WeatherSection component
+// ---------------------------------------------------------------------------
+
 interface WeatherSectionProps {
   lat: number
   lng: number
   routeGeoJSON?: RouteGeoJSON | null
+  courseTheme?: string | null
   onWindDataChange?: (windDirection: number | null, windSpeed: number | null) => void
+  onWindSegmentsChange?: (segments: WindSegment[] | null) => void
 }
 
-export function WeatherSection({ lat, lng, routeGeoJSON, onWindDataChange }: WeatherSectionProps) {
+export function WeatherSection({
+  lat,
+  lng,
+  routeGeoJSON,
+  courseTheme,
+  onWindDataChange,
+  onWindSegmentsChange,
+}: WeatherSectionProps) {
   const dateRange = useMemo(() => getDateRangeForForecast(), [])
   const [selectedDate, setSelectedDate] = useState(dateRange.min)
   const [data, setData] = useState<WeatherForecastResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [departureTime, setDepartureTime] = useState('07:00')
+  const [avgSpeed, setAvgSpeed] = useState(() => getDefaultSpeed(courseTheme))
+  const [timeAwareMode, setTimeAwareMode] = useState(false)
 
   const fetchWeather = useCallback(async (
     fetchLat: number,
@@ -140,13 +170,44 @@ export function WeatherSection({ lat, lng, routeGeoJSON, onWindDataChange }: Wea
     }
   }, [averageWind, onWindDataChange])
 
+  // Reset time-aware mode when date changes
+  const handleDateChange = useCallback((date: string) => {
+    setSelectedDate(date)
+    setTimeAwareMode(false)
+  }, [])
+
+  // Time-aware wind segments (only when button is clicked)
+  const timeAwareSegments = useMemo<WindSegment[]>(() => {
+    if (!timeAwareMode || !routeGeoJSON || enrichedForecasts.length === 0) return []
+    const departureIso = `${selectedDate}T${departureTime}`
+    return buildTimeAwareWindSegments(routeGeoJSON, enrichedForecasts, departureIso, avgSpeed)
+  }, [timeAwareMode, routeGeoJSON, enrichedForecasts, selectedDate, departureTime, avgSpeed])
+
+  // Average-mode segments
+  const averageSegments = useMemo<WindSegment[]>(() => {
+    if (!routeGeoJSON || !averageWind || averageWind.speed <= 0) return []
+    return buildWindSegments(routeGeoJSON, averageWind.direction, averageWind.speed)
+  }, [routeGeoJSON, averageWind])
+
+  const activeSegments = timeAwareMode && timeAwareSegments.length > 0
+    ? timeAwareSegments
+    : averageSegments
+
   // Wind summary for this route + current wind
   const windSummary = useMemo(() => {
-    if (!routeGeoJSON || !averageWind || averageWind.speed <= 0) return null
-    const segments = buildWindSegments(routeGeoJSON, averageWind.direction, averageWind.speed)
-    if (segments.length === 0) return null
-    return summarizeWind(segments)
-  }, [routeGeoJSON, averageWind])
+    if (activeSegments.length === 0) return null
+    return summarizeWind(activeSegments)
+  }, [activeSegments])
+
+  // Notify parent of wind segments for elevation panel sync
+  useEffect(() => {
+    if (!onWindSegmentsChange) return
+    if (timeAwareMode && timeAwareSegments.length > 0) {
+      onWindSegmentsChange(timeAwareSegments)
+    } else {
+      onWindSegmentsChange(null)
+    }
+  }, [timeAwareMode, timeAwareSegments, onWindSegmentsChange])
 
   return (
     <div className="rounded-[24px] border bg-card p-4 shadow-sm">
@@ -165,7 +226,7 @@ export function WeatherSection({ lat, lng, routeGeoJSON, onWindDataChange }: Wea
             value={selectedDate}
             min={dateRange.min}
             max={dateRange.max}
-            onChange={(e) => setSelectedDate(e.target.value)}
+            onChange={(e) => handleDateChange(e.target.value)}
             className="rounded-lg border bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground/20"
           />
         </div>
@@ -195,7 +256,54 @@ export function WeatherSection({ lat, lng, routeGeoJSON, onWindDataChange }: Wea
       )}
 
       {windSummary && (
-        <WindSummaryBar summary={windSummary} />
+        <WindSummaryBar
+          summary={windSummary}
+          isTimeAware={timeAwareMode && timeAwareSegments.length > 0}
+        />
+      )}
+
+      {routeGeoJSON && averageWind && averageWind.speed > 0 && (
+        <div className="mt-3 rounded-xl border bg-background px-3 py-2.5">
+          <span className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            시간대별 바람 분석
+          </span>
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="flex flex-col gap-0.5">
+              <span className="text-[10px] text-muted-foreground">출발시간</span>
+              <input
+                type="time"
+                value={departureTime}
+                onChange={(e) => {
+                  setDepartureTime(e.target.value)
+                  setTimeAwareMode(false)
+                }}
+                className="h-7 rounded-lg border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground/20"
+              />
+            </label>
+            <label className="flex flex-col gap-0.5">
+              <span className="text-[10px] text-muted-foreground">평균속도 (km/h)</span>
+              <input
+                type="number"
+                min={10}
+                max={50}
+                step={1}
+                value={avgSpeed}
+                onChange={(e) => {
+                  setAvgSpeed(Number(e.target.value))
+                  setTimeAwareMode(false)
+                }}
+                className="h-7 w-16 rounded-lg border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground/20"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => setTimeAwareMode(true)}
+              className="h-7 shrink-0 rounded-lg bg-foreground px-3 text-[11px] font-medium text-background transition-colors hover:bg-foreground/85"
+            >
+              바람 분석 업데이트
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )
@@ -263,7 +371,10 @@ function HourlyCard({ forecast }: { forecast: HourlyForecastWithMeta }) {
 // Loading skeleton
 // ---------------------------------------------------------------------------
 
-function WindSummaryBar({ summary }: { summary: { headwindPercent: number; tailwindPercent: number; crosswindPercent: number } }) {
+function WindSummaryBar({ summary, isTimeAware = false }: {
+  summary: { headwindPercent: number; tailwindPercent: number; crosswindPercent: number }
+  isTimeAware?: boolean
+}) {
   const entries = [
     { key: 'headwind' as const, pct: summary.headwindPercent },
     { key: 'tailwind' as const, pct: summary.tailwindPercent },
@@ -274,7 +385,7 @@ function WindSummaryBar({ summary }: { summary: { headwindPercent: number; tailw
     <div className="mt-3 rounded-xl border bg-background px-3 py-2.5">
       <div className="mb-1.5 flex items-center justify-between">
         <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-          코스 바람 분석
+          {isTimeAware ? '시간대별 분석' : '코스 바람 분석'}
         </span>
         <div className="flex items-center gap-2">
           {entries.map(({ key, pct }) => (

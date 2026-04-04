@@ -67,6 +67,7 @@ interface CourseDetailPanelProps {
   onAlbumPhotoUploaded?: (photo: CourseAlbumPhoto) => void
   onPoiCreated?: (poi: PoiMapItem) => void
   onWindDataChange?: (windDirection: number | null, windSpeed: number | null) => void
+  onWindSegmentsChange?: (segments: import('@/lib/wind-analysis').WindSegment[] | null) => void
 }
 
 export function CourseDetailPanel({
@@ -87,6 +88,7 @@ export function CourseDetailPanel({
   onAlbumPhotoUploaded,
   onPoiCreated,
   onWindDataChange,
+  onWindSegmentsChange,
 }: CourseDetailPanelProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -444,7 +446,9 @@ export function CourseDetailPanel({
               lat={startCoords.lat}
               lng={startCoords.lng}
               routeGeoJSON={course.route_geojson}
+              courseTheme={course.theme}
               onWindDataChange={onWindDataChange}
+              onWindSegmentsChange={onWindSegmentsChange}
             />
           ) : (
             <Button

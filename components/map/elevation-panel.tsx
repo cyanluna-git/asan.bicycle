@@ -28,6 +28,7 @@ interface ElevationPanelProps {
   courseTitle?: string
   windDirection?: number | null
   windSpeed?: number | null
+  windSegmentsOverride?: WindSegment[] | null
   onHoverPointChange?: (point: RouteHoverPoint | null) => void
 }
 
@@ -38,6 +39,7 @@ export function ElevationPanel({
   courseTitle,
   windDirection,
   windSpeed,
+  windSegmentsOverride,
   onHoverPointChange,
 }: ElevationPanelProps) {
   const [collapsed, setCollapsed] = useState(false)
@@ -58,10 +60,15 @@ export function ElevationPanel({
     [hoverProfile, normalizedMetadata],
   )
   const windSegments = useMemo<WindSegment[]>(
-    () => (windDirection != null && windSpeed != null)
-      ? buildWindSegments(routeGeoJSON, windDirection, windSpeed)
-      : [],
-    [routeGeoJSON, windDirection, windSpeed],
+    () => {
+      if (windSegmentsOverride && windSegmentsOverride.length > 0) {
+        return windSegmentsOverride
+      }
+      return (windDirection != null && windSpeed != null)
+        ? buildWindSegments(routeGeoJSON, windDirection, windSpeed)
+        : []
+    },
+    [routeGeoJSON, windDirection, windSpeed, windSegmentsOverride],
   )
 
   useEffect(() => {

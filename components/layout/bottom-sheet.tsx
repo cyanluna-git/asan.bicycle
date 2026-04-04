@@ -48,6 +48,7 @@ interface BottomSheetProps {
   onAlbumPhotoUploaded?: (photo: CourseAlbumPhoto) => void
   onPoiCreated?: (poi: PoiMapItem) => void
   onWindDataChange?: (windDirection: number | null, windSpeed: number | null) => void
+  onWindSegmentsChange?: (segments: import('@/lib/wind-analysis').WindSegment[] | null) => void
   open: boolean
   showTrigger?: boolean
   onOpenChange: (open: boolean) => void
@@ -73,6 +74,7 @@ export function BottomSheet({
   onAlbumPhotoUploaded,
   onPoiCreated,
   onWindDataChange,
+  onWindSegmentsChange,
   open,
   showTrigger = true,
   onOpenChange,
@@ -166,6 +168,7 @@ export function BottomSheet({
                   onAlbumPhotoUploaded={onAlbumPhotoUploaded}
                   onPoiCreated={onPoiCreated}
                   onWindDataChange={onWindDataChange}
+                  onWindSegmentsChange={onWindSegmentsChange}
                 />
               </Suspense>
             ) : (

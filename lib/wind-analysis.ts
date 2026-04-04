@@ -1,4 +1,5 @@
 import type { RouteGeoJSON } from '@/types/course'
+import type { HourlyForecast } from '@/types/weather'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -111,18 +112,17 @@ export function classifyWind(
 }
 
 // ---------------------------------------------------------------------------
-// Build wind segments from route GeoJSON
+// Collect route points with cumulative distance
 // ---------------------------------------------------------------------------
 
-export function buildWindSegments(
-  routeGeoJSON: RouteGeoJSON | null | undefined,
-  windFromDirection: number,
-  windSpeed: number,
-): WindSegment[] {
-  if (!routeGeoJSON || windSpeed <= 0) return []
+type RoutePoint = { lat: number; lng: number; km: number }
 
-  // Collect all coordinate pairs with cumulative distance
-  const points: Array<{ lat: number; lng: number; km: number }> = []
+export function collectRoutePoints(
+  routeGeoJSON: RouteGeoJSON | null | undefined,
+): RoutePoint[] {
+  if (!routeGeoJSON) return []
+
+  const points: RoutePoint[] = []
 
   for (const feature of routeGeoJSON.features) {
     if (feature.geometry?.type !== 'LineString') continue
@@ -144,6 +144,21 @@ export function buildWindSegments(
     }
   }
 
+  return points
+}
+
+// ---------------------------------------------------------------------------
+// Build wind segments from route GeoJSON
+// ---------------------------------------------------------------------------
+
+export function buildWindSegments(
+  routeGeoJSON: RouteGeoJSON | null | undefined,
+  windFromDirection: number,
+  windSpeed: number,
+): WindSegment[] {
+  if (!routeGeoJSON || windSpeed <= 0) return []
+
+  const points = collectRoutePoints(routeGeoJSON)
   if (points.length < 2) return []
 
   // Down-sample if too many coordinates
@@ -172,6 +187,90 @@ export function buildWindSegments(
   }
 
   return segments
+}
+
+// ---------------------------------------------------------------------------
+// Build time-aware wind segments (per-segment forecast lookup)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build wind segments where each segment uses the forecast closest to the
+ * estimated arrival time at that point along the route.
+ *
+ * @param routeGeoJSON   Route geometry
+ * @param forecasts      Hourly forecasts for the selected date
+ * @param departureTime  ISO datetime string for departure (e.g. "2026-04-02T07:00")
+ * @param avgSpeedKmh    Average riding speed in km/h
+ */
+export function buildTimeAwareWindSegments(
+  routeGeoJSON: RouteGeoJSON | null | undefined,
+  forecasts: HourlyForecast[],
+  departureTime: string,
+  avgSpeedKmh: number,
+): WindSegment[] {
+  if (!routeGeoJSON || forecasts.length === 0 || avgSpeedKmh <= 0) return []
+
+  const points = collectRoutePoints(routeGeoJSON)
+  if (points.length < 2) return []
+
+  const sampled = downsample(points, MAX_SEGMENTS)
+  const departureMs = new Date(departureTime).getTime()
+
+  // Pre-parse forecast timestamps for efficient lookup
+  const parsedForecasts = forecasts.map((f) => ({
+    ...f,
+    ms: new Date(f.datetime).getTime(),
+  }))
+
+  const segments: WindSegment[] = []
+
+  for (let i = 1; i < sampled.length; i++) {
+    const prev = sampled[i - 1]
+    const curr = sampled[i]
+
+    // Midpoint distance of this segment
+    const midKm = (prev.km + curr.km) / 2
+    const arrivalMs = departureMs + (midKm / avgSpeedKmh) * 3600_000
+
+    // Find nearest forecast by time
+    const forecast = findNearestForecast(parsedForecasts, arrivalMs)
+    if (!forecast) continue
+
+    const bearing = calculateBearing(prev.lat, prev.lng, curr.lat, curr.lng)
+    const classification = classifyWind(bearing, forecast.windDirection)
+    const angleDiff = Math.abs(((bearing - forecast.windDirection) + 540) % 360 - 180)
+    const effectiveSpeed = forecast.windSpeed * Math.cos(angleDiff * TO_RAD)
+
+    segments.push({
+      startKm: prev.km,
+      endKm: curr.km,
+      classification,
+      effectiveSpeed: Math.round(effectiveSpeed * 10) / 10,
+      color: WIND_COLORS[classification],
+    })
+  }
+
+  return segments
+}
+
+function findNearestForecast<T extends { ms: number }>(
+  forecasts: T[],
+  targetMs: number,
+): T | null {
+  if (forecasts.length === 0) return null
+
+  let best = forecasts[0]
+  let bestDiff = Math.abs(best.ms - targetMs)
+
+  for (let i = 1; i < forecasts.length; i++) {
+    const diff = Math.abs(forecasts[i].ms - targetMs)
+    if (diff < bestDiff) {
+      best = forecasts[i]
+      bestDiff = diff
+    }
+  }
+
+  return best
 }
 
 // ---------------------------------------------------------------------------
