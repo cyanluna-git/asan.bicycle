@@ -70,7 +70,7 @@ function WeatherIcon({
 // Default speed helpers
 // ---------------------------------------------------------------------------
 
-function getDefaultSpeed(theme: string | null | undefined): number {
+export function getDefaultSpeed(theme: string | null | undefined): number {
   if (!theme) return 25
   const lower = theme.toLowerCase()
   if (lower.includes('로드') || lower.includes('road')) return 28
@@ -87,6 +87,8 @@ interface WeatherSectionProps {
   lng: number
   routeGeoJSON?: RouteGeoJSON | null
   courseTheme?: string | null
+  initialDepartureTime?: string
+  initialAvgSpeed?: number
   onWindDataChange?: (windDirection: number | null, windSpeed: number | null) => void
   onWindSegmentsChange?: (segments: WindSegment[] | null) => void
 }
@@ -96,6 +98,8 @@ export function WeatherSection({
   lng,
   routeGeoJSON,
   courseTheme,
+  initialDepartureTime,
+  initialAvgSpeed,
   onWindDataChange,
   onWindSegmentsChange,
 }: WeatherSectionProps) {
@@ -104,8 +108,8 @@ export function WeatherSection({
   const [data, setData] = useState<WeatherForecastResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [departureTime, setDepartureTime] = useState('07:00')
-  const [avgSpeed, setAvgSpeed] = useState(() => getDefaultSpeed(courseTheme))
+  const [departureTime, setDepartureTime] = useState(initialDepartureTime ?? '07:00')
+  const [avgSpeed, setAvgSpeed] = useState(initialAvgSpeed ?? getDefaultSpeed(courseTheme))
   const [timeAwareMode, setTimeAwareMode] = useState(false)
 
   const fetchWeather = useCallback(async (

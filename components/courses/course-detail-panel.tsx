@@ -6,7 +6,7 @@ import React, { useCallback, useEffect, useRef, useState, useTransition } from '
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, ArrowRight, Cloud, Download, ImagePlus, Loader2, LogIn, Pencil, Send, Star } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { WeatherSection } from '@/components/courses/weather-section'
+import { WeatherSection, getDefaultSpeed } from '@/components/courses/weather-section'
 import { Button } from '@/components/ui/button'
 import { CoursePoiAddPanel } from '@/components/courses/course-poi-add-panel'
 import { CourseShareButton } from '@/components/courses/course-share-button'
@@ -96,6 +96,8 @@ export function CourseDetailPanel({
   const [activeCategory, setActiveCategory] = useState<PoiCategoryFilter>('all')
   const [optimisticReview, setOptimisticReview] = useState<CourseReview | null>(null)
   const [weatherExpanded, setWeatherExpanded] = useState(false)
+  const [weatherDepartureTime, setWeatherDepartureTime] = useState('07:00')
+  const [weatherAvgSpeed, setWeatherAvgSpeed] = useState(() => getDefaultSpeed(course.theme))
 
   const allReviews = optimisticReview
     ? [optimisticReview, ...reviews.filter((r) => r.id !== optimisticReview.id)]
@@ -162,7 +164,9 @@ export function CourseDetailPanel({
     setActiveCategory('all')
     setOptimisticReview(null)
     setWeatherExpanded(false)
-  }, [course.id])
+    setWeatherDepartureTime('07:00')
+    setWeatherAvgSpeed(getDefaultSpeed(course.theme))
+  }, [course.id, course.theme])
 
   useEffect(() => {
     if (activeCategory !== 'all' && !categoryTabs.includes(activeCategory)) {
@@ -447,19 +451,48 @@ export function CourseDetailPanel({
               lng={startCoords.lng}
               routeGeoJSON={course.route_geojson}
               courseTheme={course.theme}
+              initialDepartureTime={weatherDepartureTime}
+              initialAvgSpeed={weatherAvgSpeed}
               onWindDataChange={onWindDataChange}
               onWindSegmentsChange={onWindSegmentsChange}
             />
           ) : (
-            <Button
-              type="button"
-              variant="outline"
-              className="h-10 w-full rounded-full"
-              onClick={() => setWeatherExpanded(true)}
-            >
-              <Cloud className="mr-1.5 h-4 w-4" />
-              날씨 확인
-            </Button>
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-medium text-muted-foreground">출발시간</label>
+                  <input
+                    type="time"
+                    value={weatherDepartureTime}
+                    onChange={(e) => setWeatherDepartureTime(e.target.value)}
+                    className="rounded-lg border bg-background px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground/20"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-medium text-muted-foreground">예상 평속</label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min={10}
+                      max={50}
+                      value={weatherAvgSpeed}
+                      onChange={(e) => setWeatherAvgSpeed(Math.max(10, Math.min(50, Number(e.target.value) || 10)))}
+                      className="w-14 rounded-lg border bg-background px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground/20"
+                    />
+                    <span className="text-[10px] text-muted-foreground">km/h</span>
+                  </div>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 w-full rounded-full"
+                onClick={() => setWeatherExpanded(true)}
+              >
+                <Cloud className="mr-1.5 h-4 w-4" />
+                날씨 확인
+              </Button>
+            </div>
           )}
         </div>
       )}
