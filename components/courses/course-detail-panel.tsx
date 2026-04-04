@@ -97,6 +97,7 @@ export function CourseDetailPanel({
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState<'weather' | 'reviews' | 'album' | 'poi'>('weather')
   const [activeCategory, setActiveCategory] = useState<PoiCategoryFilter>('all')
   const [optimisticReview, setOptimisticReview] = useState<CourseReview | null>(null)
   const [weatherExpanded, setWeatherExpanded] = useState(false)
@@ -169,6 +170,7 @@ export function CourseDetailPanel({
   }, [course.route_preview_points, course.route_geojson])
 
   useEffect(() => {
+    setActiveTab('weather')
     setActiveCategory('all')
     setOptimisticReview(null)
     setWeatherExpanded(false)
@@ -284,174 +286,204 @@ export function CourseDetailPanel({
         </div>
       </div>
 
-      <div className="rounded-[24px] border bg-card p-4 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <div className="flex items-center gap-1 text-sm font-semibold text-foreground">
-              <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-              <span>{reviewStats?.avg_rating?.toFixed(1) ?? '-'}</span>
+      <div className="rounded-[24px] border bg-card p-3 shadow-sm">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {([
+            { key: 'weather', label: '날씨' },
+            { key: 'reviews', label: `후기 ${reviewStats?.review_count ?? 0}` },
+            { key: 'album', label: `사진 ${albumPreviewPhotos.length}` },
+            { key: 'poi', label: `명소 ${pois.length}` },
+          ] as const).map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              className={`rounded-lg border px-2 py-1 text-[11px] font-medium transition ${
+                activeTab === tab.key
+                  ? 'border-foreground bg-foreground text-background'
+                  : 'bg-background text-foreground hover:bg-muted'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {activeTab === 'reviews' && (
+        <div className="rounded-[24px] border bg-card p-4 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <div className="flex items-center gap-1 text-sm font-semibold text-foreground">
+                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                <span>{reviewStats?.avg_rating?.toFixed(1) ?? '-'}</span>
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {reviewStats?.review_count ?? 0}개 후기
+              </span>
             </div>
-            <span className="text-sm text-muted-foreground">
-              {reviewStats?.review_count ?? 0}개 후기
-            </span>
+            {shouldShowMoreButton(allReviews) && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                id={reviewTriggerId}
+                onClick={(event) => onOpenReviews?.(event.currentTarget)}
+                disabled={!onOpenReviews}
+                className="h-10 w-full rounded-full sm:h-9 sm:w-auto sm:shrink-0"
+                aria-haspopup="dialog"
+                aria-label={`${course.title} 후기 더보기`}
+              >
+                후기 보기
+                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+              </Button>
+            )}
           </div>
-          {shouldShowMoreButton(allReviews) && (
+
+          {previewReviews.length > 0 ? (
+            <div className="mt-3 flex flex-col gap-2.5">
+              {previewReviews.map((review) => (
+                <ReviewPreviewCard key={review.id} review={review} />
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-muted-foreground">
+              아직 첫 후기 전입니다.
+            </p>
+          )}
+
+          {!user ? (
+            <InlineLoginPrompt />
+          ) : hasOwnReview ? (
+            <InlineOwnReviewNotice
+              onOpenReviews={onOpenReviews}
+              reviewTriggerId={reviewTriggerId}
+            />
+          ) : (
+            <InlineReviewForm
+              courseId={course.id}
+              user={user}
+              onSubmitted={setOptimisticReview}
+            />
+          )}
+        </div>
+      )}
+
+      {activeTab === 'album' && (
+        <div className="rounded-[24px] border bg-card p-4 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-end">
             <Button
               type="button"
               variant="outline"
               size="sm"
-              id={reviewTriggerId}
-              onClick={(event) => onOpenReviews?.(event.currentTarget)}
-              disabled={!onOpenReviews}
+              id={albumTriggerId}
+              onClick={(event) => onOpenAlbum?.(event.currentTarget)}
+              disabled={!onOpenAlbum}
               className="h-10 w-full rounded-full sm:h-9 sm:w-auto sm:shrink-0"
               aria-haspopup="dialog"
-              aria-label={`${course.title} 후기 더보기`}
+              aria-label={`${course.title} 앨범 보기`}
             >
-              후기 보기
+              앨범 보기
               <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
             </Button>
+          </div>
+
+          {albumPreviewPhotos.length > 0 ? (
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-1.5">
+              {albumPreviewPhotos.slice(0, 4).map((photo) => (
+                <button
+                  key={photo.id}
+                  type="button"
+                  className="relative aspect-square overflow-hidden rounded-xl ring-1 ring-black/5"
+                  onClick={() => onOpenAlbum?.()}
+                  aria-label="앨범 사진 보기"
+                >
+                  <Image
+                    src={photo.public_url}
+                    alt={photo.caption || `${course.title} 라이딩 사진`}
+                    fill
+                    unoptimized
+                    sizes="(max-width: 768px) 50vw, 120px"
+                    className="object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-muted-foreground">
+              아직 등록된 사진이 없습니다.
+            </p>
+          )}
+
+          {!user ? (
+            <InlineAlbumLoginPrompt />
+          ) : (
+            <InlineAlbumUploadButton
+              courseId={course.id}
+              onUploaded={onAlbumPhotoUploaded}
+            />
           )}
         </div>
+      )}
 
-        {previewReviews.length > 0 ? (
-          <div className="mt-3 flex flex-col gap-2.5">
-            {previewReviews.map((review) => (
-              <ReviewPreviewCard key={review.id} review={review} />
-            ))}
+      {activeTab === 'poi' && (
+        <div className="rounded-[24px] border bg-card p-4 shadow-sm">
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <h3 className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              들를만한 곳
+            </h3>
+            <span className="text-xs text-muted-foreground">
+              {pois.length}개
+            </span>
           </div>
-        ) : (
-          <p className="mt-3 text-sm text-muted-foreground">
-            아직 첫 후기 전입니다.
-          </p>
-        )}
 
-        {!user ? (
-          <InlineLoginPrompt />
-        ) : hasOwnReview ? (
-          <InlineOwnReviewNotice
-            onOpenReviews={onOpenReviews}
-            reviewTriggerId={reviewTriggerId}
-          />
-        ) : (
-          <InlineReviewForm
-            courseId={course.id}
-            user={user}
-            onSubmitted={setOptimisticReview}
-          />
-        )}
-      </div>
+          {canEditCourse ? (
+            <div className="mb-3">
+              <CoursePoiAddPanel
+                courseId={course.id}
+                onCreated={handlePoiCreated}
+              />
+            </div>
+          ) : null}
 
-      <div className="rounded-[24px] border bg-card p-4 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            id={albumTriggerId}
-            onClick={(event) => onOpenAlbum?.(event.currentTarget)}
-            disabled={!onOpenAlbum}
-            className="h-10 w-full rounded-full sm:h-9 sm:w-auto sm:shrink-0"
-            aria-haspopup="dialog"
-            aria-label={`${course.title} 앨범 보기`}
-          >
-            앨범 보기
-            <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-          </Button>
-        </div>
-
-        {albumPreviewPhotos.length > 0 ? (
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-1.5">
-            {albumPreviewPhotos.slice(0, 4).map((photo) => (
-              <button
-                key={photo.id}
-                type="button"
-                className="relative aspect-square overflow-hidden rounded-xl ring-1 ring-black/5"
-                onClick={() => onOpenAlbum?.()}
-                aria-label="앨범 사진 보기"
-              >
-                <Image
-                  src={photo.public_url}
-                  alt={photo.caption || `${course.title} 라이딩 사진`}
-                  fill
-                  unoptimized
-                  sizes="(max-width: 768px) 50vw, 120px"
-                  className="object-cover"
-                />
-              </button>
-            ))}
-          </div>
-        ) : (
-          <p className="mt-3 text-sm text-muted-foreground">
-            아직 등록된 사진이 없습니다.
-          </p>
-        )}
-
-        {!user ? (
-          <InlineAlbumLoginPrompt />
-        ) : (
-          <InlineAlbumUploadButton
-            courseId={course.id}
-            onUploaded={onAlbumPhotoUploaded}
-          />
-        )}
-      </div>
-
-      <div className="rounded-[24px] border bg-card p-4 shadow-sm">
-        <div className="mb-3 flex items-end justify-between gap-3">
-          <h3 className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
-            들를만한 곳
-          </h3>
-          <span className="text-xs text-muted-foreground">
-            {pois.length}개
-          </span>
-        </div>
-
-        {canEditCourse ? (
-          <div className="mb-3">
-            <CoursePoiAddPanel
-              courseId={course.id}
-              onCreated={handlePoiCreated}
-            />
-          </div>
-        ) : null}
-
-        {categoryTabs.length > 0 && (
-          <div className="-mx-1 mb-3 flex gap-2 overflow-x-auto px-1 pb-1.5 touch-pan-x">
-            <PoiFilterChip
-              label="전체"
-              isActive={activeCategory === 'all'}
-              onClick={() => setActiveCategory('all')}
-            />
-            {categoryTabs.map((category) => (
+          {categoryTabs.length > 0 && (
+            <div className="-mx-1 mb-3 flex gap-2 overflow-x-auto px-1 pb-1.5 touch-pan-x">
               <PoiFilterChip
-                key={category}
-                label={getPoiMeta(category).label}
-                isActive={activeCategory === category}
-                onClick={() => setActiveCategory(category)}
+                label="전체"
+                isActive={activeCategory === 'all'}
+                onClick={() => setActiveCategory('all')}
               />
-            ))}
-          </div>
-        )}
+              {categoryTabs.map((category) => (
+                <PoiFilterChip
+                  key={category}
+                  label={getPoiMeta(category).label}
+                  isActive={activeCategory === category}
+                  onClick={() => setActiveCategory(category)}
+                />
+              ))}
+            </div>
+          )}
 
-        {visiblePois.length > 0 ? (
-          <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 touch-pan-x">
-            {visiblePois.map((poi) => (
-              <PoiCard
-                key={poi.id}
-                poi={poi}
-                isSelected={selectedPoiId === poi.id}
-                onClick={() => onSelectPoi?.(poi.id)}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-xl border border-dashed bg-muted/30 px-4 py-5 text-center text-sm text-muted-foreground">
-            등록된 POI가 없습니다.
-          </div>
-        )}
-      </div>
+          {visiblePois.length > 0 ? (
+            <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 touch-pan-x">
+              {visiblePois.map((poi) => (
+                <PoiCard
+                  key={poi.id}
+                  poi={poi}
+                  isSelected={selectedPoiId === poi.id}
+                  onClick={() => onSelectPoi?.(poi.id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed bg-muted/30 px-4 py-5 text-center text-sm text-muted-foreground">
+              등록된 POI가 없습니다.
+            </div>
+          )}
+        </div>
+      )}
 
-      {startCoords && (
+      {activeTab === 'weather' && startCoords && (
         <div className="rounded-[24px] border bg-card p-4 shadow-sm">
           {weatherExpanded ? (
             <WeatherSection
