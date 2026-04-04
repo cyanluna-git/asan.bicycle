@@ -502,37 +502,32 @@ export function CourseDetailPanel({
             />
           ) : (
             <div className="space-y-3">
-              <div className="flex flex-wrap items-end gap-2">
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-medium text-muted-foreground">출발날짜</label>
-                  <div className="flex gap-1">
-                    {(() => {
-                      const labels = ['오늘', '내일', '모레'] as const
-                      const base = new Date(Date.now() + 9 * 60 * 60 * 1000)
-                      return labels.map((label, i) => {
-                        const d = new Date(base)
-                        d.setDate(d.getDate() + i)
-                        const val = d.toISOString().slice(0, 10)
-                        return (
-                          <button
-                            key={val}
-                            type="button"
-                            onClick={() => setWeatherDate(val)}
-                            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
-                              weatherDate === val
-                                ? 'border-foreground bg-foreground text-background'
-                                : 'bg-background text-foreground hover:bg-muted'
-                            }`}
-                          >
-                            {label}
-                          </button>
-                        )
-                      })
-                    })()}
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-medium text-muted-foreground">출발시간</label>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-medium text-muted-foreground">출발 날짜 · 시간</label>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {(() => {
+                    const labels = ['오늘', '내일', '모레'] as const
+                    const base = new Date(Date.now() + 9 * 60 * 60 * 1000)
+                    return labels.map((label, i) => {
+                      const d = new Date(base)
+                      d.setDate(d.getDate() + i)
+                      const val = d.toISOString().slice(0, 10)
+                      return (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setWeatherDate(val)}
+                          className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                            weatherDate === val
+                              ? 'border-foreground bg-foreground text-background'
+                              : 'bg-background text-foreground hover:bg-muted'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      )
+                    })
+                  })()}
                   <input
                     type="time"
                     value={weatherDepartureTime}
@@ -571,7 +566,7 @@ export function CourseDetailPanel({
                 onClick={() => setWeatherExpanded(true)}
               >
                 <Cloud className="mr-1.5 h-4 w-4" />
-                날씨 확인
+                라이딩 시작!
               </Button>
             </div>
           )}
