@@ -2,13 +2,18 @@ import { describe, it, expect } from 'vitest'
 import {
   calculateBearing,
   classifyWind,
+  collectRoutePoints,
   buildWindSegments,
   buildTimeAwareWindSegments,
+  buildRidingForecastSequence,
   summarizeWind,
   buildWindMapOverlays,
   buildWeatherMapPoints,
+  sampleRouteAtKmIntervals,
+  pickForecastsByLocation,
+  haversineKm,
 } from '@/lib/wind-analysis'
-import type { WindSegment } from '@/lib/wind-analysis'
+import type { WindSegment, RouteForecasts } from '@/lib/wind-analysis'
 import type { RouteGeoJSON } from '@/types/course'
 import type { HourlyForecast } from '@/types/weather'
 
@@ -793,5 +798,220 @@ describe('buildWeatherMapPoints', () => {
     expect(points).toHaveLength(4)
     // First point (km=0) → temperature=15; last point (km=100) → arrival +20h → temperature=35
     expect(points[0].temperature).toBeLessThan(points[3].temperature)
+  })
+
+  it('accepts RouteForecasts (backward compat)', () => {
+    const route = makeNorthRoute(100)
+    const forecasts = makeFullForecastSuite(departure)
+    const rf: RouteForecasts = [{ atKm: 0, lat: 37.0, lng: 127.0, forecasts }]
+    const points = buildWeatherMapPoints(route, rf, departure, avgSpeed)
+    expect(points).toHaveLength(4)
+    expect(points[0].label).toBe('출발')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// sampleRouteAtKmIntervals
+// ---------------------------------------------------------------------------
+
+describe('sampleRouteAtKmIntervals', () => {
+  it('null route → empty array', () => {
+    expect(sampleRouteAtKmIntervals(null, 50)).toEqual([])
+  })
+
+  it('undefined route → empty array', () => {
+    expect(sampleRouteAtKmIntervals(undefined, 50)).toEqual([])
+  })
+
+  it('100km route at 50km interval → 3 samples (0, 50, 100)', () => {
+    const route = makeNorthRoute(100)
+    const samples = sampleRouteAtKmIntervals(route, 50)
+    expect(samples).toHaveLength(3)
+    expect(samples[0].atKm).toBe(0)
+    expect(samples[1].atKm).toBe(50)
+    expect(samples[2].atKm).toBe(100)
+  })
+
+  it('30km route at 50km interval → 1 sample (only start)', () => {
+    const route = makeNorthRoute(30, 10)
+    const samples = sampleRouteAtKmIntervals(route, 50)
+    expect(samples).toHaveLength(1)
+    expect(samples[0].atKm).toBe(0)
+  })
+
+  it('first sample is near route start coordinates', () => {
+    const route = makeNorthRoute(100)
+    const samples = sampleRouteAtKmIntervals(route, 50)
+    expect(samples[0].lat).toBeCloseTo(37.0, 2)
+    expect(samples[0].lng).toBeCloseTo(127.0, 2)
+  })
+
+  it('250km route at 50km interval → 6 samples', () => {
+    const route = makeNorthRoute(250, 50)
+    const samples = sampleRouteAtKmIntervals(route, 50)
+    expect(samples).toHaveLength(6)
+  })
+
+  it('empty features array → empty array', () => {
+    const route: RouteGeoJSON = { type: 'FeatureCollection', features: [] }
+    expect(sampleRouteAtKmIntervals(route, 50)).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// pickForecastsByLocation
+// ---------------------------------------------------------------------------
+
+describe('pickForecastsByLocation', () => {
+  const forecastsA = [makeForecast('2026-04-02T07:00', 0, 5)]
+  const forecastsB = [makeForecast('2026-04-02T07:00', 180, 10)]
+
+  it('empty routeForecasts → empty array', () => {
+    expect(pickForecastsByLocation([], 37.0, 127.0)).toEqual([])
+  })
+
+  it('single entry → returns that entry forecasts', () => {
+    const rf: RouteForecasts = [{ atKm: 0, lat: 37.0, lng: 127.0, forecasts: forecastsA }]
+    expect(pickForecastsByLocation(rf, 37.0, 127.0)).toEqual(forecastsA)
+  })
+
+  it('picks geographically nearest sample', () => {
+    const rf: RouteForecasts = [
+      { atKm: 0, lat: 37.0, lng: 127.0, forecasts: forecastsA },
+      { atKm: 50, lat: 37.45, lng: 127.0, forecasts: forecastsB },
+    ]
+    // Point near second sample
+    const result = pickForecastsByLocation(rf, 37.4, 127.0)
+    expect(result).toEqual(forecastsB)
+  })
+
+  it('picks first sample when equidistant from both', () => {
+    const rf: RouteForecasts = [
+      { atKm: 0, lat: 37.0, lng: 127.0, forecasts: forecastsA },
+      { atKm: 50, lat: 37.0, lng: 127.0, forecasts: forecastsB },
+    ]
+    const result = pickForecastsByLocation(rf, 37.0, 127.0)
+    // Both at same location; first wins (bestDist never < bestDist)
+    expect(result).toEqual(forecastsA)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// buildRidingForecastSequence
+// ---------------------------------------------------------------------------
+
+describe('buildRidingForecastSequence', () => {
+  it('empty routePoints → empty array', () => {
+    const rf: RouteForecasts = [{ atKm: 0, lat: 37.0, lng: 127.0, forecasts: [makeForecast('2026-04-02T07:00', 0, 5)] }]
+    expect(buildRidingForecastSequence([], rf, '2026-04-02T07:00', 20)).toEqual([])
+  })
+
+  it('single routePoint → empty array (need at least 2)', () => {
+    const points = collectRoutePoints(makeRoute([[127.0, 37.0]]))
+    const rf: RouteForecasts = [{ atKm: 0, lat: 37.0, lng: 127.0, forecasts: [makeForecast('2026-04-02T07:00', 0, 5)] }]
+    expect(buildRidingForecastSequence(points, rf, '2026-04-02T07:00', 20)).toEqual([])
+  })
+
+  it('empty routeForecasts → empty array', () => {
+    const points = collectRoutePoints(makeNorthRoute(100))
+    expect(buildRidingForecastSequence(points, [], '2026-04-02T07:00', 20)).toEqual([])
+  })
+
+  it('avgSpeed <= 0 → empty array', () => {
+    const points = collectRoutePoints(makeNorthRoute(100))
+    const rf: RouteForecasts = [{ atKm: 0, lat: 37.0, lng: 127.0, forecasts: makeFullForecastSuite('2026-04-02T07:00') }]
+    expect(buildRidingForecastSequence(points, rf, '2026-04-02T07:00', 0)).toEqual([])
+  })
+
+  it('returns per-hour forecasts covering departure to arrival+1h', () => {
+    // 100km at 20km/h = 5h riding → hours 7..13 = 7 entries
+    const route = makeNorthRoute(100)
+    const points = collectRoutePoints(route)
+    const rf: RouteForecasts = [{ atKm: 0, lat: 37.0, lng: 127.0, forecasts: makeFullForecastSuite('2026-04-02T07:00') }]
+    const result = buildRidingForecastSequence(points, rf, '2026-04-02T07:00', 20)
+    expect(result.length).toBeGreaterThanOrEqual(6)
+    // All entries should have valid datetime
+    for (const f of result) {
+      expect(f.datetime).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:00$/)
+    }
+  })
+
+  it('each entry has all HourlyForecast fields', () => {
+    const route = makeNorthRoute(50, 10)
+    const points = collectRoutePoints(route)
+    const rf: RouteForecasts = [{ atKm: 0, lat: 37.0, lng: 127.0, forecasts: makeFullForecastSuite('2026-04-02T07:00') }]
+    const result = buildRidingForecastSequence(points, rf, '2026-04-02T07:00', 25)
+    expect(result.length).toBeGreaterThan(0)
+    for (const f of result) {
+      expect(typeof f.temperature).toBe('number')
+      expect(typeof f.windSpeed).toBe('number')
+      expect(typeof f.windDirection).toBe('number')
+      expect(typeof f.precipitationProbability).toBe('number')
+      expect(typeof f.skyCondition).toBe('number')
+      expect(typeof f.precipitationType).toBe('number')
+    }
+  })
+
+  it('multi-grid: later hours use forecasts from geographically later grids', () => {
+    // Two grids: start at 37.0, another at 37.45 (~50km north)
+    // Route goes 100km north at 20km/h
+    const route = makeNorthRoute(100)
+    const points = collectRoutePoints(route)
+
+    const forecastsNear = [makeForecast('2026-04-02T07:00', 0, 5)]
+    const forecastsFar = [makeForecast('2026-04-02T07:00', 180, 10)]
+
+    const rf: RouteForecasts = [
+      { atKm: 0, lat: 37.0, lng: 127.0, forecasts: forecastsNear },
+      { atKm: 50, lat: 37.45, lng: 127.0, forecasts: forecastsFar },
+    ]
+
+    const result = buildRidingForecastSequence(points, rf, '2026-04-02T07:00', 20)
+    expect(result.length).toBeGreaterThan(0)
+    // Hour 0 (km=0) should use grid at 37.0 → windDirection=0
+    expect(result[0].windDirection).toBe(0)
+    // Later hours (km > ~25) should use grid at 37.45 → windDirection=180
+    const lastEntry = result[result.length - 1]
+    expect(lastEntry.windDirection).toBe(180)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Backward compatibility: RouteForecasts in existing functions
+// ---------------------------------------------------------------------------
+
+describe('backward compatibility with RouteForecasts', () => {
+  const departure = '2026-04-02T07:00'
+  const avgSpeed = 20
+
+  it('buildTimeAwareWindSegments accepts RouteForecasts', () => {
+    const route = makeNorthRoute(50)
+    const forecasts = makeFullForecastSuite(departure)
+    const rf: RouteForecasts = [{ atKm: 0, lat: 37.0, lng: 127.0, forecasts }]
+    const segments = buildTimeAwareWindSegments(route, rf, departure, avgSpeed)
+    expect(segments.length).toBeGreaterThan(0)
+  })
+
+  it('buildTimeAwareWindSegments still works with HourlyForecast[]', () => {
+    const route = makeNorthRoute(50)
+    const forecasts = makeFullForecastSuite(departure)
+    const segments = buildTimeAwareWindSegments(route, forecasts, departure, avgSpeed)
+    expect(segments.length).toBeGreaterThan(0)
+  })
+
+  it('buildWindMapOverlays accepts RouteForecasts', () => {
+    const route = makeNorthRoute(50)
+    const forecasts = makeFullForecastSuite(departure)
+    const rf: RouteForecasts = [{ atKm: 0, lat: 37.0, lng: 127.0, forecasts }]
+    const overlays = buildWindMapOverlays(route, rf, departure, avgSpeed, 10)
+    expect(overlays.length).toBeGreaterThan(0)
+  })
+
+  it('buildWeatherMapPoints accepts RouteForecasts', () => {
+    const route = makeNorthRoute(100)
+    const forecasts = makeFullForecastSuite(departure)
+    const rf: RouteForecasts = [{ atKm: 0, lat: 37.0, lng: 127.0, forecasts }]
+    const points = buildWeatherMapPoints(route, rf, departure, avgSpeed)
+    expect(points).toHaveLength(4)
   })
 })

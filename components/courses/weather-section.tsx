@@ -25,9 +25,13 @@ import {
   buildWindSegments,
   buildTimeAwareWindSegments,
   buildWindMapOverlays,
+  buildRidingForecastSequence,
+  collectRoutePoints,
+  sampleRouteAtKmIntervals,
   summarizeWind,
   WIND_COLORS,
   WIND_LABELS,
+  type RouteForecasts,
   type WeatherMapPoint,
   type WindMapOverlay,
   type WindSegment,
@@ -151,54 +155,105 @@ export function WeatherSection({
   const dateRange = useMemo(() => getDateRangeForForecast(), [])
   const [selectedDate, setSelectedDate] = useState(initialDate ?? dateRange.min)
   const [data, setData] = useState<WeatherForecastResponse | null>(null)
+  const [routeForecasts, setRouteForecasts] = useState<RouteForecasts>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [departureTime, setDepartureTime] = useState(initialDepartureTime ?? '07:00')
   const [avgSpeed, setAvgSpeed] = useState(initialAvgSpeed ?? getDefaultSpeed(courseTheme))
   const [timeAwareMode, setTimeAwareMode] = useState(true)
 
-  const fetchWeather = useCallback(async (
+  // Sample points for multi-grid weather fetch
+  const samplePoints = useMemo(() => {
+    if (!routeGeoJSON) return [{ atKm: 0, lat, lng }]
+    const samples = sampleRouteAtKmIntervals(routeGeoJSON, 50)
+    return samples.length > 0 ? samples : [{ atKm: 0, lat, lng }]
+  }, [routeGeoJSON, lat, lng])
+
+  const fetchWeatherForPoint = useCallback(async (
     fetchLat: number,
     fetchLng: number,
     date: string,
-  ) => {
-    // Check cache first
+  ): Promise<WeatherForecastResponse> => {
     const cached = getWeatherCache(fetchLat, fetchLng, date)
-    if (cached) {
-      setData(cached)
-      setError(null)
-      return
-    }
+    if (cached) return cached
 
-    setLoading(true)
-    setError(null)
+    const res = await fetch(
+      `/api/weather?lat=${fetchLat}&lng=${fetchLng}&date=${date}`,
+    )
 
-    try {
-      const res = await fetch(
-        `/api/weather?lat=${fetchLat}&lng=${fetchLng}&date=${date}`,
+    if (!res.ok) {
+      const body = await res.json().catch(() => null)
+      throw new Error(
+        body?.error ?? `날씨 정보를 불러올 수 없습니다. (${res.status})`,
       )
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => null)
-        throw new Error(
-          body?.error ?? `날씨 정보를 불러올 수 없습니다. (${res.status})`,
-        )
-      }
-
-      const json: WeatherForecastResponse = await res.json()
-      setWeatherCache(fetchLat, fetchLng, date, json)
-      setData(json)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.')
-      setData(null)
-    } finally {
-      setLoading(false)
     }
+
+    const json: WeatherForecastResponse = await res.json()
+    setWeatherCache(fetchLat, fetchLng, date, json)
+    return json
   }, [])
 
   useEffect(() => {
-    void fetchWeather(lat, lng, selectedDate)
-  }, [lat, lng, selectedDate, fetchWeather])
+    let cancelled = false
+
+    async function fetchAll(): Promise<void> {
+      setLoading(true)
+      setError(null)
+
+      const results = await Promise.allSettled(
+        samplePoints.map((pt) => fetchWeatherForPoint(pt.lat, pt.lng, selectedDate)),
+      )
+
+      if (cancelled) return
+
+      const fulfilled: { pt: typeof samplePoints[number]; resp: WeatherForecastResponse }[] = []
+      for (let i = 0; i < results.length; i++) {
+        const r = results[i]
+        if (r.status === 'fulfilled') {
+          fulfilled.push({ pt: samplePoints[i], resp: r.value })
+        }
+      }
+
+      if (fulfilled.length === 0) {
+        // Total failure — fallback to single-grid fetch
+        try {
+          const fallback = await fetchWeatherForPoint(lat, lng, selectedDate)
+          if (cancelled) return
+          setData(fallback)
+          setRouteForecasts([{ atKm: 0, lat, lng, forecasts: fallback.forecasts }])
+          setError(null)
+        } catch (err) {
+          if (cancelled) return
+          setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.')
+          setData(null)
+          setRouteForecasts([])
+        }
+      } else {
+        // Use first fulfilled response as primary data (for single-grid compat)
+        setData(fulfilled[0].resp)
+        setRouteForecasts(
+          fulfilled.map(({ pt, resp }) => ({
+            atKm: pt.atKm,
+            lat: pt.lat,
+            lng: pt.lng,
+            forecasts: resp.forecasts,
+          })),
+        )
+        setError(null)
+      }
+
+      setLoading(false)
+    }
+
+    void fetchAll()
+    return () => { cancelled = true }
+  }, [samplePoints, selectedDate, fetchWeatherForPoint, lat, lng])
+
+  // Route points for riding forecast sequence
+  const routePoints = useMemo(
+    () => collectRoutePoints(routeGeoJSON),
+    [routeGeoJSON],
+  )
 
   // 출발시간 ~ 출발+주행시간+1시간 범위만 필터링
   const enrichedForecasts: HourlyForecastWithMeta[] = useMemo(() => {
@@ -208,14 +263,25 @@ export function WeatherSection({
     const ridingHours = distanceKm && avgSpeed > 0 ? distanceKm / avgSpeed : 4
     const endHour = depHour + Math.ceil(ridingHours) + 1
 
-    return data.forecasts
+    // When multi-grid RouteForecasts available, build location-aware sequence
+    const baseForecastList =
+      routeForecasts.length > 0 && routePoints.length >= 2
+        ? buildRidingForecastSequence(
+            routePoints,
+            routeForecasts,
+            `${selectedDate}T${departureTime}`,
+            avgSpeed,
+          )
+        : data.forecasts
+
+    return baseForecastList
       .filter((f) => f.datetime.startsWith(selectedDate))
       .map(enrichForecast)
       .filter((f) => {
         const h = new Date(f.datetime).getHours()
         return h >= depHour && h <= endHour
       })
-  }, [data, selectedDate, departureTime, distanceKm, avgSpeed])
+  }, [data, routeForecasts, routePoints, selectedDate, departureTime, distanceKm, avgSpeed])
 
   // Compute average wind for the selected date's daytime hours (6-21)
   const averageWind = useMemo(() => {
@@ -246,8 +312,9 @@ export function WeatherSection({
   const timeAwareSegments = useMemo<WindSegment[]>(() => {
     if (!timeAwareMode || !routeGeoJSON || enrichedForecasts.length === 0) return []
     const departureIso = `${selectedDate}T${departureTime}`
-    return buildTimeAwareWindSegments(routeGeoJSON, enrichedForecasts, departureIso, avgSpeed)
-  }, [timeAwareMode, routeGeoJSON, enrichedForecasts, selectedDate, departureTime, avgSpeed])
+    const forecastInput = routeForecasts.length > 0 ? routeForecasts : enrichedForecasts
+    return buildTimeAwareWindSegments(routeGeoJSON, forecastInput, departureIso, avgSpeed)
+  }, [timeAwareMode, routeGeoJSON, enrichedForecasts, routeForecasts, selectedDate, departureTime, avgSpeed])
 
   // Average-mode segments
   const averageSegments = useMemo<WindSegment[]>(() => {
@@ -279,8 +346,9 @@ export function WeatherSection({
   const windMapOverlays = useMemo<WindMapOverlay[]>(() => {
     if (!routeGeoJSON || enrichedForecasts.length === 0 || avgSpeed <= 0) return []
     const departureIso = `${selectedDate}T${departureTime}`
-    return buildWindMapOverlays(routeGeoJSON, enrichedForecasts, departureIso, avgSpeed)
-  }, [routeGeoJSON, enrichedForecasts, selectedDate, departureTime, avgSpeed])
+    const forecastInput = routeForecasts.length > 0 ? routeForecasts : enrichedForecasts
+    return buildWindMapOverlays(routeGeoJSON, forecastInput, departureIso, avgSpeed)
+  }, [routeGeoJSON, enrichedForecasts, routeForecasts, selectedDate, departureTime, avgSpeed])
 
   // Notify parent of wind map overlays
   useEffect(() => {
@@ -292,8 +360,9 @@ export function WeatherSection({
   const weatherMapPoints = useMemo<WeatherMapPoint[]>(() => {
     if (!routeGeoJSON || enrichedForecasts.length === 0 || avgSpeed <= 0) return []
     const departureIso = `${selectedDate}T${departureTime}`
-    return buildWeatherMapPoints(routeGeoJSON, enrichedForecasts, departureIso, avgSpeed)
-  }, [routeGeoJSON, enrichedForecasts, selectedDate, departureTime, avgSpeed])
+    const forecastInput = routeForecasts.length > 0 ? routeForecasts : enrichedForecasts
+    return buildWeatherMapPoints(routeGeoJSON, forecastInput, departureIso, avgSpeed)
+  }, [routeGeoJSON, enrichedForecasts, routeForecasts, selectedDate, departureTime, avgSpeed])
 
   // Notify parent of weather map points
   useEffect(() => {

@@ -25,6 +25,13 @@ export type WindSummary = {
   crosswindPercent: number
 }
 
+export type RouteForecasts = {
+  atKm: number
+  lat: number
+  lng: number
+  forecasts: HourlyForecast[]
+}[]
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -72,7 +79,7 @@ export function calculateBearing(
 // Haversine distance
 // ---------------------------------------------------------------------------
 
-function haversineKm(
+export function haversineKm(
   aLat: number,
   aLng: number,
   bLat: number,
@@ -119,7 +126,7 @@ export function classifyWind(
 // Collect route points with cumulative distance
 // ---------------------------------------------------------------------------
 
-type RoutePoint = { lat: number; lng: number; km: number }
+export type RoutePoint = { lat: number; lng: number; km: number }
 
 export function collectRoutePoints(
   routeGeoJSON: RouteGeoJSON | null | undefined,
@@ -149,6 +156,142 @@ export function collectRoutePoints(
   }
 
   return points
+}
+
+// ---------------------------------------------------------------------------
+// Sample route points at fixed km intervals (multi-grid weather)
+// ---------------------------------------------------------------------------
+
+export function sampleRouteAtKmIntervals(
+  routeGeoJSON: RouteGeoJSON | null | undefined,
+  intervalKm: number = 50,
+): { atKm: number; lat: number; lng: number }[] {
+  const points = collectRoutePoints(routeGeoJSON)
+  if (points.length === 0) return []
+
+  const totalKm = points[points.length - 1].km
+  const result: { atKm: number; lat: number; lng: number }[] = []
+
+  if (totalKm < intervalKm) {
+    // Route shorter than interval — return only the start
+    const { lat, lng } = interpolatePointAtKm(points, 0)
+    result.push({ atKm: 0, lat, lng })
+    return result
+  }
+
+  for (let km = 0; km <= totalKm; km += intervalKm) {
+    const { lat, lng } = interpolatePointAtKm(points, km)
+    result.push({ atKm: km, lat, lng })
+  }
+
+  return result
+}
+
+// ---------------------------------------------------------------------------
+// Pick forecasts by geographic proximity
+// ---------------------------------------------------------------------------
+
+export function pickForecastsByLocation(
+  routeForecasts: RouteForecasts,
+  lat: number,
+  lng: number,
+): HourlyForecast[] {
+  if (routeForecasts.length === 0) return []
+
+  let best = routeForecasts[0]
+  let bestDist = haversineKm(lat, lng, best.lat, best.lng)
+
+  for (let i = 1; i < routeForecasts.length; i++) {
+    const dist = haversineKm(lat, lng, routeForecasts[i].lat, routeForecasts[i].lng)
+    if (dist < bestDist) {
+      best = routeForecasts[i]
+      bestDist = dist
+    }
+  }
+
+  return best.forecasts
+}
+
+// ---------------------------------------------------------------------------
+// Build riding forecast sequence (per-hour, location-aware)
+// ---------------------------------------------------------------------------
+
+export function buildRidingForecastSequence(
+  routePoints: RoutePoint[],
+  routeForecasts: RouteForecasts,
+  departureTime: string,
+  avgSpeedKmh: number,
+): HourlyForecast[] {
+  if (routePoints.length < 2 || routeForecasts.length === 0 || avgSpeedKmh <= 0) return []
+
+  const totalKm = routePoints[routePoints.length - 1].km
+  const departureMs = new Date(departureTime).getTime()
+  const depHour = new Date(departureMs).getHours()
+  const ridingHours = totalKm / avgSpeedKmh
+  const endHour = depHour + Math.ceil(ridingHours) + 1
+
+  const result: HourlyForecast[] = []
+
+  for (let h = depHour; h <= endHour; h++) {
+    const elapsedHours = h - depHour
+    const km = elapsedHours * avgSpeedKmh
+    const { lat, lng } = interpolatePointAtKm(routePoints, km)
+
+    // Get forecasts from nearest grid
+    const forecasts = pickForecastsByLocation(routeForecasts, lat, lng)
+    if (forecasts.length === 0) continue
+
+    // Find forecast closest to this hour
+    const targetMs = departureMs + elapsedHours * 3600_000
+    const parsed = forecasts.map((f) => ({ ...f, ms: new Date(f.datetime).getTime() }))
+    const nearest = findNearestForecast(parsed, targetMs)
+    if (!nearest) continue
+
+    // Build entry with the target hour's datetime
+    const targetDate = new Date(targetMs)
+    const yyyy = targetDate.getFullYear()
+    const mm = String(targetDate.getMonth() + 1).padStart(2, '0')
+    const dd = String(targetDate.getDate()).padStart(2, '0')
+    const hh = String(targetDate.getHours()).padStart(2, '0')
+
+    result.push({
+      datetime: `${yyyy}-${mm}-${dd}T${hh}:00`,
+      temperature: nearest.temperature,
+      windSpeed: nearest.windSpeed,
+      windDirection: nearest.windDirection,
+      precipitationProbability: nearest.precipitationProbability,
+      skyCondition: nearest.skyCondition,
+      precipitationType: nearest.precipitationType,
+    })
+  }
+
+  return result
+}
+
+// ---------------------------------------------------------------------------
+// Helpers: detect RouteForecasts vs HourlyForecast[], resolve forecasts per-location
+// ---------------------------------------------------------------------------
+
+function isRouteForecasts(
+  input: RouteForecasts | HourlyForecast[],
+): input is RouteForecasts {
+  return input.length > 0 && 'atKm' in input[0]
+}
+
+function toRouteForecasts(
+  input: RouteForecasts | HourlyForecast[],
+): RouteForecasts {
+  if (isRouteForecasts(input)) return input
+  return [{ atKm: 0, lat: 0, lng: 0, forecasts: input }]
+}
+
+function resolveForecasts(
+  routeForecasts: RouteForecasts,
+  lat: number,
+  lng: number,
+): (HourlyForecast & { ms: number })[] {
+  const forecasts = pickForecastsByLocation(routeForecasts, lat, lng)
+  return forecasts.map((f) => ({ ...f, ms: new Date(f.datetime).getTime() }))
 }
 
 // ---------------------------------------------------------------------------
@@ -202,13 +345,13 @@ export function buildWindSegments(
  * estimated arrival time at that point along the route.
  *
  * @param routeGeoJSON   Route geometry
- * @param forecasts      Hourly forecasts for the selected date
+ * @param forecasts      Hourly forecasts or multi-grid RouteForecasts
  * @param departureTime  ISO datetime string for departure (e.g. "2026-04-02T07:00")
  * @param avgSpeedKmh    Average riding speed in km/h
  */
 export function buildTimeAwareWindSegments(
   routeGeoJSON: RouteGeoJSON | null | undefined,
-  forecasts: HourlyForecast[],
+  forecasts: RouteForecasts | HourlyForecast[],
   departureTime: string,
   avgSpeedKmh: number,
 ): WindSegment[] {
@@ -219,12 +362,7 @@ export function buildTimeAwareWindSegments(
 
   const sampled = downsample(points, MAX_SEGMENTS)
   const departureMs = new Date(departureTime).getTime()
-
-  // Pre-parse forecast timestamps for efficient lookup
-  const parsedForecasts = forecasts.map((f) => ({
-    ...f,
-    ms: new Date(f.datetime).getTime(),
-  }))
+  const rf = toRouteForecasts(forecasts)
 
   const segments: WindSegment[] = []
 
@@ -232,11 +370,14 @@ export function buildTimeAwareWindSegments(
     const prev = sampled[i - 1]
     const curr = sampled[i]
 
-    // Midpoint distance of this segment
+    // Midpoint distance and location of this segment
     const midKm = (prev.km + curr.km) / 2
+    const midLat = (prev.lat + curr.lat) / 2
+    const midLng = (prev.lng + curr.lng) / 2
     const arrivalMs = departureMs + (midKm / avgSpeedKmh) * 3600_000
 
-    // Find nearest forecast by time
+    // Resolve forecasts by geographic proximity, then find nearest by time
+    const parsedForecasts = resolveForecasts(rf, midLat, midLng)
     const forecast = findNearestForecast(parsedForecasts, arrivalMs)
     if (!forecast) continue
 
@@ -405,7 +546,7 @@ function interpolatePointAtKm(
 
 export function buildWindMapOverlays(
   routeGeoJSON: RouteGeoJSON | null | undefined,
-  forecasts: HourlyForecast[],
+  forecasts: RouteForecasts | HourlyForecast[],
   departureTime: string,
   avgSpeedKmh: number,
   intervalKm: number = 10,
@@ -419,17 +560,15 @@ export function buildWindMapOverlays(
 
   const totalKm = points[points.length - 1].km
   const departureMs = new Date(departureTime).getTime()
-
-  const parsedForecasts = forecasts.map((f) => ({
-    ...f,
-    ms: new Date(f.datetime).getTime(),
-  }))
+  const rf = toRouteForecasts(forecasts)
 
   const overlays: WindMapOverlay[] = []
 
   for (let km = 0; km <= totalKm; km += intervalKm) {
     const { lat, lng } = interpolatePointAtKm(points, km)
     const arrivalMs = departureMs + (km / avgSpeedKmh) * 3600_000
+
+    const parsedForecasts = resolveForecasts(rf, lat, lng)
     const forecast = findNearestForecast(parsedForecasts, arrivalMs)
     if (!forecast) continue
 
@@ -459,7 +598,7 @@ const WEATHER_POINT_LABELS = ['출발', '경유', '경유', '도착'] as const
 
 export function buildWeatherMapPoints(
   routeGeoJSON: RouteGeoJSON | null | undefined,
-  forecasts: HourlyForecast[],
+  forecasts: RouteForecasts | HourlyForecast[],
   departureTime: string,
   avgSpeedKmh: number,
 ): WeatherMapPoint[] {
@@ -470,11 +609,7 @@ export function buildWeatherMapPoints(
 
   const totalKm = points[points.length - 1].km
   const departureMs = new Date(departureTime).getTime()
-
-  const parsedForecasts = forecasts.map((f) => ({
-    ...f,
-    ms: new Date(f.datetime).getTime(),
-  }))
+  const rf = toRouteForecasts(forecasts)
 
   const result: WeatherMapPoint[] = []
 
@@ -482,6 +617,8 @@ export function buildWeatherMapPoints(
     const km = totalKm * WEATHER_POINT_RATIOS[i]
     const { lat, lng } = interpolatePointAtKm(points, km)
     const arrivalMs = departureMs + (km / avgSpeedKmh) * 3600_000
+
+    const parsedForecasts = resolveForecasts(rf, lat, lng)
     const forecast = findNearestForecast(parsedForecasts, arrivalMs)
     if (!forecast) continue
 
