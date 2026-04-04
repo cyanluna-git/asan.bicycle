@@ -206,7 +206,7 @@ export function CourseDetailPanel({
         }}
       >
         <div className="absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.9),_transparent_58%)]" />
-        <div className="relative space-y-3.5">
+        <div className="relative space-y-2.5">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <Badge variant={difficultyVariant[course.difficulty]}>
@@ -544,9 +544,13 @@ export function CourseDetailPanel({
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] font-medium text-muted-foreground">예상 평속</label>
                 <div className="flex gap-1.5">
-                  {[20, 25, 30, 35].map((speed) => (
+                  {([
+                    { label: '초심자', speed: SPEED_BEGINNER },
+                    { label: '초중급', speed: SPEED_INTERMEDIATE },
+                    { label: '중상급', speed: SPEED_ADVANCED },
+                  ] as const).map(({ label, speed }) => (
                     <button
-                      key={speed}
+                      key={label}
                       type="button"
                       onClick={() => setWeatherAvgSpeed(speed)}
                       className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition ${
@@ -555,10 +559,9 @@ export function CourseDetailPanel({
                           : 'bg-background text-foreground hover:bg-muted'
                       }`}
                     >
-                      {speed}
+                      {label}
                     </button>
                   ))}
-                  <span className="flex items-center text-[10px] text-muted-foreground">km/h</span>
                 </div>
               </div>
               <Button
@@ -668,11 +671,11 @@ function SummaryMetric({
   value: string
 }) {
   return (
-    <div className="rounded-2xl border border-black/5 bg-white/75 px-3.5 py-3 text-left">
-      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-foreground/45">
+    <div className="rounded-xl border border-black/5 bg-white/75 px-3 py-2.5 text-left">
+      <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-foreground/45">
         {label}
       </p>
-      <p className="mt-1 whitespace-nowrap text-[1.15rem] font-semibold text-foreground sm:text-2xl">
+      <p className="mt-0.5 whitespace-nowrap text-base font-semibold text-foreground sm:text-lg">
         {value}
       </p>
     </div>
@@ -689,13 +692,13 @@ function DurationTile({
   value: string
 }) {
   return (
-    <div className="rounded-2xl bg-black/5 px-3.5 py-3">
+    <div className="rounded-xl bg-black/5 px-3 py-2">
       <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[11px] font-medium text-foreground/45">{label}</p>
-          <p className="mt-1 text-[10px] text-muted-foreground">{speed}</p>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <p className="text-[11px] font-medium text-foreground/50">{label}</p>
+          <p className="text-[10px] text-muted-foreground">{speed}</p>
         </div>
-        <p className="shrink-0 whitespace-nowrap text-xl font-semibold text-foreground">
+        <p className="shrink-0 whitespace-nowrap text-base font-semibold text-foreground">
           {value}
         </p>
       </div>
