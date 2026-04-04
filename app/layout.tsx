@@ -23,8 +23,8 @@ const googleSiteVerification =
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
-  title: "아산 자전거 코스 | asan.bicycle",
-  description: "아산시 자전거 코스 탐색 및 공유 플랫폼",
+  title: "Wheeling — 전국 자전거 코스 탐색",
+  description: "전국 자전거 코스를 탐색하고 공유하는 라이딩 커뮤니티",
   verification: googleSiteVerification
     ? {
         google: googleSiteVerification,

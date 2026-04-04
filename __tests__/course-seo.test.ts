@@ -32,7 +32,7 @@ describe('getSiteUrl', () => {
   it('falls back to the default deployment url when the env var is missing', () => {
     delete process.env.NEXT_PUBLIC_APP_URL
 
-    expect(getSiteUrl()).toBe('https://asan-bicycle.vercel.app')
+    expect(getSiteUrl()).toBe('https://wheeling.cyanluna.com')
   })
 })
 
@@ -56,7 +56,7 @@ describe('buildCourseSeoDescription', () => {
         elevation_gain_m: 1455,
         theme: '호수',
       }),
-    ).toBe('아산 라이딩 코스 · 80km · 획득고도 1,455m · 호수')
+    ).toBe('라이딩 코스 · 80km · 획득고도 1,455m · 호수')
   })
 })
 
@@ -78,8 +78,8 @@ describe('buildCourseMetadata', () => {
 
     const metadata = buildCourseMetadata(course)
 
-    expect(metadata.title).toBe('좌부-예당호-도고-송악 | asan.bicycle')
-    expect(metadata.description).toBe('아산 라이딩 코스 · 80km · 획득고도 455m · 호수')
+    expect(metadata.title).toBe('좌부-예당호-도고-송악 | Wheeling')
+    expect(metadata.description).toBe('라이딩 코스 · 80km · 획득고도 455m · 호수')
     expect(metadata.alternates?.canonical).toBe('https://asan.bicycle/courses/course-123')
     expect(metadata.openGraph?.url).toBe('https://asan.bicycle/courses/course-123')
     expect(metadata.openGraph?.images).toEqual([

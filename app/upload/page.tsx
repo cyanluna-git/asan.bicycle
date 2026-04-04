@@ -23,7 +23,7 @@ import { parseGpxToGeoJSON, type ParsedGpx } from '@/lib/gpx-parser'
 import { supabase } from '@/lib/supabase'
 import { getUploaderDisplayName } from '@/lib/user-display-name'
 import { detectUphillSegments, type UphillSegmentDraft } from '@/lib/uphill-detection'
-import { isWithinAsan } from '@/lib/validation'
+import { isValidCourseLocation } from '@/lib/validation'
 import type { Json } from '@/types/database'
 import type { User } from '@supabase/supabase-js'
 
@@ -148,9 +148,9 @@ export default function UploadPage() {
 
     try {
       const result = await parseGpxToGeoJSON(nextFile)
-      if (!isWithinAsan(result.startLat, result.startLng)) {
+      if (!isValidCourseLocation(result.startLat, result.startLng)) {
         setValidationError(
-          '출발점이 아산시 범위(20km) 밖입니다. 아산시 출발 코스만 업로드할 수 있습니다.',
+          '한국 외 지역의 코스는 업로드할 수 없습니다.',
         )
       }
       setParsed(result)

@@ -14,8 +14,8 @@ export async function generateMetadata({
 
   if (!selectedCourseId) {
     return {
-      title: '코스 탐색 | asan.bicycle',
-      description: '아산 자전거 코스를 지도와 함께 탐색하세요.',
+      title: '코스 탐색 | Wheeling',
+      description: '자전거 코스를 지도와 함께 탐색하세요.',
       alternates: {
         canonical: `${getSiteUrl()}/explore`,
       },
@@ -29,7 +29,7 @@ export async function generateMetadata({
   const course = await fetchCourseSeoData(selectedCourseId)
   if (!course) {
     return {
-      title: '코스 탐색 | asan.bicycle',
+      title: '코스 탐색 | Wheeling',
       robots: {
         index: false,
         follow: true,

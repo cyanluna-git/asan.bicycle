@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { CourseEditPageClient } from '@/components/courses/course-edit-page-client'
 
 export const metadata: Metadata = {
-  title: '코스 수정 | asan.bicycle',
+  title: '코스 수정 | Wheeling',
   robots: {
     index: false,
     follow: false,

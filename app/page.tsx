@@ -17,7 +17,7 @@ const notoKr = Noto_Sans_KR({
 const laneCards = [
   {
     label: 'ROAD',
-    title: '빠르게 이어지는 아산 출발 로드 코스',
+    title: '빠르게 이어지는 로드 코스',
     body: '평지 위주 스피드 루프부터 장거리 업힐 루트까지 한 번에.',
     icon: Route,
     tone: '#FFD84D',
@@ -34,7 +34,7 @@ const laneCards = [
 const quickPoints = [
   {
     icon: MapPinned,
-    title: '아산시 출발',
+    title: '내 지역 출발',
     body: '출발지 기준으로 바로 고르기',
   },
   {
@@ -113,7 +113,7 @@ export default function LandingPage() {
           <div className="max-w-3xl">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-xs font-medium tracking-[0.24em] text-white/72 uppercase">
               <span className="h-2 w-2 rounded-full bg-[#8FE36A]" />
-              Asan Bicycle
+              Wheeling
             </div>
 
             <h1
@@ -125,15 +125,15 @@ export default function LandingPage() {
                 fontSize: 'clamp(72px, 11vw, 156px)',
               }}
             >
-              ASAN
+              WHEELING
               <span className="block text-white/74">ROAD / MTB</span>
               <span className="block text-[#FFD84D]">START HERE</span>
             </h1>
 
             <p className="mt-6 max-w-2xl text-base leading-relaxed text-white/68 md:text-lg">
-              아산시에서 출발하는 로드와 MTB 코스를 짧고 선명하게.
+              전국의 로드와 MTB 코스를 짧고 선명하게.
               코스 선택, 지도 확인, GPX 다운로드까지 한 번에 끝내는
-              라이딩 브랜딩 허브.
+              라이딩 허브.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -175,7 +175,7 @@ export default function LandingPage() {
                       Brand Snapshot
                     </p>
                     <p className="mt-2 text-2xl font-semibold text-white">
-                      아산 출발 코스만 빠르게
+                      내 지역 코스 바로 보기
                     </p>
                   </div>
                   <div className="rounded-full border border-white/10 px-3 py-1 text-xs font-medium text-[#FFD84D]">
@@ -217,7 +217,7 @@ export default function LandingPage() {
 
                 <div className="mt-4 rounded-3xl border border-dashed border-white/12 px-4 py-4 text-sm text-white/62">
                   길게 설명하지 않습니다.
-                  <span className="ml-1 text-white">아산에서 출발하고, 바로 타면 됩니다.</span>
+                  <span className="ml-1 text-white">원하는 지역 선택하고, 바로 타면 됩니다.</span>
                 </div>
               </div>
             </div>

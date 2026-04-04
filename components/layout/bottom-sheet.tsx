@@ -148,7 +148,7 @@ export function BottomSheet({
             <DrawerDescription>
               {selectedCourse
                 ? '코스 상세 정보'
-                : '아산시 자전거 코스를 탐색하세요'}
+                : '근처 자전거 코스를 탐색하세요'}
             </DrawerDescription>
           </DrawerHeader>
           <div className="overflow-y-auto overscroll-contain px-4 pb-6 [touch-action:pan-y]">

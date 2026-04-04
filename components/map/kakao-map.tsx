@@ -24,7 +24,7 @@ import { lookupPoiPlaceDetails } from '@/lib/use-poi-place-details'
 // Constants
 // ---------------------------------------------------------------------------
 
-const ASAN_CENTER = { lat: 36.7797, lng: 127.004 }
+const KOREA_CENTER = { lat: 36.5, lng: 127.5 }
 
 /** Fallback route shown when no courses have route_geojson data. */
 const SAMPLE_ROUTE: RouteGeoJSON = {
@@ -316,7 +316,7 @@ function KakaoMapInner({
       className="relative h-full w-full [touch-action:pan-x_pan-y_pinch-zoom]"
       data-map-interaction-surface="true"
     >
-      <Map center={ASAN_CENTER} style={{ width: "100%", height: "100%" }} level={8}>
+      <Map center={KOREA_CENTER} style={{ width: "100%", height: "100%" }} level={13}>
         <ZoomControl position="RIGHT" />
         <RoutePolylines
           courses={effectiveCourses}

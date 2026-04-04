@@ -1,8 +1,7 @@
 /**
- * Asan city boundary validation utilities.
+ * Course location validation utilities.
  *
- * Uses Haversine formula to check whether a coordinate falls within
- * a generous radius of Asan city center.
+ * Checks whether a coordinate falls within South Korea's territory.
  */
 
 export const ASAN_CENTER = { lat: 36.7897, lng: 127.002 }
@@ -24,9 +23,9 @@ export function haversineKm(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-/** Check whether a coordinate is within Asan city boundary (ASAN_RADIUS_KM). */
-export function isWithinAsan(lat: number, lng: number): boolean {
-  return haversineKm(lat, lng, ASAN_CENTER.lat, ASAN_CENTER.lng) <= ASAN_RADIUS_KM
+/** Check whether a coordinate is within South Korea's territory (lat 33–38.5, lng 125–130). */
+export function isValidCourseLocation(lat: number, lng: number): boolean {
+  return lat >= 33 && lat <= 38.5 && lng >= 125 && lng <= 130
 }
 
 function toRad(deg: number): number {

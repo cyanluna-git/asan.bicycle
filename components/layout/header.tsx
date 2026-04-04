@@ -61,7 +61,7 @@ export function Header() {
       {/* Logo */}
       <Link href="/" className="mr-6 flex items-center gap-1.5">
         <span className="text-lg font-bold tracking-tight">
-          asan<span className="text-orange-500">.bicycle</span>
+          Wheeling
         </span>
       </Link>
 

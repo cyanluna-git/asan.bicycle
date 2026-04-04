@@ -67,7 +67,7 @@ export function CourseMetadataForm({
           required
           value={form.title}
           onChange={(event) => onChangeForm('title', event.target.value)}
-          placeholder="예: 아산 신정호 순환 코스"
+          placeholder="예: 남한강 자전거길 100km"
           className="mt-1.5 h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
         {validationErrors.title && (

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: '코스 업로드 | asan.bicycle',
+  title: '코스 업로드 | Wheeling',
   robots: {
     index: false,
     follow: false,

@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og'
 
-export const alt = 'asan.bicycle'
+export const alt = 'Wheeling'
 export const size = {
   width: 1200,
   height: 630,
@@ -41,12 +41,12 @@ export default function OpenGraphImage() {
               fontWeight: 700,
             }}
           >
-            asan.bicycle
+            Wheeling
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           <div style={{ fontSize: 68, fontWeight: 800, lineHeight: 1.05 }}>
-            Ride courses around Asan
+            Discover cycling routes nationwide
           </div>
           <div style={{ fontSize: 30, color: '#4B5563' }}>
             Explore routes, climbs, reviews, and ride albums.
@@ -61,7 +61,7 @@ export default function OpenGraphImage() {
             color: '#6B7280',
           }}
         >
-          <div style={{ display: 'flex' }}>asan.bicycle</div>
+          <div style={{ display: 'flex' }}>wheeling</div>
           <div style={{ display: 'flex' }}>courses · reviews · share</div>
         </div>
       </div>

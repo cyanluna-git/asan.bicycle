@@ -33,7 +33,7 @@ export function buildCourseSeoDescription(course: Pick<CourseSeoRow, 'descriptio
     course.theme?.trim() || null,
   ].filter(Boolean)
 
-  return `아산 라이딩 코스 · ${parts.join(' · ')}`
+  return `라이딩 코스 · ${parts.join(' · ')}`
 }
 
 export function buildCourseMetadata(course: CourseSeoData): Metadata {
@@ -43,7 +43,7 @@ export function buildCourseMetadata(course: CourseSeoData): Metadata {
   const imageUrl = course.imageUrl ?? `${siteUrl}/opengraph-image`
 
   return {
-    title: `${course.title} | asan.bicycle`,
+    title: `${course.title} | Wheeling`,
     description,
     alternates: {
       canonical,
@@ -54,7 +54,7 @@ export function buildCourseMetadata(course: CourseSeoData): Metadata {
       url: canonical,
       title: course.title,
       description,
-      siteName: 'asan.bicycle',
+      siteName: 'Wheeling',
       images: [
         {
           url: imageUrl,

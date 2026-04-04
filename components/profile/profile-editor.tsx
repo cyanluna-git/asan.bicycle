@@ -128,7 +128,7 @@ function ProfileEditorForm({
               setProfileName(event.target.value)
               setError(null)
             }}
-            placeholder="예: 아산 라이더"
+            placeholder="예: 라이딩 고수"
             maxLength={24}
             className="h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />

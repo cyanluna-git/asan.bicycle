@@ -1,0 +1,19 @@
+{
+  "source": "southkorea/southkorea-maps",
+  "index_url": "https://api.github.com/repos/southkorea/southkorea-maps/contents/kostat/2013/json",
+  "downloaded_at": "2026-03-10T02:28:33+00:00",
+  "files": [
+    {
+      "name": "skorea_municipalities_geo.json",
+      "download_url": "https://raw.githubusercontent.com/southkorea/southkorea-maps/master/kostat/2013/json/skorea_municipalities_geo.json",
+      "size": 55022850,
+      "sha": "d57000d690bd67acaf5fd6784b4a3931fc721f9f"
+    },
+    {
+      "name": "skorea_provinces_geo.json",
+      "download_url": "https://raw.githubusercontent.com/southkorea/southkorea-maps/master/kostat/2013/json/skorea_provinces_geo.json",
+      "size": 28114985,
+      "sha": "a63217f4bad1fc043779502329029facaa02d36d"
+    }
+  ]
+}
