@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ProfileGate } from "@/components/profile/profile-gate";
+import { RegionProvider } from "@/lib/region-context";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { getSiteUrl } from "@/lib/site-url";
@@ -42,12 +43,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Suspense fallback={<HeaderSkeleton />}>
-          <Header />
-        </Suspense>
-        <ProfileGate>
-          <div className="pt-16">{children}</div>
-        </ProfileGate>
+        <RegionProvider>
+          <Suspense fallback={<HeaderSkeleton />}>
+            <Header />
+          </Suspense>
+          <ProfileGate>
+            <div className="pt-16">{children}</div>
+          </ProfileGate>
+        </RegionProvider>
       </body>
     </html>
   );
