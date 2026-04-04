@@ -453,6 +453,7 @@ export function CourseDetailPanel({
             <WeatherSection
               lat={startCoords.lat}
               lng={startCoords.lng}
+              distanceKm={course.distance_km}
               routeGeoJSON={course.route_geojson}
               courseTheme={course.theme}
               initialDate={weatherDate}

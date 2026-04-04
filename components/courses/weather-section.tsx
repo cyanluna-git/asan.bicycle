@@ -85,6 +85,7 @@ export function getDefaultSpeed(theme: string | null | undefined): number {
 interface WeatherSectionProps {
   lat: number
   lng: number
+  distanceKm?: number
   routeGeoJSON?: RouteGeoJSON | null
   courseTheme?: string | null
   initialDate?: string
@@ -97,6 +98,7 @@ interface WeatherSectionProps {
 export function WeatherSection({
   lat,
   lng,
+  distanceKm,
   routeGeoJSON,
   courseTheme,
   initialDate,
@@ -148,13 +150,22 @@ export function WeatherSection({
     void fetchWeather(lat, lng, selectedDate)
   }, [lat, lng, selectedDate, fetchWeather])
 
+  // 출발시간 ~ 출발+주행시간+1시간 범위만 필터링
   const enrichedForecasts: HourlyForecastWithMeta[] = useMemo(() => {
     if (!data) return []
+
+    const depHour = parseInt(departureTime.split(':')[0], 10) || 7
+    const ridingHours = distanceKm && avgSpeed > 0 ? distanceKm / avgSpeed : 4
+    const endHour = depHour + Math.ceil(ridingHours) + 1
 
     return data.forecasts
       .filter((f) => f.datetime.startsWith(selectedDate))
       .map(enrichForecast)
-  }, [data, selectedDate])
+      .filter((f) => {
+        const h = new Date(f.datetime).getHours()
+        return h >= depHour && h <= endHour
+      })
+  }, [data, selectedDate, departureTime, distanceKm, avgSpeed])
 
   // Compute average wind for the selected date's daytime hours (6-21)
   const averageWind = useMemo(() => {
@@ -254,9 +265,9 @@ export function WeatherSection({
       )}
 
       {!loading && !error && enrichedForecasts.length > 0 && (
-        <div className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-2 touch-pan-x">
+        <div className="space-y-1.5">
           {enrichedForecasts.map((f) => (
-            <HourlyCard key={f.datetime} forecast={f} />
+            <HourlyRow key={f.datetime} forecast={f} />
           ))}
         </div>
       )}
@@ -316,7 +327,51 @@ export function WeatherSection({
 }
 
 // ---------------------------------------------------------------------------
-// Hourly card
+// Hourly row (vertical stack)
+// ---------------------------------------------------------------------------
+
+function HourlyRow({ forecast }: { forecast: HourlyForecastWithMeta }) {
+  const hour = new Date(forecast.datetime).getHours()
+  const hourLabel = `${String(hour).padStart(2, '0')}시`
+  const suitability = getSuitabilityMeta(forecast.suitability)
+  const isSubZero = forecast.temperature < 0
+
+  return (
+    <div className="flex items-center gap-2 rounded-xl border bg-background px-3 py-2">
+      <span className="w-9 text-xs font-medium text-muted-foreground">{hourLabel}</span>
+      <WeatherIcon
+        sky={forecast.skyCondition}
+        pty={forecast.precipitationType}
+        isNight={forecast.isNighttime}
+        className="h-5 w-5 shrink-0 text-foreground/70"
+      />
+      <span
+        className={`w-9 text-sm font-semibold ${isSubZero ? 'text-red-600' : 'text-foreground'}`}
+      >
+        {forecast.temperature}°
+      </span>
+      <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+        <ArrowUp
+          className="h-3 w-3"
+          style={{ transform: `rotate(${(forecast.windDirection + 180) % 360}deg)` }}
+        />
+        <span>{forecast.windSpeed}</span>
+      </div>
+      <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+        <Droplets className="h-3 w-3" />
+        <span>{forecast.precipitationProbability}%</span>
+      </div>
+      <span
+        className={`ml-auto inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-semibold ring-1 ${suitability.className}`}
+      >
+        {suitability.label}
+      </span>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Hourly card (kept for potential reuse)
 // ---------------------------------------------------------------------------
 
 function HourlyCard({ forecast }: { forecast: HourlyForecastWithMeta }) {
