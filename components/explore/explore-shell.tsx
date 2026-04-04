@@ -9,6 +9,7 @@ import { BottomSheet } from '@/components/layout/bottom-sheet'
 import KakaoMap from '@/components/map/kakao-map'
 import { ElevationPanel } from '@/components/map/elevation-panel'
 import { Button } from '@/components/ui/button'
+import { RegionOnboardingModal } from '@/components/region/region-onboarding-modal'
 import { Drawer, DrawerContent } from '@/components/ui/drawer'
 import { canEditCourse, isAdminUser } from '@/lib/admin'
 import { filterSafeAlbumPhotos } from '@/lib/course-album'
@@ -650,6 +651,7 @@ export function ExploreShell({
           )}
         </aside>
       ) : null}
+      <RegionOnboardingModal />
     </div>
   )
 }
