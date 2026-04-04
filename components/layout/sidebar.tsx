@@ -34,6 +34,7 @@ interface SidebarProps {
   onPoiCreated?: (poi: PoiMapItem) => void
   onWindDataChange?: (windDirection: number | null, windSpeed: number | null) => void
   onWindSegmentsChange?: (segments: import('@/lib/wind-analysis').WindSegment[] | null) => void
+  onWindMapOverlaysChange?: (overlays: import('@/lib/wind-analysis').WindMapOverlay[]) => void
   width?: number
 }
 
@@ -58,6 +59,7 @@ export function Sidebar({
   onPoiCreated,
   onWindDataChange,
   onWindSegmentsChange,
+  onWindMapOverlaysChange,
   width = 320,
 }: SidebarProps) {
   return (
@@ -87,6 +89,7 @@ export function Sidebar({
               onPoiCreated={onPoiCreated}
               onWindDataChange={onWindDataChange}
               onWindSegmentsChange={onWindSegmentsChange}
+              onWindMapOverlaysChange={onWindMapOverlaysChange}
             />
           </Suspense>
         ) : (

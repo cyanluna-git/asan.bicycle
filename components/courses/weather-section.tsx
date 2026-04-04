@@ -23,9 +23,11 @@ import {
 import {
   buildWindSegments,
   buildTimeAwareWindSegments,
+  buildWindMapOverlays,
   summarizeWind,
   WIND_COLORS,
   WIND_LABELS,
+  type WindMapOverlay,
   type WindSegment,
 } from '@/lib/wind-analysis'
 import type { RouteGeoJSON } from '@/types/course'
@@ -93,6 +95,7 @@ interface WeatherSectionProps {
   initialAvgSpeed?: number
   onWindDataChange?: (windDirection: number | null, windSpeed: number | null) => void
   onWindSegmentsChange?: (segments: WindSegment[] | null) => void
+  onWindMapOverlaysChange?: (overlays: WindMapOverlay[]) => void
 }
 
 export function WeatherSection({
@@ -106,6 +109,7 @@ export function WeatherSection({
   initialAvgSpeed,
   onWindDataChange,
   onWindSegmentsChange,
+  onWindMapOverlaysChange,
 }: WeatherSectionProps) {
   const dateRange = useMemo(() => getDateRangeForForecast(), [])
   const [selectedDate, setSelectedDate] = useState(initialDate ?? dateRange.min)
@@ -224,6 +228,19 @@ export function WeatherSection({
       onWindSegmentsChange(null)
     }
   }, [timeAwareMode, timeAwareSegments, onWindSegmentsChange])
+
+  // Build wind map overlays for route overlay visualization
+  const windMapOverlays = useMemo<WindMapOverlay[]>(() => {
+    if (!routeGeoJSON || enrichedForecasts.length === 0 || avgSpeed <= 0) return []
+    const departureIso = `${selectedDate}T${departureTime}`
+    return buildWindMapOverlays(routeGeoJSON, enrichedForecasts, departureIso, avgSpeed)
+  }, [routeGeoJSON, enrichedForecasts, selectedDate, departureTime, avgSpeed])
+
+  // Notify parent of wind map overlays
+  useEffect(() => {
+    if (!onWindMapOverlaysChange) return
+    onWindMapOverlaysChange(windMapOverlays)
+  }, [windMapOverlays, onWindMapOverlaysChange])
 
   return (
     <div className="rounded-[24px] border bg-card p-4 shadow-sm">

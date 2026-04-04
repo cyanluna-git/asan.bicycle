@@ -11,6 +11,8 @@ import {
 } from "react-kakao-maps-sdk"
 import type { CourseAlbumPhoto, CourseMapItem, RouteGeoJSON, PoiMapItem } from "@/types/course"
 import type { RouteHoverPoint } from '@/lib/elevation-hover-sync'
+import type { WindMapOverlay } from '@/lib/wind-analysis'
+import { WindArrowOverlay } from '@/components/map/wind-arrow-overlay'
 import { computeRouteBounds, normalizeRouteRenderMetadata } from '@/lib/course-render-metadata'
 import { mergeSelectedAndBackgroundRoutes } from '@/lib/map-route-display'
 import { getPoiMeta } from '@/lib/poi'
@@ -120,6 +122,7 @@ interface KakaoMapProps {
   selectedAlbumPhotoId?: string | null
   onSelectAlbumPhoto?: (id: string | null) => void
   hoveredRoutePoint?: RouteHoverPoint | null
+  windOverlays?: WindMapOverlay[]
 }
 
 // ---------------------------------------------------------------------------
@@ -139,6 +142,7 @@ export default function KakaoMap({
   selectedAlbumPhotoId,
   onSelectAlbumPhoto,
   hoveredRoutePoint,
+  windOverlays,
 }: KakaoMapProps) {
   const appkey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY
   if (!appkey) {
@@ -162,6 +166,7 @@ export default function KakaoMap({
       selectedAlbumPhotoId={selectedAlbumPhotoId}
       onSelectAlbumPhoto={onSelectAlbumPhoto}
       hoveredRoutePoint={hoveredRoutePoint}
+      windOverlays={windOverlays}
     />
   )
 }
@@ -184,6 +189,7 @@ function KakaoMapInner({
   selectedAlbumPhotoId,
   onSelectAlbumPhoto,
   hoveredRoutePoint,
+  windOverlays,
 }: { appkey: string } & KakaoMapProps) {
   const loaderOptions = useMemo(
     () => ({
@@ -323,6 +329,9 @@ function KakaoMapInner({
           onSelectPhoto={onSelectAlbumPhoto}
         />
         <HoveredRouteMarker point={hoveredRoutePoint ?? null} />
+        {windOverlays && windOverlays.length > 0 ? (
+          <WindArrowOverlay overlays={windOverlays} />
+        ) : null}
       </Map>
       {effectiveSelectedId ? (
         <SlopeLegend />
