@@ -7,7 +7,7 @@ import { Search, Menu, X, LogOut, Settings2, LogIn, MapPin, ChevronDown } from "
 import { Button } from "@/components/ui/button";
 import { ProfileEditor } from "@/components/profile/profile-editor";
 import { RegionSwitchDrawer } from "@/components/region/region-switch-drawer";
-import { signInWithGoogle } from "@/lib/auth";
+import { signInWithGoogle, signInWithKakao } from "@/lib/auth";
 import { resolveProfileEmoji } from "@/lib/profile";
 import { useRegionContext } from "@/lib/region-context";
 import { supabase } from "@/lib/supabase";
@@ -154,13 +154,21 @@ export function Header() {
         </div>
       ) : (
         <div className="hidden items-center gap-2 ml-3 md:flex">
+          <button
+            type="button"
+            onClick={async () => { await signInWithKakao() }}
+            className="flex h-9 items-center gap-2 rounded-md bg-[#FEE500] px-4 text-sm font-medium text-[#191919] transition-colors hover:bg-[#FDD800]"
+          >
+            카카오로 시작하기
+          </button>
           <Button
+            variant="outline"
             onClick={async () => {
               await signInWithGoogle()
             }}
           >
             <LogIn className="mr-2 h-4 w-4" />
-            로그인
+            Google
           </Button>
         </div>
       )}
@@ -247,8 +255,16 @@ export function Header() {
               </div>
             </div>
           ) : (
-            <div className="mt-3 border-t pt-3">
+            <div className="mt-3 flex flex-col gap-2 border-t pt-3">
+              <button
+                type="button"
+                onClick={async () => { await signInWithKakao() }}
+                className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[#FEE500] text-sm font-medium text-[#191919] transition-colors hover:bg-[#FDD800]"
+              >
+                카카오로 시작하기
+              </button>
               <Button
+                variant="outline"
                 className="w-full"
                 onClick={async () => {
                   await signInWithGoogle()

@@ -50,3 +50,14 @@ export async function signInWithGoogle(currentUrl?: string) {
     options: redirectTo ? { redirectTo } : undefined,
   });
 }
+
+export async function signInWithKakao(currentUrl?: string) {
+  const redirectTo = getAuthRedirectUrl(currentUrl);
+
+  return supabase.auth.signInWithOAuth({
+    provider: "kakao",
+    options: redirectTo
+      ? { redirectTo: `${redirectTo.replace(/\/+$/, "")}/auth/callback` }
+      : { redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback` },
+  });
+}
