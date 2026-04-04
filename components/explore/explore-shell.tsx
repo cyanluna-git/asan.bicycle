@@ -22,7 +22,7 @@ import {
   type ReviewSurfaceSource,
 } from '@/lib/course-reviews-surface-ui'
 import type { RouteHoverPoint } from '@/lib/elevation-hover-sync'
-import type { WindMapOverlay, WindSegment } from '@/lib/wind-analysis'
+import type { WeatherMapPoint, WindMapOverlay, WindSegment } from '@/lib/wind-analysis'
 import { supabase } from '@/lib/supabase'
 import type {
   CourseAlbumPhoto,
@@ -76,6 +76,7 @@ export function ExploreShell({
   const [windSpeed, setWindSpeed] = useState<number | null>(null)
   const [windSegmentsOverride, setWindSegmentsOverride] = useState<WindSegment[] | null>(null)
   const [windOverlays, setWindOverlays] = useState<WindMapOverlay[]>([])
+  const [weatherPoints, setWeatherPoints] = useState<WeatherMapPoint[]>([])
   const [albumPhotos, setAlbumPhotos] = useState<CourseAlbumPhoto[]>([])
   const [albumPreviewPhotos, setAlbumPreviewPhotos] = useState<CourseAlbumPhoto[]>([])
   const [albumLoading, setAlbumLoading] = useState(false)
@@ -112,6 +113,7 @@ export function ExploreShell({
     setWindSpeed(null)
     setWindSegmentsOverride(null)
     setWindOverlays([])
+    setWeatherPoints([])
     setAlbumPreviewPhotos([])
     setAlbumPhotos([])
     setAlbumLoading(false)
@@ -257,6 +259,13 @@ export function ExploreShell({
   const handleWindMapOverlaysChange = useCallback(
     (overlays: WindMapOverlay[]) => {
       setWindOverlays(overlays)
+    },
+    [],
+  )
+
+  const handleWeatherMapPointsChange = useCallback(
+    (points: WeatherMapPoint[]) => {
+      setWeatherPoints(points)
     },
     [],
   )
@@ -429,6 +438,7 @@ export function ExploreShell({
         onWindDataChange={handleWindDataChange}
         onWindSegmentsChange={handleWindSegmentsChange}
         onWindMapOverlaysChange={handleWindMapOverlaysChange}
+        onWeatherMapPointsChange={handleWeatherMapPointsChange}
         width={sidebarWidth}
       />
       <div className="relative hidden w-3 shrink-0 md:block">
@@ -459,6 +469,7 @@ export function ExploreShell({
             onSelectAlbumPhoto={setSelectedAlbumPhotoId}
             hoveredRoutePoint={hoveredRoutePoint}
             windOverlays={windOverlays}
+            weatherPoints={weatherPoints}
           />
           {selectedCourse && canShowMapFullscreen && !isMapFullscreen ? (
             <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-end px-4 pt-4 md:hidden">
@@ -534,6 +545,7 @@ export function ExploreShell({
             onWindDataChange={handleWindDataChange}
             onWindSegmentsChange={handleWindSegmentsChange}
             onWindMapOverlaysChange={handleWindMapOverlaysChange}
+            onWeatherMapPointsChange={handleWeatherMapPointsChange}
           />
           {selectedCourse && surfaceSource === 'bottom-sheet' && activeSurfaceKind ? (
             <Drawer

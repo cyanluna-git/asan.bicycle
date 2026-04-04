@@ -35,6 +35,7 @@ interface SidebarProps {
   onWindDataChange?: (windDirection: number | null, windSpeed: number | null) => void
   onWindSegmentsChange?: (segments: import('@/lib/wind-analysis').WindSegment[] | null) => void
   onWindMapOverlaysChange?: (overlays: import('@/lib/wind-analysis').WindMapOverlay[]) => void
+  onWeatherMapPointsChange?: (points: import('@/lib/wind-analysis').WeatherMapPoint[]) => void
   width?: number
 }
 
@@ -60,6 +61,7 @@ export function Sidebar({
   onWindDataChange,
   onWindSegmentsChange,
   onWindMapOverlaysChange,
+  onWeatherMapPointsChange,
   width = 320,
 }: SidebarProps) {
   return (
@@ -90,6 +92,7 @@ export function Sidebar({
               onWindDataChange={onWindDataChange}
               onWindSegmentsChange={onWindSegmentsChange}
               onWindMapOverlaysChange={onWindMapOverlaysChange}
+              onWeatherMapPointsChange={onWeatherMapPointsChange}
             />
           </Suspense>
         ) : (

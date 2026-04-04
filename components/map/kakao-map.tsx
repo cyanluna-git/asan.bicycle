@@ -11,7 +11,8 @@ import {
 } from "react-kakao-maps-sdk"
 import type { CourseAlbumPhoto, CourseMapItem, RouteGeoJSON, PoiMapItem } from "@/types/course"
 import type { RouteHoverPoint } from '@/lib/elevation-hover-sync'
-import type { WindMapOverlay } from '@/lib/wind-analysis'
+import type { WeatherMapPoint, WindMapOverlay } from '@/lib/wind-analysis'
+import { WeatherCardOverlay } from '@/components/map/weather-card-overlay'
 import { WindArrowOverlay } from '@/components/map/wind-arrow-overlay'
 import { computeRouteBounds, normalizeRouteRenderMetadata } from '@/lib/course-render-metadata'
 import { mergeSelectedAndBackgroundRoutes } from '@/lib/map-route-display'
@@ -123,6 +124,7 @@ interface KakaoMapProps {
   onSelectAlbumPhoto?: (id: string | null) => void
   hoveredRoutePoint?: RouteHoverPoint | null
   windOverlays?: WindMapOverlay[]
+  weatherPoints?: WeatherMapPoint[]
 }
 
 // ---------------------------------------------------------------------------
@@ -143,6 +145,7 @@ export default function KakaoMap({
   onSelectAlbumPhoto,
   hoveredRoutePoint,
   windOverlays,
+  weatherPoints,
 }: KakaoMapProps) {
   const appkey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY
   if (!appkey) {
@@ -167,6 +170,7 @@ export default function KakaoMap({
       onSelectAlbumPhoto={onSelectAlbumPhoto}
       hoveredRoutePoint={hoveredRoutePoint}
       windOverlays={windOverlays}
+      weatherPoints={weatherPoints}
     />
   )
 }
@@ -190,6 +194,7 @@ function KakaoMapInner({
   onSelectAlbumPhoto,
   hoveredRoutePoint,
   windOverlays,
+  weatherPoints,
 }: { appkey: string } & KakaoMapProps) {
   const loaderOptions = useMemo(
     () => ({
@@ -331,6 +336,9 @@ function KakaoMapInner({
         <HoveredRouteMarker point={hoveredRoutePoint ?? null} />
         {windOverlays && windOverlays.length > 0 ? (
           <WindArrowOverlay overlays={windOverlays} />
+        ) : null}
+        {weatherPoints && weatherPoints.length > 0 ? (
+          <WeatherCardOverlay points={weatherPoints} />
         ) : null}
       </Map>
       {effectiveSelectedId ? (

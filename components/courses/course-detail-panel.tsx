@@ -69,6 +69,7 @@ interface CourseDetailPanelProps {
   onWindDataChange?: (windDirection: number | null, windSpeed: number | null) => void
   onWindSegmentsChange?: (segments: import('@/lib/wind-analysis').WindSegment[] | null) => void
   onWindMapOverlaysChange?: (overlays: import('@/lib/wind-analysis').WindMapOverlay[]) => void
+  onWeatherMapPointsChange?: (points: import('@/lib/wind-analysis').WeatherMapPoint[]) => void
 }
 
 export function CourseDetailPanel({
@@ -91,6 +92,7 @@ export function CourseDetailPanel({
   onWindDataChange,
   onWindSegmentsChange,
   onWindMapOverlaysChange,
+  onWeatherMapPointsChange,
 }: CourseDetailPanelProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -464,6 +466,7 @@ export function CourseDetailPanel({
               onWindDataChange={onWindDataChange}
               onWindSegmentsChange={onWindSegmentsChange}
               onWindMapOverlaysChange={onWindMapOverlaysChange}
+              onWeatherMapPointsChange={onWeatherMapPointsChange}
             />
           ) : (
             <div className="space-y-3">

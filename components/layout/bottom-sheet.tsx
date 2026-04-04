@@ -50,6 +50,7 @@ interface BottomSheetProps {
   onWindDataChange?: (windDirection: number | null, windSpeed: number | null) => void
   onWindSegmentsChange?: (segments: import('@/lib/wind-analysis').WindSegment[] | null) => void
   onWindMapOverlaysChange?: (overlays: import('@/lib/wind-analysis').WindMapOverlay[]) => void
+  onWeatherMapPointsChange?: (points: import('@/lib/wind-analysis').WeatherMapPoint[]) => void
   open: boolean
   showTrigger?: boolean
   onOpenChange: (open: boolean) => void
@@ -77,6 +78,7 @@ export function BottomSheet({
   onWindDataChange,
   onWindSegmentsChange,
   onWindMapOverlaysChange,
+  onWeatherMapPointsChange,
   open,
   showTrigger = true,
   onOpenChange,
@@ -172,6 +174,7 @@ export function BottomSheet({
                   onWindDataChange={onWindDataChange}
                   onWindSegmentsChange={onWindSegmentsChange}
                   onWindMapOverlaysChange={onWindMapOverlaysChange}
+                  onWeatherMapPointsChange={onWeatherMapPointsChange}
                 />
               </Suspense>
             ) : (

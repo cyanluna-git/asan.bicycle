@@ -21,12 +21,14 @@ import {
   getWeatherIconName,
 } from '@/lib/weather-ui'
 import {
+  buildWeatherMapPoints,
   buildWindSegments,
   buildTimeAwareWindSegments,
   buildWindMapOverlays,
   summarizeWind,
   WIND_COLORS,
   WIND_LABELS,
+  type WeatherMapPoint,
   type WindMapOverlay,
   type WindSegment,
 } from '@/lib/wind-analysis'
@@ -96,6 +98,7 @@ interface WeatherSectionProps {
   onWindDataChange?: (windDirection: number | null, windSpeed: number | null) => void
   onWindSegmentsChange?: (segments: WindSegment[] | null) => void
   onWindMapOverlaysChange?: (overlays: WindMapOverlay[]) => void
+  onWeatherMapPointsChange?: (points: WeatherMapPoint[]) => void
 }
 
 export function WeatherSection({
@@ -110,6 +113,7 @@ export function WeatherSection({
   onWindDataChange,
   onWindSegmentsChange,
   onWindMapOverlaysChange,
+  onWeatherMapPointsChange,
 }: WeatherSectionProps) {
   const dateRange = useMemo(() => getDateRangeForForecast(), [])
   const [selectedDate, setSelectedDate] = useState(initialDate ?? dateRange.min)
@@ -241,6 +245,19 @@ export function WeatherSection({
     if (!onWindMapOverlaysChange) return
     onWindMapOverlaysChange(windMapOverlays)
   }, [windMapOverlays, onWindMapOverlaysChange])
+
+  // Build weather map points at key route positions
+  const weatherMapPoints = useMemo<WeatherMapPoint[]>(() => {
+    if (!routeGeoJSON || enrichedForecasts.length === 0 || avgSpeed <= 0) return []
+    const departureIso = `${selectedDate}T${departureTime}`
+    return buildWeatherMapPoints(routeGeoJSON, enrichedForecasts, departureIso, avgSpeed)
+  }, [routeGeoJSON, enrichedForecasts, selectedDate, departureTime, avgSpeed])
+
+  // Notify parent of weather map points
+  useEffect(() => {
+    if (!onWeatherMapPointsChange) return
+    onWeatherMapPointsChange(weatherMapPoints)
+  }, [weatherMapPoints, onWeatherMapPointsChange])
 
   return (
     <div className="rounded-[24px] border bg-card p-4 shadow-sm">
