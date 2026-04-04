@@ -1,5 +1,9 @@
 import type { RouteGeoJSON } from '@/types/course'
-import type { HourlyForecast } from '@/types/weather'
+import type {
+  HourlyForecast,
+  PrecipitationType,
+  SkyCondition,
+} from '@/types/weather'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -336,4 +340,165 @@ export function summarizeWind(segments: WindSegment[]): WindSummary {
     tailwindPercent: Math.round((tailwindKm / totalKm) * 100),
     crosswindPercent: Math.round((crosswindKm / totalKm) * 100),
   }
+}
+
+// ---------------------------------------------------------------------------
+// Map overlay types
+// ---------------------------------------------------------------------------
+
+export type WindMapOverlay = {
+  lat: number
+  lng: number
+  windDirection: number
+  windSpeed: number
+  classification: WindClassification
+}
+
+export type WeatherMapPoint = {
+  lat: number
+  lng: number
+  temperature: number
+  skyCondition: SkyCondition
+  precipitationType: PrecipitationType
+  label: string
+  estimatedTime: string
+}
+
+// ---------------------------------------------------------------------------
+// Interpolate a point at a given cumulative km along the route
+// ---------------------------------------------------------------------------
+
+function interpolatePointAtKm(
+  routePoints: RoutePoint[],
+  targetKm: number,
+): { lat: number; lng: number } {
+  if (routePoints.length === 0) return { lat: 0, lng: 0 }
+
+  // Clamp to route bounds
+  if (targetKm <= 0) return { lat: routePoints[0].lat, lng: routePoints[0].lng }
+
+  const last = routePoints[routePoints.length - 1]
+  if (targetKm >= last.km) return { lat: last.lat, lng: last.lng }
+
+  // Find the segment that contains targetKm
+  for (let i = 1; i < routePoints.length; i++) {
+    if (routePoints[i].km >= targetKm) {
+      const prev = routePoints[i - 1]
+      const curr = routePoints[i]
+      const segLen = curr.km - prev.km
+      if (segLen <= 0) return { lat: prev.lat, lng: prev.lng }
+
+      const ratio = (targetKm - prev.km) / segLen
+      return {
+        lat: prev.lat + (curr.lat - prev.lat) * ratio,
+        lng: prev.lng + (curr.lng - prev.lng) * ratio,
+      }
+    }
+  }
+
+  return { lat: last.lat, lng: last.lng }
+}
+
+// ---------------------------------------------------------------------------
+// Build wind map overlays at regular km intervals
+// ---------------------------------------------------------------------------
+
+export function buildWindMapOverlays(
+  routeGeoJSON: RouteGeoJSON | null | undefined,
+  forecasts: HourlyForecast[],
+  departureTime: string,
+  avgSpeedKmh: number,
+  intervalKm: number = 10,
+): WindMapOverlay[] {
+  if (!routeGeoJSON || forecasts.length === 0 || avgSpeedKmh <= 0 || intervalKm <= 0) {
+    return []
+  }
+
+  const points = collectRoutePoints(routeGeoJSON)
+  if (points.length < 2) return []
+
+  const totalKm = points[points.length - 1].km
+  const departureMs = new Date(departureTime).getTime()
+
+  const parsedForecasts = forecasts.map((f) => ({
+    ...f,
+    ms: new Date(f.datetime).getTime(),
+  }))
+
+  const overlays: WindMapOverlay[] = []
+
+  for (let km = 0; km <= totalKm; km += intervalKm) {
+    const { lat, lng } = interpolatePointAtKm(points, km)
+    const arrivalMs = departureMs + (km / avgSpeedKmh) * 3600_000
+    const forecast = findNearestForecast(parsedForecasts, arrivalMs)
+    if (!forecast) continue
+
+    // Determine riding bearing at this point
+    const nextKm = Math.min(km + 0.5, totalKm)
+    const nextPt = interpolatePointAtKm(points, nextKm)
+    const bearing = calculateBearing(lat, lng, nextPt.lat, nextPt.lng)
+
+    overlays.push({
+      lat,
+      lng,
+      windDirection: forecast.windDirection,
+      windSpeed: forecast.windSpeed,
+      classification: classifyWind(bearing, forecast.windDirection),
+    })
+  }
+
+  return overlays
+}
+
+// ---------------------------------------------------------------------------
+// Build weather map points at fixed route proportions
+// ---------------------------------------------------------------------------
+
+const WEATHER_POINT_RATIOS = [0, 1 / 3, 2 / 3, 1] as const
+const WEATHER_POINT_LABELS = ['출발', '경유', '경유', '도착'] as const
+
+export function buildWeatherMapPoints(
+  routeGeoJSON: RouteGeoJSON | null | undefined,
+  forecasts: HourlyForecast[],
+  departureTime: string,
+  avgSpeedKmh: number,
+): WeatherMapPoint[] {
+  if (!routeGeoJSON || forecasts.length === 0 || avgSpeedKmh <= 0) return []
+
+  const points = collectRoutePoints(routeGeoJSON)
+  if (points.length < 2) return []
+
+  const totalKm = points[points.length - 1].km
+  const departureMs = new Date(departureTime).getTime()
+
+  const parsedForecasts = forecasts.map((f) => ({
+    ...f,
+    ms: new Date(f.datetime).getTime(),
+  }))
+
+  const result: WeatherMapPoint[] = []
+
+  for (let i = 0; i < WEATHER_POINT_RATIOS.length; i++) {
+    const km = totalKm * WEATHER_POINT_RATIOS[i]
+    const { lat, lng } = interpolatePointAtKm(points, km)
+    const arrivalMs = departureMs + (km / avgSpeedKmh) * 3600_000
+    const forecast = findNearestForecast(parsedForecasts, arrivalMs)
+    if (!forecast) continue
+
+    const estimatedDate = new Date(arrivalMs)
+    const hh = String(estimatedDate.getHours()).padStart(2, '0')
+    const mm = String(estimatedDate.getMinutes()).padStart(2, '0')
+
+    result.push({
+      lat,
+      lng,
+      temperature: forecast.temperature,
+      skyCondition: forecast.skyCondition,
+      precipitationType: forecast.precipitationType,
+      label: WEATHER_POINT_LABELS[i],
+      estimatedTime: `${hh}:${mm}`,
+    })
+  }
+
+  return result
 }

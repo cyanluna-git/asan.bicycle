@@ -5,6 +5,8 @@ import {
   buildWindSegments,
   buildTimeAwareWindSegments,
   summarizeWind,
+  buildWindMapOverlays,
+  buildWeatherMapPoints,
 } from '@/lib/wind-analysis'
 import type { WindSegment } from '@/lib/wind-analysis'
 import type { RouteGeoJSON } from '@/types/course'
@@ -493,5 +495,303 @@ describe('buildTimeAwareWindSegments', () => {
     const segments = buildTimeAwareWindSegments(route, forecasts, departure, 20)
     expect(segments.length).toBeGreaterThan(0)
     expect(segments[0].classification).toBe('headwind')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Helpers for map overlay / weather point tests
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a straight north-going route of approximately `totalKm` km.
+ * Each degree of latitude ≈ 111 km, so we step by totalKm/111 degrees.
+ * We create `numPoints` evenly-spaced points.
+ */
+function makeNorthRoute(totalKm: number, numPoints: number = 20): RouteGeoJSON {
+  const degStep = (totalKm / 111) / (numPoints - 1)
+  const coords: [number, number][] = []
+  for (let i = 0; i < numPoints; i++) {
+    coords.push([127.0, 37.0 + degStep * i])
+  }
+  return makeRoute(coords)
+}
+
+function makeFullForecastSuite(baseIso: string): HourlyForecast[] {
+  // 24 hourly forecasts starting from baseIso
+  const base = new Date(baseIso).getTime()
+  return Array.from({ length: 24 }, (_, i) => {
+    const dt = new Date(base + i * 3600_000).toISOString().slice(0, 16)
+    return {
+      datetime: dt,
+      temperature: 15 + i,
+      windSpeed: 5,
+      windDirection: 270, // westerly → crosswind for north-going rider
+      precipitationProbability: 0,
+      skyCondition: 1 as const,
+      precipitationType: 0 as const,
+    }
+  })
+}
+
+// ---------------------------------------------------------------------------
+// buildWindMapOverlays
+// ---------------------------------------------------------------------------
+
+describe('buildWindMapOverlays', () => {
+  const departure = '2026-04-02T07:00'
+  const avgSpeed = 20 // km/h
+
+  it('null route → empty array', () => {
+    const forecasts = makeFullForecastSuite(departure)
+    expect(buildWindMapOverlays(null, forecasts, departure, avgSpeed)).toEqual([])
+  })
+
+  it('undefined route → empty array', () => {
+    const forecasts = makeFullForecastSuite(departure)
+    expect(buildWindMapOverlays(undefined, forecasts, departure, avgSpeed)).toEqual([])
+  })
+
+  it('empty route (no features) → empty array', () => {
+    const route: RouteGeoJSON = { type: 'FeatureCollection', features: [] }
+    const forecasts = makeFullForecastSuite(departure)
+    expect(buildWindMapOverlays(route, forecasts, departure, avgSpeed)).toEqual([])
+  })
+
+  it('empty forecasts → empty array', () => {
+    const route = makeNorthRoute(50)
+    expect(buildWindMapOverlays(route, [], departure, avgSpeed)).toEqual([])
+  })
+
+  it('avgSpeedKmh <= 0 → empty array', () => {
+    const route = makeNorthRoute(50)
+    const forecasts = makeFullForecastSuite(departure)
+    expect(buildWindMapOverlays(route, forecasts, departure, 0)).toEqual([])
+    expect(buildWindMapOverlays(route, forecasts, departure, -5)).toEqual([])
+  })
+
+  it('100km route at 10km interval → ~10 overlays (between 9 and 12)', () => {
+    const route = makeNorthRoute(100)
+    const forecasts = makeFullForecastSuite(departure)
+    const overlays = buildWindMapOverlays(route, forecasts, departure, avgSpeed, 10)
+    // Loop: km=0,10,20,...,100 → 11 steps, but floating-point route length may vary slightly
+    expect(overlays.length).toBeGreaterThanOrEqual(9)
+    expect(overlays.length).toBeLessThanOrEqual(12)
+  })
+
+  it('short route (5km) → 1-2 overlays', () => {
+    const route = makeNorthRoute(5, 10)
+    const forecasts = makeFullForecastSuite(departure)
+    // Default interval = 10km; a 5km route: km=0 (inside), km=10 (outside) → 1 overlay
+    const overlays = buildWindMapOverlays(route, forecasts, departure, avgSpeed, 10)
+    expect(overlays.length).toBeGreaterThanOrEqual(1)
+    expect(overlays.length).toBeLessThanOrEqual(2)
+  })
+
+  it('each overlay has required fields: lat, lng, windDirection, windSpeed, classification', () => {
+    const route = makeNorthRoute(30)
+    const forecasts = makeFullForecastSuite(departure)
+    const overlays = buildWindMapOverlays(route, forecasts, departure, avgSpeed, 10)
+    expect(overlays.length).toBeGreaterThan(0)
+    for (const overlay of overlays) {
+      expect(typeof overlay.lat).toBe('number')
+      expect(typeof overlay.lng).toBe('number')
+      expect(typeof overlay.windDirection).toBe('number')
+      expect(typeof overlay.windSpeed).toBe('number')
+      expect(['headwind', 'tailwind', 'crosswind']).toContain(overlay.classification)
+    }
+  })
+
+  it('overlay coordinates are within the route bounding box', () => {
+    // North-going route: lat from 37.0 to ~37 + totalKm/111, lng fixed at 127.0
+    const totalKm = 50
+    const route = makeNorthRoute(totalKm, 20)
+    const forecasts = makeFullForecastSuite(departure)
+    const overlays = buildWindMapOverlays(route, forecasts, departure, avgSpeed, 10)
+    const latMax = 37.0 + (totalKm / 111) + 0.01 // small tolerance
+    for (const overlay of overlays) {
+      expect(overlay.lat).toBeGreaterThanOrEqual(37.0 - 0.01)
+      expect(overlay.lat).toBeLessThanOrEqual(latMax)
+      expect(overlay.lng).toBeGreaterThanOrEqual(126.99)
+      expect(overlay.lng).toBeLessThanOrEqual(127.01)
+    }
+  })
+
+  it('first overlay is at (or near) the route start', () => {
+    const route = makeNorthRoute(50)
+    const forecasts = makeFullForecastSuite(departure)
+    const overlays = buildWindMapOverlays(route, forecasts, departure, avgSpeed, 10)
+    expect(overlays.length).toBeGreaterThan(0)
+    const first = overlays[0]
+    expect(first.lat).toBeCloseTo(37.0, 2)
+    expect(first.lng).toBeCloseTo(127.0, 2)
+  })
+
+  it('windSpeed and windDirection values come from the forecast', () => {
+    // Use a single forecast with known values
+    const route = makeNorthRoute(20, 5)
+    const forecasts: HourlyForecast[] = [
+      {
+        datetime: departure,
+        temperature: 12,
+        windSpeed: 7,
+        windDirection: 90,
+        precipitationProbability: 0,
+        skyCondition: 1,
+        precipitationType: 0,
+      },
+    ]
+    const overlays = buildWindMapOverlays(route, forecasts, departure, avgSpeed, 10)
+    expect(overlays.length).toBeGreaterThan(0)
+    for (const overlay of overlays) {
+      expect(overlay.windSpeed).toBe(7)
+      expect(overlay.windDirection).toBe(90)
+    }
+  })
+
+  it('custom interval respected: 5km interval on 20km route → ~5 overlays', () => {
+    const route = makeNorthRoute(20)
+    const forecasts = makeFullForecastSuite(departure)
+    // km=0,5,10,15,20 → 5 points
+    const overlays = buildWindMapOverlays(route, forecasts, departure, avgSpeed, 5)
+    expect(overlays.length).toBeGreaterThanOrEqual(4)
+    expect(overlays.length).toBeLessThanOrEqual(6)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// buildWeatherMapPoints
+// ---------------------------------------------------------------------------
+
+describe('buildWeatherMapPoints', () => {
+  const departure = '2026-04-02T07:00'
+  const avgSpeed = 20 // km/h
+
+  it('null route → empty array', () => {
+    const forecasts = makeFullForecastSuite(departure)
+    expect(buildWeatherMapPoints(null, forecasts, departure, avgSpeed)).toEqual([])
+  })
+
+  it('undefined route → empty array', () => {
+    const forecasts = makeFullForecastSuite(departure)
+    expect(buildWeatherMapPoints(undefined, forecasts, departure, avgSpeed)).toEqual([])
+  })
+
+  it('empty forecasts → empty array', () => {
+    const route = makeNorthRoute(100)
+    expect(buildWeatherMapPoints(route, [], departure, avgSpeed)).toEqual([])
+  })
+
+  it('avgSpeedKmh <= 0 → empty array', () => {
+    const route = makeNorthRoute(100)
+    const forecasts = makeFullForecastSuite(departure)
+    expect(buildWeatherMapPoints(route, forecasts, departure, 0)).toEqual([])
+    expect(buildWeatherMapPoints(route, forecasts, departure, -1)).toEqual([])
+  })
+
+  it('normal route → returns exactly 4 points', () => {
+    const route = makeNorthRoute(100)
+    const forecasts = makeFullForecastSuite(departure)
+    const points = buildWeatherMapPoints(route, forecasts, departure, avgSpeed)
+    expect(points).toHaveLength(4)
+  })
+
+  it('labels are 출발, 경유, 경유, 도착 in order', () => {
+    const route = makeNorthRoute(100)
+    const forecasts = makeFullForecastSuite(departure)
+    const points = buildWeatherMapPoints(route, forecasts, departure, avgSpeed)
+    expect(points[0].label).toBe('출발')
+    expect(points[1].label).toBe('경유')
+    expect(points[2].label).toBe('경유')
+    expect(points[3].label).toBe('도착')
+  })
+
+  it('first point is approximately at the route start (ratio 0)', () => {
+    const route = makeNorthRoute(100)
+    const forecasts = makeFullForecastSuite(departure)
+    const points = buildWeatherMapPoints(route, forecasts, departure, avgSpeed)
+    expect(points[0].lat).toBeCloseTo(37.0, 2)
+    expect(points[0].lng).toBeCloseTo(127.0, 2)
+  })
+
+  it('last point is approximately at the route end (ratio 1)', () => {
+    const totalKm = 100
+    const route = makeNorthRoute(totalKm)
+    const forecasts = makeFullForecastSuite(departure)
+    const points = buildWeatherMapPoints(route, forecasts, departure, avgSpeed)
+    const expectedEndLat = 37.0 + totalKm / 111
+    expect(points[3].lat).toBeCloseTo(expectedEndLat, 1)
+    expect(points[3].lng).toBeCloseTo(127.0, 2)
+  })
+
+  it('each point has temperature, skyCondition, precipitationType, estimatedTime', () => {
+    const route = makeNorthRoute(100)
+    const forecasts = makeFullForecastSuite(departure)
+    const points = buildWeatherMapPoints(route, forecasts, departure, avgSpeed)
+    for (const pt of points) {
+      expect(typeof pt.temperature).toBe('number')
+      expect([1, 3, 4]).toContain(pt.skyCondition)
+      expect([0, 1, 2, 3, 5, 6, 7]).toContain(pt.precipitationType)
+      expect(typeof pt.estimatedTime).toBe('string')
+      // estimatedTime format HH:MM
+      expect(pt.estimatedTime).toMatch(/^\d{2}:\d{2}$/)
+    }
+  })
+
+  it('each point has lat and lng as numbers', () => {
+    const route = makeNorthRoute(100)
+    const forecasts = makeFullForecastSuite(departure)
+    const points = buildWeatherMapPoints(route, forecasts, departure, avgSpeed)
+    for (const pt of points) {
+      expect(typeof pt.lat).toBe('number')
+      expect(typeof pt.lng).toBe('number')
+    }
+  })
+
+  it('first point estimatedTime equals departure time (ratio=0, km=0)', () => {
+    const route = makeNorthRoute(100)
+    const forecasts = makeFullForecastSuite(departure)
+    const points = buildWeatherMapPoints(route, forecasts, departure, avgSpeed)
+    // At km=0, arrivalMs = departureMs, so estimatedTime = departure hour:min
+    const dep = new Date(departure)
+    const hh = String(dep.getHours()).padStart(2, '0')
+    const mm = String(dep.getMinutes()).padStart(2, '0')
+    expect(points[0].estimatedTime).toBe(`${hh}:${mm}`)
+  })
+
+  it('later points have estimatedTime >= earlier points (time is non-decreasing)', () => {
+    const route = makeNorthRoute(80)
+    const forecasts = makeFullForecastSuite(departure)
+    const points = buildWeatherMapPoints(route, forecasts, departure, avgSpeed)
+    // Convert HH:MM to minutes for comparison
+    const toMinutes = (t: string) => {
+      const [h, m] = t.split(':').map(Number)
+      return h * 60 + m
+    }
+    for (let i = 1; i < points.length; i++) {
+      expect(toMinutes(points[i].estimatedTime)).toBeGreaterThanOrEqual(
+        toMinutes(points[i - 1].estimatedTime),
+      )
+    }
+  })
+
+  it('short route (2km) → still returns 4 points', () => {
+    // buildWeatherMapPoints uses route proportions (0, 1/3, 2/3, 1) so even
+    // a very short route should yield 4 points as long as it has >= 2 coordinates
+    const route = makeNorthRoute(2, 5)
+    const forecasts = makeFullForecastSuite(departure)
+    const points = buildWeatherMapPoints(route, forecasts, departure, avgSpeed)
+    expect(points).toHaveLength(4)
+  })
+
+  it('weather values (temperature) differ across points when forecasts change over time', () => {
+    // Each forecast has temperature = 15 + i, so later arrivals get higher temperature
+    // Use a slow speed so the 4 points span multiple forecast hours
+    const route = makeNorthRoute(100)
+    const forecasts = makeFullForecastSuite(departure) // temperature: 15..38
+    const slowSpeed = 5 // km/h → 100km takes 20h, covering many forecasts
+    const points = buildWeatherMapPoints(route, forecasts, departure, slowSpeed)
+    expect(points).toHaveLength(4)
+    // First point (km=0) → temperature=15; last point (km=100) → arrival +20h → temperature=35
+    expect(points[0].temperature).toBeLessThan(points[3].temperature)
   })
 })
