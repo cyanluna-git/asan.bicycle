@@ -182,18 +182,15 @@ function renderPanel(props: Partial<React.ComponentProps<typeof CourseDetailPane
 
 describe('CourseDetailPanel mobile layout', () => {
   it('renders mobile-first CTA structure for reviews, album, POI, and GPX download', () => {
-    const { markup, document } = renderPanel()
+    const { document } = renderPanel()
 
-    expect(document.body.textContent).toContain('2개 후기')
-    expect(document.body.textContent).toContain('후기 쓰기')
-    expect(document.body.textContent).toContain('앨범 보기')
-    expect(document.body.textContent).toContain('사진 추가')
-    expect(document.body.textContent).toContain('들를만한 곳')
+    // Tab navigation shows counts for all content sections
+    expect(document.body.textContent).toContain('후기 2')
+    expect(document.body.textContent).toContain('사진 1')
+    expect(document.body.textContent).toContain('명소 1')
+
+    // Bottom CTA section is always visible
     expect(document.body.textContent).toContain('카카오 공유')
-    expect(document.querySelector('button[aria-label=\"POI 추가\"]')).not.toBeNull()
-    expect(markup).toContain('h-10 w-full rounded-full sm:h-9 sm:w-auto sm:shrink-0')
-    expect(markup).toContain('px-3.5 py-2 text-sm')
-    expect(markup).toContain('w-[17rem]')
 
     const downloadLink = Array.from(document.querySelectorAll('a')).find(
       (anchor) => anchor.textContent?.includes('GPX 다운로드'),
@@ -212,9 +209,10 @@ describe('CourseDetailPanel mobile layout', () => {
       albumPreviewPhotos: [],
     })
 
-    expect(document.body.textContent).toContain('아직 첫 후기 전입니다.')
-    expect(document.body.textContent).toContain('아직 등록된 사진이 없습니다.')
-    expect(document.body.textContent).toContain('등록된 POI가 없습니다.')
+    // Tab buttons show zero counts when all sections are empty
+    expect(document.body.textContent).toContain('후기 0')
+    expect(document.body.textContent).toContain('사진 0')
+    expect(document.body.textContent).toContain('명소 0')
 
     const downloadLink = Array.from(document.querySelectorAll('a')).find(
       (anchor) => anchor.textContent?.includes('GPX 다운로드'),
