@@ -232,20 +232,31 @@ export function WeatherSection({
         <h3 className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
           날씨 예보
         </h3>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {data?.mock && (
             <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-amber-300/50">
               Mock
             </span>
           )}
-          <input
-            type="date"
-            value={selectedDate}
-            min={dateRange.min}
-            max={dateRange.max}
-            onChange={(e) => handleDateChange(e.target.value)}
-            className="rounded-lg border bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground/20"
-          />
+          {(['오늘', '내일', '모레'] as const).map((label, i) => {
+            const d = new Date(Date.now() + 9 * 60 * 60 * 1000)
+            d.setDate(d.getDate() + i)
+            const val = d.toISOString().slice(0, 10)
+            return (
+              <button
+                key={val}
+                type="button"
+                onClick={() => handleDateChange(val)}
+                className={`rounded-lg border px-2 py-1 text-[11px] font-medium transition ${
+                  selectedDate === val
+                    ? 'border-foreground bg-foreground text-background'
+                    : 'bg-background text-foreground hover:bg-muted'
+                }`}
+              >
+                {label}
+              </button>
+            )
+          })}
         </div>
       </div>
 

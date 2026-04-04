@@ -467,14 +467,31 @@ export function CourseDetailPanel({
               <div className="flex flex-wrap items-end gap-2">
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] font-medium text-muted-foreground">출발날짜</label>
-                  <input
-                    type="date"
-                    value={weatherDate}
-                    min={(() => { const d = new Date(Date.now() + 9 * 60 * 60 * 1000); return d.toISOString().slice(0, 10) })()}
-                    max={(() => { const d = new Date(Date.now() + 9 * 60 * 60 * 1000); d.setDate(d.getDate() + 2); return d.toISOString().slice(0, 10) })()}
-                    onChange={(e) => setWeatherDate(e.target.value)}
-                    className="rounded-lg border bg-background px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground/20"
-                  />
+                  <div className="flex gap-1">
+                    {(() => {
+                      const labels = ['오늘', '내일', '모레'] as const
+                      const base = new Date(Date.now() + 9 * 60 * 60 * 1000)
+                      return labels.map((label, i) => {
+                        const d = new Date(base)
+                        d.setDate(d.getDate() + i)
+                        const val = d.toISOString().slice(0, 10)
+                        return (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() => setWeatherDate(val)}
+                            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                              weatherDate === val
+                                ? 'border-foreground bg-foreground text-background'
+                                : 'bg-background text-foreground hover:bg-muted'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        )
+                      })
+                    })()}
+                  </div>
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] font-medium text-muted-foreground">출발시간</label>
