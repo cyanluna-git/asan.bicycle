@@ -147,7 +147,9 @@ export async function fetchWeatherForecast(
   }
 
   const { nx, ny } = convertLatLngToGrid(lat, lng)
-  const { baseDate, baseTime } = resolveBaseDateTime(date)
+  // 항상 현재 시각(KST) 기준으로 최신 발표시각을 사용 — 미래 날짜 예보도 포함됨
+  const nowKST = new Date(Date.now() + 9 * 60 * 60 * 1000)
+  const { baseDate, baseTime } = resolveBaseDateTime(nowKST)
 
   // serviceKey는 URL 인코딩 없이 raw로 전달해야 함 (이중 인코딩 방지)
   const queryString = [
