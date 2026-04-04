@@ -106,7 +106,7 @@ export function CourseDetailPanel({
     return d.toISOString().slice(0, 10)
   })
   const [weatherDepartureTime, setWeatherDepartureTime] = useState('07:00')
-  const [weatherAvgSpeed, setWeatherAvgSpeed] = useState(() => getDefaultSpeed(course.theme))
+  const [weatherAvgSpeed, setWeatherAvgSpeed] = useState(SPEED_INTERMEDIATE)
 
   const allReviews = optimisticReview
     ? [optimisticReview, ...reviews.filter((r) => r.id !== optimisticReview.id)]
@@ -175,7 +175,7 @@ export function CourseDetailPanel({
     setOptimisticReview(null)
     setWeatherExpanded(false)
     setWeatherDepartureTime('07:00')
-    setWeatherAvgSpeed(getDefaultSpeed(course.theme))
+    setWeatherAvgSpeed(SPEED_INTERMEDIATE)
   }, [course.id, course.theme])
 
   useEffect(() => {
@@ -503,7 +503,7 @@ export function CourseDetailPanel({
           ) : (
             <div className="space-y-3">
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-medium text-muted-foreground">출발 날짜 · 시간</label>
+                <label className="text-[10px] font-medium text-muted-foreground">라이딩시작 시간</label>
                 <div className="flex flex-wrap items-center gap-1.5">
                   {(() => {
                     const labels = ['오늘', '내일', '모레'] as const
@@ -537,7 +537,7 @@ export function CourseDetailPanel({
                 </div>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-medium text-muted-foreground">예상 평속</label>
+                <label className="text-[10px] font-medium text-muted-foreground">페이스</label>
                 <div className="flex gap-1.5">
                   {([
                     { label: '초심자', speed: SPEED_BEGINNER },
@@ -566,7 +566,7 @@ export function CourseDetailPanel({
                 onClick={() => setWeatherExpanded(true)}
               >
                 <Cloud className="mr-1.5 h-4 w-4" />
-                라이딩 시작!
+                날씨 확인
               </Button>
             </div>
           )}
