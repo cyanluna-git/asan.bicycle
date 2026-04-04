@@ -149,22 +149,25 @@ export async function fetchWeatherForecast(
   const { nx, ny } = convertLatLngToGrid(lat, lng)
   const { baseDate, baseTime } = resolveBaseDateTime(date)
 
-  const url = new URL(KMA_ENDPOINT)
-  url.searchParams.set('serviceKey', apiKey)
-  url.searchParams.set('numOfRows', '1000')
-  url.searchParams.set('pageNo', '1')
-  url.searchParams.set('dataType', 'JSON')
-  url.searchParams.set('base_date', baseDate)
-  url.searchParams.set('base_time', baseTime)
-  url.searchParams.set('nx', String(nx))
-  url.searchParams.set('ny', String(ny))
+  // serviceKey는 URL 인코딩 없이 raw로 전달해야 함 (이중 인코딩 방지)
+  const queryString = [
+    `serviceKey=${apiKey}`,
+    'numOfRows=1000',
+    'pageNo=1',
+    'dataType=JSON',
+    `base_date=${baseDate}`,
+    `base_time=${baseTime}`,
+    `nx=${nx}`,
+    `ny=${ny}`,
+  ].join('&')
+  const url = `${KMA_ENDPOINT}?${queryString}`
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 5000)
 
   let res: Response
   try {
-    res = await fetch(url.toString(), { signal: controller.signal })
+    res = await fetch(url, { signal: controller.signal })
   } finally {
     clearTimeout(timeout)
   }
