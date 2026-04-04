@@ -1,4 +1,5 @@
 import type { User } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
 
 export const PROFILE_EMOJI_OPTIONS = [
   '🚴',
@@ -145,4 +146,46 @@ export function buildProfileUpdate(
         ? currentUpdatedAt
         : now.toISOString(),
   }
+}
+
+// ---------------------------------------------------------------------------
+// user_profiles table helpers
+// ---------------------------------------------------------------------------
+
+export type UserProfileRow = {
+  id: string
+  display_name: string | null
+  emoji: string
+  home_region_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export async function getProfile(userId: string): Promise<UserProfileRow | null> {
+  const { data } = await supabase
+    .from('user_profiles')
+    .select('*')
+    .eq('id', userId)
+    .maybeSingle()
+  return data ?? null
+}
+
+export async function upsertProfile(
+  userId: string,
+  fields: { display_name?: string | null; emoji?: string; home_region_id?: string | null },
+): Promise<void> {
+  await supabase
+    .from('user_profiles')
+    .upsert({ id: userId, ...fields }, { onConflict: 'id' })
+}
+
+export async function ensureProfile(
+  user: Pick<User, 'id' | 'email' | 'user_metadata'>,
+): Promise<void> {
+  const existing = await getProfile(user.id)
+  if (existing) return
+  await upsertProfile(user.id, {
+    display_name: getProfileName(user) || null,
+    emoji: getProfileAvatarEmoji(user) ?? getDefaultProfileEmoji(user),
+  })
 }

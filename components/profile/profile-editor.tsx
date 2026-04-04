@@ -7,11 +7,14 @@ import { Button } from '@/components/ui/button'
 import {
   buildProfileUpdate,
   canChangeProfileEmoji,
+  ensureProfile,
   getDefaultProfileEmoji,
+  getProfile,
   getProfileAvatarUpdatedAt,
   getProfileName,
   getProfileAvatarEmoji,
   pickRandomProfileEmoji,
+  upsertProfile,
   PROFILE_EMOJI_CHANGE_INTERVAL_DAYS,
   PROFILE_EMOJI_OPTIONS,
 } from '@/lib/profile'
@@ -40,6 +43,7 @@ function ProfileEditorForm({
   const [selectedEmoji, setSelectedEmoji] = useState(buildInitialEmoji)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [homeRegionName, setHomeRegionName] = useState<string | null>(null)
   const currentEmoji = getProfileAvatarEmoji(user)
   const avatarUpdatedAt = getProfileAvatarUpdatedAt(user)
   const emojiChangeState = canChangeProfileEmoji(user, selectedEmoji)
@@ -49,6 +53,20 @@ function ProfileEditorForm({
     setProfileName(getProfileName(user))
     setSelectedEmoji(getProfileAvatarEmoji(user) ?? pickRandomProfileEmoji())
     setError(null)
+
+    ensureProfile(user)
+
+    getProfile(user.id).then((profile) => {
+      if (!profile?.home_region_id) return
+      supabase
+        .from('regions')
+        .select('short_name')
+        .eq('id', profile.home_region_id)
+        .maybeSingle()
+        .then(({ data }) => {
+          setHomeRegionName(data?.short_name ?? null)
+        })
+    })
   }, [user])
 
   const submitLabel = mode === 'onboarding' ? '프로필 시작하기' : '프로필 저장'
@@ -78,6 +96,11 @@ function ProfileEditorForm({
       setIsSaving(false)
       return
     }
+
+    await upsertProfile(user.id, {
+      display_name: nextName,
+      emoji: selectedEmoji,
+    })
 
     const { error: courseUpdateError } = await supabase
       .from('courses')
@@ -178,6 +201,12 @@ function ProfileEditorForm({
               {emojiChangeState.nextAllowedAt && currentEmoji !== selectedEmoji
                 ? ` 다음 변경 가능일: ${emojiChangeState.nextAllowedAt.toLocaleDateString('ko-KR')}`
                 : ''}
+            </p>
+          )}
+
+          {homeRegionName && (
+            <p className="text-xs text-muted-foreground">
+              기본 지역: {homeRegionName}
             </p>
           )}
         </div>
