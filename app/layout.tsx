@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ProfileGate } from "@/components/profile/profile-gate";
+import { InstallPromptBanner } from "@/components/pwa/install-prompt-banner";
 import { RegionProvider } from "@/lib/region-context";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
@@ -40,6 +41,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#E8690A" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Wheeling" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
@@ -51,6 +60,7 @@ export default function RootLayout({
             <div className="pt-16">{children}</div>
           </ProfileGate>
         </RegionProvider>
+        <InstallPromptBanner />
       </body>
     </html>
   );
