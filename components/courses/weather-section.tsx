@@ -114,7 +114,7 @@ export function WeatherSection({
   const [loading, setLoading] = useState(false)
   const [departureTime, setDepartureTime] = useState(initialDepartureTime ?? '07:00')
   const [avgSpeed, setAvgSpeed] = useState(initialAvgSpeed ?? getDefaultSpeed(courseTheme))
-  const [timeAwareMode, setTimeAwareMode] = useState(false)
+  const [timeAwareMode, setTimeAwareMode] = useState(true)
 
   const fetchWeather = useCallback(async (
     fetchLat: number,
@@ -190,7 +190,6 @@ export function WeatherSection({
   // Reset time-aware mode when date changes
   const handleDateChange = useCallback((date: string) => {
     setSelectedDate(date)
-    setTimeAwareMode(false)
   }, [])
 
   // Time-aware wind segments (only when button is clicked)
@@ -290,49 +289,6 @@ export function WeatherSection({
         />
       )}
 
-      {routeGeoJSON && averageWind && averageWind.speed > 0 && (
-        <div className="mt-3 rounded-xl border bg-background px-3 py-2.5">
-          <span className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            시간대별 바람 분석
-          </span>
-          <div className="flex flex-wrap items-end gap-2">
-            <label className="flex flex-col gap-0.5">
-              <span className="text-[10px] text-muted-foreground">출발시간</span>
-              <input
-                type="time"
-                value={departureTime}
-                onChange={(e) => {
-                  setDepartureTime(e.target.value)
-                  setTimeAwareMode(false)
-                }}
-                className="h-7 rounded-lg border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground/20"
-              />
-            </label>
-            <label className="flex flex-col gap-0.5">
-              <span className="text-[10px] text-muted-foreground">평균속도 (km/h)</span>
-              <input
-                type="number"
-                min={10}
-                max={50}
-                step={1}
-                value={avgSpeed}
-                onChange={(e) => {
-                  setAvgSpeed(Number(e.target.value))
-                  setTimeAwareMode(false)
-                }}
-                className="h-7 w-16 rounded-lg border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground/20"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={() => setTimeAwareMode(true)}
-              className="h-7 shrink-0 rounded-lg bg-foreground px-3 text-[11px] font-medium text-background transition-colors hover:bg-foreground/85"
-            >
-              바람 분석 업데이트
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
