@@ -96,6 +96,10 @@ export function CourseDetailPanel({
   const [activeCategory, setActiveCategory] = useState<PoiCategoryFilter>('all')
   const [optimisticReview, setOptimisticReview] = useState<CourseReview | null>(null)
   const [weatherExpanded, setWeatherExpanded] = useState(false)
+  const [weatherDate, setWeatherDate] = useState(() => {
+    const d = new Date(Date.now() + 9 * 60 * 60 * 1000)
+    return d.toISOString().slice(0, 10)
+  })
   const [weatherDepartureTime, setWeatherDepartureTime] = useState('07:00')
   const [weatherAvgSpeed, setWeatherAvgSpeed] = useState(() => getDefaultSpeed(course.theme))
 
@@ -451,6 +455,7 @@ export function CourseDetailPanel({
               lng={startCoords.lng}
               routeGeoJSON={course.route_geojson}
               courseTheme={course.theme}
+              initialDate={weatherDate}
               initialDepartureTime={weatherDepartureTime}
               initialAvgSpeed={weatherAvgSpeed}
               onWindDataChange={onWindDataChange}
@@ -460,6 +465,17 @@ export function CourseDetailPanel({
             <div className="space-y-3">
               <div className="flex flex-wrap items-end gap-2">
                 <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-medium text-muted-foreground">출발날짜</label>
+                  <input
+                    type="date"
+                    value={weatherDate}
+                    min={(() => { const d = new Date(Date.now() + 9 * 60 * 60 * 1000); return d.toISOString().slice(0, 10) })()}
+                    max={(() => { const d = new Date(Date.now() + 9 * 60 * 60 * 1000); d.setDate(d.getDate() + 2); return d.toISOString().slice(0, 10) })()}
+                    onChange={(e) => setWeatherDate(e.target.value)}
+                    className="rounded-lg border bg-background px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground/20"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
                   <label className="text-[10px] font-medium text-muted-foreground">출발시간</label>
                   <input
                     type="time"
@@ -468,19 +484,25 @@ export function CourseDetailPanel({
                     className="rounded-lg border bg-background px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground/20"
                   />
                 </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-medium text-muted-foreground">예상 평속</label>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      min={10}
-                      max={50}
-                      value={weatherAvgSpeed}
-                      onChange={(e) => setWeatherAvgSpeed(Math.max(10, Math.min(50, Number(e.target.value) || 10)))}
-                      className="w-14 rounded-lg border bg-background px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground/20"
-                    />
-                    <span className="text-[10px] text-muted-foreground">km/h</span>
-                  </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-medium text-muted-foreground">예상 평속</label>
+                <div className="flex gap-1.5">
+                  {[20, 25, 30, 35].map((speed) => (
+                    <button
+                      key={speed}
+                      type="button"
+                      onClick={() => setWeatherAvgSpeed(speed)}
+                      className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition ${
+                        weatherAvgSpeed === speed
+                          ? 'border-foreground bg-foreground text-background'
+                          : 'bg-background text-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {speed}
+                    </button>
+                  ))}
+                  <span className="flex items-center text-[10px] text-muted-foreground">km/h</span>
                 </div>
               </div>
               <Button

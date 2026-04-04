@@ -87,6 +87,7 @@ interface WeatherSectionProps {
   lng: number
   routeGeoJSON?: RouteGeoJSON | null
   courseTheme?: string | null
+  initialDate?: string
   initialDepartureTime?: string
   initialAvgSpeed?: number
   onWindDataChange?: (windDirection: number | null, windSpeed: number | null) => void
@@ -98,13 +99,14 @@ export function WeatherSection({
   lng,
   routeGeoJSON,
   courseTheme,
+  initialDate,
   initialDepartureTime,
   initialAvgSpeed,
   onWindDataChange,
   onWindSegmentsChange,
 }: WeatherSectionProps) {
   const dateRange = useMemo(() => getDateRangeForForecast(), [])
-  const [selectedDate, setSelectedDate] = useState(dateRange.min)
+  const [selectedDate, setSelectedDate] = useState(initialDate ?? dateRange.min)
   const [data, setData] = useState<WeatherForecastResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
