@@ -504,7 +504,7 @@ export function CourseDetailPanel({
             <div className="space-y-3">
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] font-medium text-muted-foreground">라이딩시작 시간</label>
-                <div className="flex flex-wrap items-center gap-1.5">
+                <div className="flex items-center gap-1.5">
                   {(() => {
                     const labels = ['오늘', '내일', '모레'] as const
                     const base = new Date(Date.now() + 9 * 60 * 60 * 1000)
@@ -528,11 +528,12 @@ export function CourseDetailPanel({
                       )
                     })
                   })()}
+                  <span className="text-muted-foreground/30">|</span>
                   <input
                     type="time"
                     value={weatherDepartureTime}
                     onChange={(e) => setWeatherDepartureTime(e.target.value)}
-                    className="rounded-lg border bg-background px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground/20"
+                    className="w-[90px] rounded-lg border bg-background px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground/20"
                   />
                 </div>
               </div>
