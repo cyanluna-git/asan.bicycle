@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ProfileGate } from "@/components/profile/profile-gate";
 import { InstallPromptBanner } from "@/components/pwa/install-prompt-banner";
+import { NotificationPrompt } from "@/components/pwa/notification-prompt";
+import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { RegionProvider } from "@/lib/region-context";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
@@ -60,7 +62,9 @@ export default function RootLayout({
             <div className="pt-16">{children}</div>
           </ProfileGate>
         </RegionProvider>
+        <ServiceWorkerRegister />
         <InstallPromptBanner />
+        <NotificationPrompt />
       </body>
     </html>
   );
