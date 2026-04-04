@@ -50,28 +50,29 @@ export function WeatherCardOverlay({ points }: WeatherCardOverlayProps) {
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 3,
-                backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                borderRadius: 8,
-                boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-                padding: '4px 6px',
+                gap: 4,
+                backgroundColor: 'rgba(255, 255, 255, 0.92)',
+                borderRadius: 10,
+                boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                padding: '5px 10px',
                 lineHeight: 1,
+                border: '1px solid rgba(0,0,0,0.08)',
               }}
             >
               <Icon
-                width={16}
-                height={16}
+                width={20}
+                height={20}
                 style={{ flexShrink: 0, color: '#475569' }}
               />
               <span
                 style={{
-                  fontSize: 11,
-                  fontWeight: 600,
+                  fontSize: 13,
+                  fontWeight: 700,
                   color: '#1e293b',
                   whiteSpace: 'nowrap',
                 }}
               >
-                {point.temperature}°C
+                {point.temperature}°
               </span>
             </div>
           </CustomOverlayMap>

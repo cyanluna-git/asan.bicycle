@@ -30,16 +30,17 @@ export function WindArrowOverlay({ overlays }: WindArrowOverlayProps) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 20,
-                height: 20,
+                width: 32,
+                height: 32,
                 borderRadius: '999px',
-                backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
+                border: `2px solid ${color}`,
               }}
             >
               <svg
-                width="12"
-                height="12"
+                width="18"
+                height="18"
                 viewBox="0 0 12 12"
                 style={{
                   transform: `rotate(${rotation}deg)`,
