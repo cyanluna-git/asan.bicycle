@@ -67,8 +67,41 @@ function WeatherIcon({
 }
 
 // ---------------------------------------------------------------------------
-// WeatherSection component
+// Weather cache (localStorage, TTL 24h)
 // ---------------------------------------------------------------------------
+
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 1 day
+
+function makeCacheKey(lat: number, lng: number, date: string): string {
+  // Round to 2 decimal places (~1 km precision) so minor GPS drift doesn't bust the cache
+  return `wx_${lat.toFixed(2)}_${lng.toFixed(2)}_${date}`
+}
+
+function getWeatherCache(lat: number, lng: number, date: string): WeatherForecastResponse | null {
+  try {
+    const raw = localStorage.getItem(makeCacheKey(lat, lng, date))
+    if (!raw) return null
+    const { data, cachedAt } = JSON.parse(raw) as { data: WeatherForecastResponse; cachedAt: number }
+    if (Date.now() - cachedAt > CACHE_TTL_MS) {
+      localStorage.removeItem(makeCacheKey(lat, lng, date))
+      return null
+    }
+    return data
+  } catch {
+    return null
+  }
+}
+
+function setWeatherCache(lat: number, lng: number, date: string, data: WeatherForecastResponse): void {
+  try {
+    localStorage.setItem(
+      makeCacheKey(lat, lng, date),
+      JSON.stringify({ data, cachedAt: Date.now() }),
+    )
+  } catch {
+    // localStorage full or unavailable — ignore silently
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Default speed helpers
@@ -129,6 +162,14 @@ export function WeatherSection({
     fetchLng: number,
     date: string,
   ) => {
+    // Check cache first
+    const cached = getWeatherCache(fetchLat, fetchLng, date)
+    if (cached) {
+      setData(cached)
+      setError(null)
+      return
+    }
+
     setLoading(true)
     setError(null)
 
@@ -145,6 +186,7 @@ export function WeatherSection({
       }
 
       const json: WeatherForecastResponse = await res.json()
+      setWeatherCache(fetchLat, fetchLng, date, json)
       setData(json)
     } catch (err) {
       setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.')
