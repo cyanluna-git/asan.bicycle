@@ -9,6 +9,7 @@ export type RegionSelection = {
   name: string
   shortName: string
   level: string
+  code?: string
 }
 
 export interface RegionPickerProps {
