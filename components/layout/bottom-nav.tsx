@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Compass, Map, User } from 'lucide-react'
 
-const tabs = [
+export const tabs = [
   { icon: Compass, label: '탐색', href: '/explore' },
   { icon: Map, label: '코스', href: '/courses' },
   { icon: User, label: '내 코스', href: '/my-courses' },

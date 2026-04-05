@@ -37,7 +37,7 @@ async function fetchRecentCourses(): Promise<RecentCourse[]> {
 // Static content
 // ---------------------------------------------------------------------------
 
-const featureCards = [
+export const featureCards = [
   {
     icon: MapPinned,
     title: '내 지역에서 출발',
@@ -55,7 +55,7 @@ const featureCards = [
   },
 ] as const
 
-const regionButtons = [
+export const regionButtons = [
   '강원', '경기', '경상남도', '경상북도',
   '전라남도', '전라북도', '충청남도', '충청북도',
   '서울', '제주',
