@@ -6,7 +6,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, Menu, X, LogOut, Settings2, LogIn, MapPin, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProfileEditor } from "@/components/profile/profile-editor";
-import { RegionSwitchDrawer } from "@/components/region/region-switch-drawer";
+import { RegionMapModal } from "@/components/region/region-map-modal";
+import { type RegionSelection } from "@/components/region/region-picker";
 import { signInWithGoogle, signInWithKakao } from "@/lib/auth";
 import { resolveProfileEmoji } from "@/lib/profile";
 import { useRegionContext } from "@/lib/region-context";
@@ -23,10 +24,11 @@ export function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { currentRegionName } = useRegionContext();
+  const { currentRegionName, setTemporaryRegion } = useRegionContext();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [regionDrawerOpen, setRegionDrawerOpen] = useState(false);
+  const [regionMapOpen, setRegionMapOpen] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [searchValue, setSearchValue] = useState("");
 
@@ -53,6 +55,10 @@ export function Header() {
     ? [...navLinks, { label: "내 코스", href: "/my-courses", active: false }]
     : navLinks;
 
+  const handleRegionSelect = (region: RegionSelection) => {
+    setTemporaryRegion(region.id, region.name);
+  };
+
   const submitSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const normalized = searchValue.trim();
@@ -72,7 +78,7 @@ export function Header() {
       {/* Region Button */}
       <button
         type="button"
-        onClick={() => setRegionDrawerOpen(true)}
+        onClick={() => setRegionMapOpen(true)}
         className={
           currentRegionName
             ? "mr-4 flex min-h-[36px] items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-accent"
@@ -154,21 +160,9 @@ export function Header() {
         </div>
       ) : (
         <div className="hidden items-center gap-2 ml-3 md:flex">
-          <button
-            type="button"
-            onClick={async () => { await signInWithKakao() }}
-            className="flex h-9 items-center gap-2 rounded-md bg-[#FEE500] px-4 text-sm font-medium text-[#191919] transition-colors hover:bg-[#FDD800]"
-          >
-            카카오로 시작하기
-          </button>
-          <Button
-            variant="outline"
-            onClick={async () => {
-              await signInWithGoogle()
-            }}
-          >
+          <Button variant="outline" onClick={() => setLoginModalOpen(true)}>
             <LogIn className="mr-2 h-4 w-4" />
-            Google
+            로그인
           </Button>
         </div>
       )}
@@ -255,23 +249,14 @@ export function Header() {
               </div>
             </div>
           ) : (
-            <div className="mt-3 flex flex-col gap-2 border-t pt-3">
-              <button
-                type="button"
-                onClick={async () => { await signInWithKakao() }}
-                className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[#FEE500] text-sm font-medium text-[#191919] transition-colors hover:bg-[#FDD800]"
-              >
-                카카오로 시작하기
-              </button>
+            <div className="mt-3 border-t pt-3">
               <Button
                 variant="outline"
                 className="w-full"
-                onClick={async () => {
-                  await signInWithGoogle()
-                }}
+                onClick={() => { setMobileMenuOpen(false); setLoginModalOpen(true); }}
               >
                 <LogIn className="mr-2 h-4 w-4" />
-                Google로 로그인
+                로그인
               </Button>
             </div>
           )}
@@ -287,10 +272,51 @@ export function Header() {
         />
       )}
 
-      <RegionSwitchDrawer
-        open={regionDrawerOpen}
-        onOpenChange={setRegionDrawerOpen}
+      <RegionMapModal
+        open={regionMapOpen}
+        onOpenChange={setRegionMapOpen}
+        onSelect={handleRegionSelect}
       />
+
+      {/* Login modal */}
+      {loginModalOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-4"
+          onClick={() => setLoginModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-background p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="mb-1 text-lg font-semibold">로그인</h2>
+            <p className="mb-6 text-sm text-muted-foreground">소셜 계정으로 간편하게 시작하세요</p>
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={async () => { setLoginModalOpen(false); await signInWithKakao(); }}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#FEE500] text-sm font-semibold text-[#191919] transition-colors hover:bg-[#FDD800]"
+              >
+                카카오로 시작하기
+              </button>
+              <Button
+                variant="outline"
+                className="h-11 w-full rounded-xl text-sm font-semibold"
+                onClick={async () => { setLoginModalOpen(false); await signInWithGoogle(); }}
+              >
+                <LogIn className="mr-2 h-4 w-4" />
+                Google로 시작하기
+              </Button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setLoginModalOpen(false)}
+              className="mt-4 w-full text-center text-xs text-muted-foreground hover:text-foreground"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

@@ -1,16 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHandle,
-  DrawerHeader,
-  DrawerTitle,
-} from '@/components/ui/drawer'
-import { RegionPicker, type RegionSelection } from '@/components/region/region-picker'
+import { RegionMapModal } from '@/components/region/region-map-modal'
+import { type RegionSelection } from '@/components/region/region-picker'
 import { upsertProfile } from '@/lib/profile'
 import { supabase } from '@/lib/supabase'
 
@@ -59,32 +51,19 @@ export function RegionOnboardingModal() {
     [userId],
   )
 
-  const handleSkip = useCallback(() => {
-    sessionStorage.setItem(SESSION_KEY, 'true')
-    setOpen(false)
+  const handleOpenChange = useCallback((next: boolean) => {
+    if (!next) {
+      // User dismissed without selecting — mark as skipped
+      sessionStorage.setItem(SESSION_KEY, 'true')
+    }
+    setOpen(next)
   }, [])
 
   return (
-    <Drawer open={open} onOpenChange={(next) => { if (!next) handleSkip() }}>
-      <DrawerContent>
-        <DrawerHandle />
-        <DrawerHeader>
-          <DrawerTitle>라이딩 홈 지역을 선택하세요</DrawerTitle>
-          <DrawerDescription>가까운 코스를 먼저 만나볼 수 있어요</DrawerDescription>
-        </DrawerHeader>
-        <div className="overflow-y-auto px-4 pb-2" style={{ maxHeight: '50vh' }}>
-          <RegionPicker onSelect={handleSelect} />
-        </div>
-        <DrawerFooter>
-          <button
-            type="button"
-            onClick={handleSkip}
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            나중에 설정하기
-          </button>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+    <RegionMapModal
+      open={open}
+      onOpenChange={handleOpenChange}
+      onSelect={handleSelect}
+    />
   )
 }
