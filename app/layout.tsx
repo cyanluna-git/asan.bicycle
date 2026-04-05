@@ -8,6 +8,8 @@ import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register"
 import { RegionProvider } from "@/lib/region-context";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
+import { Footer } from "@/components/layout/footer";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { getSiteUrl } from "@/lib/site-url";
 
 const geistSans = Geist({
@@ -70,9 +72,11 @@ export default function RootLayout({
             <Header />
           </Suspense>
           <ProfileGate>
-            <div className="pt-16">{children}</div>
+            <div className="pt-16 pb-16 md:pb-0">{children}</div>
           </ProfileGate>
+          <Footer />
         </RegionProvider>
+        <BottomNav />
         <ServiceWorkerRegister />
         <InstallPromptBanner />
         <NotificationPrompt />
