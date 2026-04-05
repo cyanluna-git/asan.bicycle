@@ -26,7 +26,8 @@ path:hover { fill: #E8690A !important; }
 path.selected { fill: #c85a08 !important; }
 </style>`
 
-function injectStyle(svgText: string): string {
+/** Exported for unit testing */
+export function injectStyle(svgText: string): string {
   // Make SVG fill its container and inject interactive styles
   return svgText
     .replace(/\swidth="\d+"/, ' width="100%"')
