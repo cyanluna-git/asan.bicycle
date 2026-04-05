@@ -34,15 +34,15 @@ describe('injectStyle', () => {
     expect(result).not.toMatch(/width="\d+"/)
   })
 
-  it('replaces hardcoded height with 100%', () => {
+  it('replaces hardcoded height with auto (lets SVG size from viewBox ratio)', () => {
     const result = injectStyle(MINIMAL_SVG)
-    expect(result).toContain('height="100%"')
+    expect(result).toContain('height="auto"')
     expect(result).not.toMatch(/height="\d+"/)
   })
 
-  it('adds preserveAspectRatio attribute to <svg>', () => {
+  it('adds display:block style to <svg>', () => {
     const result = injectStyle(MINIMAL_SVG)
-    expect(result).toContain('preserveAspectRatio="xMidYMid meet"')
+    expect(result).toContain('display:block')
   })
 
   it('injects <style> tag right after the opening <svg ...> tag', () => {
@@ -61,12 +61,12 @@ describe('injectStyle', () => {
 
   it('includes hover fill rule with correct hex color', () => {
     const result = injectStyle(MINIMAL_SVG)
-    expect(result).toContain('#E8690A')
+    expect(result).toContain('#994200')
   })
 
-  it('includes selected fill rule with correct hex color', () => {
+  it('does not include selected fill in SVG style (handled by React style tag)', () => {
     const result = injectStyle(MINIMAL_SVG)
-    expect(result).toContain('#c85a08')
+    expect(result).not.toContain('#c85a08')
   })
 
   it('preserves SVG viewBox and other attributes unchanged', () => {
@@ -83,9 +83,9 @@ describe('injectStyle', () => {
   it('handles SVG with no width/height attributes (no replacement needed)', () => {
     const svgWithoutDimensions = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 750"><path d="M0 0"/></svg>`
     const result = injectStyle(svgWithoutDimensions)
-    // Should still inject style and preserveAspectRatio
+    // Should still inject style and display:block
     expect(result).toContain('<style>')
-    expect(result).toContain('preserveAspectRatio')
+    expect(result).toContain('display:block')
   })
 })
 
@@ -136,7 +136,7 @@ describe('GET /api/regions/[id]', () => {
   })
 
   it('returns region data including code field for known ID', async () => {
-    vi.mocked(createAnonServerClient).mockReturnValue(makeSupabaseMock(MOCK_REGION) as ReturnType<typeof createAnonServerClient>)
+    vi.mocked(createAnonServerClient).mockReturnValue(makeSupabaseMock(MOCK_REGION) as unknown as ReturnType<typeof createAnonServerClient>)
 
     const req = new Request('http://localhost/api/regions/abc-123')
     const params = Promise.resolve({ id: 'abc-123' })
@@ -150,7 +150,7 @@ describe('GET /api/regions/[id]', () => {
   })
 
   it('returns 404 when region is not found', async () => {
-    vi.mocked(createAnonServerClient).mockReturnValue(makeSupabaseMock(null, { code: 'PGRST116', message: 'no rows' }) as ReturnType<typeof createAnonServerClient>)
+    vi.mocked(createAnonServerClient).mockReturnValue(makeSupabaseMock(null, { code: 'PGRST116', message: 'no rows' }) as unknown as ReturnType<typeof createAnonServerClient>)
 
     const req = new Request('http://localhost/api/regions/unknown-id')
     const params = Promise.resolve({ id: 'unknown-id' })
@@ -161,7 +161,7 @@ describe('GET /api/regions/[id]', () => {
   })
 
   it('returns sido code prefix extractable from sigungu code', async () => {
-    vi.mocked(createAnonServerClient).mockReturnValue(makeSupabaseMock(MOCK_REGION) as ReturnType<typeof createAnonServerClient>)
+    vi.mocked(createAnonServerClient).mockReturnValue(makeSupabaseMock(MOCK_REGION) as unknown as ReturnType<typeof createAnonServerClient>)
 
     const req = new Request('http://localhost/api/regions/abc-123')
     const params = Promise.resolve({ id: 'abc-123' })

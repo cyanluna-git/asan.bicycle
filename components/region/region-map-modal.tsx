@@ -21,9 +21,8 @@ interface SidoMeta {
 }
 
 const SVG_STYLE = `<style>
-path { cursor: pointer; transition: fill 0.15s; }
-path:hover { fill: #E8690A !important; }
-path.selected { fill: #c85a08 !important; }
+path { fill: #d6d1c8; stroke: #fff; stroke-width: 0.8; cursor: pointer; }
+path:hover { fill: #994200; }
 </style>`
 
 /** Exported for unit testing */
@@ -31,8 +30,8 @@ export function injectStyle(svgText: string): string {
   // Make SVG fill its container and inject interactive styles
   return svgText
     .replace(/\swidth="\d+"/, ' width="100%"')
-    .replace(/\sheight="\d+"/, ' height="100%"')
-    .replace(/<svg/, '<svg style="display:block" preserveAspectRatio="xMidYMid meet"')
+    .replace(/\sheight="\d+"/, ' height="auto"')
+    .replace(/<svg/, '<svg style="display:block"')
     .replace(/(<svg[^>]*>)/, `$1${SVG_STYLE}`)
 }
 
@@ -47,10 +46,28 @@ export function RegionMapModal({ open, onOpenChange, onSelect, userId }: RegionM
   const [gpsLoading, setGpsLoading] = useState(false)
   const [gpsError, setGpsError] = useState<string | null>(null)
   const [saveAsHome, setSaveAsHome] = useState(false)
+  const [tooltip, setTooltip] = useState<{ name: string; x: number; y: number } | null>(null)
 
   // GPS result buffered for after sigungu SVG loads
   const pendingGpsRegion = useRef<RegionSelection | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const selectionStyleRef = useRef<HTMLStyleElement | null>(null)
+
+  // Stable <style> element in <head> — bypasses React reconciler so tooltip re-renders don't flicker it
+  useEffect(() => {
+    const el = document.createElement('style')
+    document.head.appendChild(el)
+    selectionStyleRef.current = el
+    return () => { el.remove() }
+  }, [])
+
+  // Update selection highlight when code changes (higher specificity than path:hover)
+  useEffect(() => {
+    if (!selectionStyleRef.current) return
+    selectionStyleRef.current.textContent = selectedRegion?.code
+      ? `svg path[data-code="${selectedRegion.code}"] { fill: #c85a08 !important; }`
+      : ''
+  }, [selectedRegion?.code])
 
   // Load SVG when view/sido changes
   useEffect(() => {
@@ -94,34 +111,26 @@ export function RegionMapModal({ open, onOpenChange, onSelect, userId }: RegionM
     }
   }, [open])
 
-  // Apply .selected class to highlighted path after SVG renders
+  // Apply pending GPS region after sigungu SVG loads
   useEffect(() => {
-    if (!svgContent || !containerRef.current) return
-
-    // Remove previous selection highlight
-    const prev = containerRef.current.querySelector('path.selected')
-    prev?.classList.remove('selected')
-
-    // Apply pending GPS region if available
+    if (!svgContent) return
     if (pendingGpsRegion.current) {
       const region = pendingGpsRegion.current
       pendingGpsRegion.current = null
       setSelectedRegion(region)
-      const path = containerRef.current.querySelector<Element>(
-        `path[data-code="${region.code}"]`,
-      )
-      path?.classList.add('selected')
-      return
     }
+  }, [svgContent])
 
-    // Apply current selectedRegion
-    if (selectedRegion) {
-      const path = containerRef.current.querySelector<Element>(
-        `path[data-code="${selectedRegion.code}"]`,
-      )
-      path?.classList.add('selected')
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    const path = (e.target as Element).closest?.('path[data-short]')
+    if (path) {
+      const name = path.getAttribute('data-short') ?? path.getAttribute('data-name') ?? ''
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+      setTooltip({ name, x: e.clientX - rect.left, y: e.clientY - rect.top })
+    } else {
+      setTooltip(null)
     }
-  }, [svgContent, selectedRegion])
+  }, [])
 
   const handleMapClick = useCallback(
     (e: React.MouseEvent) => {
@@ -139,14 +148,12 @@ export function RegionMapModal({ open, onOpenChange, onSelect, userId }: RegionM
         setView('sigungu')
         setSelectedRegion(null)
       } else {
-        // Remove previous selected style
-        containerRef.current?.querySelector('path.selected')?.classList.remove('selected')
-        path.classList.add('selected')
         setSelectedRegion({
           id: dataId,
           name: dataName,
           shortName: dataShort,
           level: 'sigungu',
+          code,
         } satisfies RegionSelection)
       }
     },
@@ -208,6 +215,7 @@ export function RegionMapModal({ open, onOpenChange, onSelect, userId }: RegionM
             name: region.name,
             shortName: region.short_name,
             level: 'sigungu',
+            code: sigunguCode,
           }
 
           // Buffer GPS result; switch to sigungu view which will trigger SVG load
@@ -253,7 +261,7 @@ export function RegionMapModal({ open, onOpenChange, onSelect, userId }: RegionM
             </button>
           )}
           <span className="flex-1 text-sm font-semibold">
-            {view === 'sido' ? '지역 선택' : selectedSido?.shortName || selectedSido?.name || '시군구 선택'}
+            라이딩하고 싶은 지역 선택
           </span>
           {/* GPS button */}
           <button
@@ -286,7 +294,7 @@ export function RegionMapModal({ open, onOpenChange, onSelect, userId }: RegionM
         )}
 
         {/* Map area */}
-        <div className="relative min-h-0 flex-1 overflow-hidden">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {loading && (
             <div className="p-4">
               <div className="h-[360px] animate-pulse rounded-lg bg-muted" />
@@ -311,14 +319,26 @@ export function RegionMapModal({ open, onOpenChange, onSelect, userId }: RegionM
 
           {svgContent && !loading && !error && (
             // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
-            <div
-              ref={containerRef}
-              className="h-full w-full overflow-hidden p-2"
-              onClick={handleMapClick}
-              // svgContent is only ever loaded from /maps/*.svg (our own pre-built files)
-              // eslint-disable-next-line react/no-danger
-              dangerouslySetInnerHTML={{ __html: svgContent }}
-            />
+            <div className="relative w-full p-2">
+              <div
+                ref={containerRef}
+                className="w-full"
+                onClick={handleMapClick}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={() => setTooltip(null)}
+                // svgContent is only ever loaded from /maps/*.svg (our own pre-built files)
+                // eslint-disable-next-line react/no-danger
+                dangerouslySetInnerHTML={{ __html: svgContent }}
+              />
+              {tooltip && (
+                <div
+                  className="pointer-events-none absolute z-10 rounded-md bg-foreground px-2 py-1 text-xs font-medium text-background shadow-md"
+                  style={{ left: tooltip.x + 12, top: tooltip.y - 28 }}
+                >
+                  {tooltip.name}
+                </div>
+              )}
+            </div>
           )}
         </div>
 

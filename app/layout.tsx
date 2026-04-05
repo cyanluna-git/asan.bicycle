@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Epilogue, Inter } from "next/font/google";
 import { ProfileGate } from "@/components/profile/profile-gate";
 import { InstallPromptBanner } from "@/components/pwa/install-prompt-banner";
 import { NotificationPrompt } from "@/components/pwa/notification-prompt";
@@ -20,6 +20,17 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const epilogue = Epilogue({
+  variable: "--font-headline",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+const inter = Inter({
+  variable: "--font-body",
+  subsets: ["latin"],
+});
+
 const googleSiteVerification =
   process.env.GOOGLE_SITE_VERIFICATION?.trim() ||
   process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim() ||
@@ -27,7 +38,7 @@ const googleSiteVerification =
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
-  title: "Wheeling — 전국 자전거 코스 탐색",
+  title: "굴림 — 전국 자전거 코스 탐색",
   description: "전국 자전거 코스를 탐색하고 공유하는 라이딩 커뮤니티",
   verification: googleSiteVerification
     ? {
@@ -45,14 +56,14 @@ export default function RootLayout({
     <html lang="ko">
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#E8690A" />
+        <meta name="theme-color" content="#994200" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Wheeling" />
+        <meta name="apple-mobile-web-app-title" content="굴림" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${epilogue.variable} ${inter.variable} antialiased`}
       >
         <RegionProvider>
           <Suspense fallback={<HeaderSkeleton />}>
