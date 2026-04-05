@@ -16,8 +16,9 @@ import { getUploaderDisplayName } from "@/lib/user-display-name";
 import type { User } from "@supabase/supabase-js";
 
 const navLinks = [
-  { label: "코스 찾기", href: "/courses", active: false },
-  { label: "코스 올리기", href: "/upload", active: false },
+  { label: "Courses", href: "/courses" },
+  { label: "Map", href: "/explore" },
+  { label: "Community", href: "/community" },
 ] as const;
 
 export function Header() {
@@ -52,7 +53,7 @@ export function Header() {
   }, [pathname, searchParams]);
 
   const visibleLinks = user
-    ? [...navLinks, { label: "내 코스", href: "/my-courses", active: false }]
+    ? [...navLinks, { label: "My Courses", href: "/my-courses" }]
     : navLinks;
 
   const handleRegionSelect = (region: RegionSelection) => {
@@ -68,11 +69,11 @@ export function Header() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 flex h-16 items-center border-b bg-background px-4 md:px-6">
+    <header className="fixed top-0 left-0 right-0 z-50 flex h-16 items-center border-b bg-stitch-surface/90 backdrop-blur-md px-4 md:px-6">
       {/* Logo */}
       <Link href="/" className="mr-4 flex items-center gap-1.5">
-        <span className="text-lg font-bold tracking-tight">
-          Wheeling
+        <span className="font-headline text-2xl font-black tracking-tighter">
+          굴림
         </span>
       </Link>
 
@@ -100,9 +101,9 @@ export function Header() {
             key={link.href}
             href={link.href}
             className={
-              link.active
-                ? "rounded-md px-3 py-2 text-sm font-medium text-foreground"
-                : "rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+              pathname === link.href
+                ? "rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wider text-primary border-b-2 border-primary"
+                : "rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
             }
           >
             {link.label}
@@ -125,48 +126,54 @@ export function Header() {
         />
       </form>
 
-      {/* User actions (desktop) */}
-      {user ? (
-        <div className="hidden items-center gap-2 ml-3 md:flex">
-          <button
-            type="button"
-            onClick={() => setProfileOpen(true)}
-            className="flex items-center gap-2 rounded-full border px-2.5 py-1.5 transition hover:bg-accent"
-          >
-            <span className="text-lg leading-none">{resolveProfileEmoji(user)}</span>
-            <span className="text-xs text-muted-foreground truncate max-w-[140px]">
-              {getUploaderDisplayName(user)}
-            </span>
-          </button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0"
-            onClick={() => setProfileOpen(true)}
-            aria-label="프로필 설정"
-            title="프로필 설정"
-          >
-            <Settings2 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0"
-            onClick={() => supabase.auth.signOut()}
-            aria-label="로그아웃"
-            title="로그아웃"
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
-        </div>
-      ) : (
-        <div className="hidden items-center gap-2 ml-3 md:flex">
-          <Button variant="outline" onClick={() => setLoginModalOpen(true)}>
+      {/* Upload CTA + User actions (desktop) */}
+      <div className="hidden items-center gap-2 ml-3 md:flex">
+        <Link
+          href="/upload"
+          className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
+        >
+          코스 올리기
+        </Link>
+        {user ? (
+          <>
+            <button
+              type="button"
+              onClick={() => setProfileOpen(true)}
+              className="flex items-center gap-2 rounded-full border px-2.5 py-1.5 transition hover:bg-accent"
+            >
+              <span className="text-lg leading-none">{resolveProfileEmoji(user)}</span>
+              <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                {getUploaderDisplayName(user)}
+              </span>
+            </button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={() => setProfileOpen(true)}
+              aria-label="프로필 설정"
+              title="프로필 설정"
+            >
+              <Settings2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={() => supabase.auth.signOut()}
+              aria-label="로그아웃"
+              title="로그아웃"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </>
+        ) : (
+          <Button variant="outline" size="sm" onClick={() => setLoginModalOpen(true)}>
             <LogIn className="mr-2 h-4 w-4" />
             로그인
           </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Mobile menu toggle */}
       <Button
@@ -207,9 +214,10 @@ export function Header() {
               <Link
                 key={link.href}
                 href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
                 className={
-                  link.active
-                    ? "rounded-md px-3 py-2 text-sm font-medium text-foreground"
+                  pathname === link.href
+                    ? "rounded-md px-3 py-2 text-sm font-semibold text-primary"
                     : "rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
                 }
               >
