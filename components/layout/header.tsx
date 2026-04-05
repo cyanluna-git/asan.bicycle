@@ -57,6 +57,7 @@ export function Header() {
 
   const handleRegionSelect = (region: RegionSelection) => {
     setTemporaryRegion(region.id, region.name);
+    router.push(`/courses?region=${region.id}`);
   };
 
   const submitSearch = (event: React.FormEvent<HTMLFormElement>) => {
@@ -276,6 +277,7 @@ export function Header() {
         open={regionMapOpen}
         onOpenChange={setRegionMapOpen}
         onSelect={handleRegionSelect}
+        userId={user?.id}
       />
 
       {/* Login modal */}

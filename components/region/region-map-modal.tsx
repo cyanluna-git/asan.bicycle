@@ -4,11 +4,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Locate, Loader2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { type RegionSelection } from '@/components/region/region-picker'
+import { upsertProfile } from '@/lib/profile'
 
 interface RegionMapModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSelect: (region: RegionSelection) => void
+  /** If provided, shows a "홈 지역으로 저장" checkbox for logged-in users */
+  userId?: string | null
 }
 
 interface SidoMeta {
@@ -32,7 +35,7 @@ function injectStyle(svgText: string): string {
     .replace(/(<svg[^>]*>)/, `$1${SVG_STYLE}`)
 }
 
-export function RegionMapModal({ open, onOpenChange, onSelect }: RegionMapModalProps) {
+export function RegionMapModal({ open, onOpenChange, onSelect, userId }: RegionMapModalProps) {
   const [view, setView] = useState<'sido' | 'sigungu'>('sido')
   const [selectedSido, setSelectedSido] = useState<SidoMeta | null>(null)
   const [svgContent, setSvgContent] = useState<string | null>(null)
@@ -42,6 +45,7 @@ export function RegionMapModal({ open, onOpenChange, onSelect }: RegionMapModalP
   const [retryKey, setRetryKey] = useState(0)
   const [gpsLoading, setGpsLoading] = useState(false)
   const [gpsError, setGpsError] = useState<string | null>(null)
+  const [saveAsHome, setSaveAsHome] = useState(false)
 
   // GPS result buffered for after sigungu SVG loads
   const pendingGpsRegion = useRef<RegionSelection | null>(null)
@@ -84,6 +88,7 @@ export function RegionMapModal({ open, onOpenChange, onSelect }: RegionMapModalP
       setSelectedRegion(null)
       setError(null)
       setGpsError(null)
+      setSaveAsHome(false)
       pendingGpsRegion.current = null
     }
   }, [open])
@@ -156,9 +161,13 @@ export function RegionMapModal({ open, onOpenChange, onSelect }: RegionMapModalP
 
   const handleConfirm = useCallback(() => {
     if (!selectedRegion) return
+    // Fire-and-forget home region save (doesn't block navigation)
+    if (saveAsHome && userId) {
+      void upsertProfile(userId, { home_region_id: selectedRegion.id })
+    }
     onSelect(selectedRegion)
     onOpenChange(false)
-  }, [selectedRegion, onSelect, onOpenChange])
+  }, [selectedRegion, saveAsHome, userId, onSelect, onOpenChange])
 
   const handleGps = useCallback(() => {
     if (!navigator.geolocation) {
@@ -316,9 +325,20 @@ export function RegionMapModal({ open, onOpenChange, onSelect }: RegionMapModalP
         {selectedRegion && (
           <div className="border-t bg-background px-4 py-3">
             <div className="flex items-center justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">선택된 지역</p>
-                <p className="text-sm font-semibold">{selectedRegion.shortName || selectedRegion.name}</p>
+                <p className="truncate text-sm font-semibold">{selectedRegion.shortName || selectedRegion.name}</p>
+                {userId && (
+                  <label className="mt-1 flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={saveAsHome}
+                      onChange={(e) => setSaveAsHome(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded"
+                    />
+                    홈 지역으로 저장
+                  </label>
+                )}
               </div>
               <Button onClick={handleConfirm} className="shrink-0">
                 여기 코스 탐색
