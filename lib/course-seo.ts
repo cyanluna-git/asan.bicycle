@@ -43,7 +43,7 @@ export function buildCourseMetadata(course: CourseSeoData): Metadata {
   const imageUrl = course.imageUrl ?? `${siteUrl}/opengraph-image`
 
   return {
-    title: `${course.title} | Wheeling`,
+    title: `${course.title} | 굴림`,
     description,
     alternates: {
       canonical,
@@ -54,7 +54,7 @@ export function buildCourseMetadata(course: CourseSeoData): Metadata {
       url: canonical,
       title: course.title,
       description,
-      siteName: 'Wheeling',
+      siteName: '굴림',
       images: [
         {
           url: imageUrl,

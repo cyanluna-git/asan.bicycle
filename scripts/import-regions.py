@@ -68,6 +68,19 @@ def ensure_multipolygon(geometry: dict) -> dict:
     return geometry
 
 
+def geom_to_ewkt(geom: dict) -> str:
+    """Convert GeoJSON MultiPolygon to EWKT string for PostgREST geometry columns."""
+    def ring_wkt(ring: list) -> str:
+        return "(" + ",".join(f"{x} {y}" for x, y in ring) + ")"
+
+    def polygon_wkt(polygon: list) -> str:
+        return "(" + ",".join(ring_wkt(r) for r in polygon) + ")"
+
+    coords = geom["coordinates"]  # always MultiPolygon after ensure_multipolygon
+    inner = ",".join(polygon_wkt(p) for p in coords)
+    return f"SRID=4326;MULTIPOLYGON({inner})"
+
+
 def supabase_post(
     service_key: str,
     table: str,
@@ -136,7 +149,7 @@ def import_sido(service_key: str, dry_run: bool) -> None:
             "code": code,
             "level": "sido",
             "parent_id": None,
-            "geom": json.dumps(geom),
+            "geom": geom_to_ewkt(geom),
         }
 
         if dry_run:
@@ -199,7 +212,7 @@ def import_sigungu(service_key: str, dry_run: bool) -> None:
             "code": code,
             "level": "sigungu",
             "parent_id": parent["id"],
-            "geom": json.dumps(geom),
+            "geom": geom_to_ewkt(geom),
         }
 
         if dry_run:

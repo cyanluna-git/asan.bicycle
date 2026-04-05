@@ -1,7 +1,9 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowRight, Bike, Download, MapPinned } from 'lucide-react'
+import { ArrowRight, Bike, Download, MapPinned, Mountain } from 'lucide-react'
 import { createAnonServerClient } from '@/lib/supabase-server'
+import { CourseRouteSnapshot } from '@/components/courses/course-route-snapshot'
+import type { RoutePreviewPoint } from '@/types/course'
 
 // ---------------------------------------------------------------------------
 // Data fetching
@@ -15,6 +17,7 @@ type RecentCourse = {
   elevation_gain_m: number
   theme: string | null
   tags: string[]
+  route_preview_points: RoutePreviewPoint[] | null
 }
 
 async function fetchRecentCourses(): Promise<RecentCourse[]> {
@@ -22,7 +25,7 @@ async function fetchRecentCourses(): Promise<RecentCourse[]> {
     const supabase = createAnonServerClient()
     const { data, error } = await supabase
       .from('courses')
-      .select('id, title, difficulty, distance_km, elevation_gain_m, theme, tags')
+      .select('id, title, difficulty, distance_km, elevation_gain_m, theme, tags, route_preview_points')
       .order('created_at', { ascending: false })
       .limit(3)
 
@@ -61,11 +64,6 @@ export const regionButtons = [
   '서울', '제주',
 ] as const
 
-const courseGradients = [
-  'from-[#21422d] to-[#3a6b4a]',
-  'from-[#994200] to-[#c05400]',
-  'from-[#1a3a5c] to-[#2d6099]',
-]
 
 // ---------------------------------------------------------------------------
 // Component
@@ -78,55 +76,76 @@ export default async function LandingPage() {
     <main className="min-h-[calc(100vh-64px)] overflow-hidden">
 
       {/* ------------------------------------------------------------------ */}
-      {/* Hero Section */}
+      {/* Hero Section — full-bleed photo with left-side overlay              */}
       {/* ------------------------------------------------------------------ */}
-      <section
-        className="relative px-6 py-12 md:px-12 lg:px-20 lg:py-20"
-        style={{
-          background: 'radial-gradient(circle at top, #21422d 0%, #102319 38%, #08150f 100%)',
-        }}
-      >
-        <div className="relative mx-auto grid min-h-[calc(100vh-104px)] max-w-6xl items-center gap-12 lg:grid-cols-2">
+      <section className="relative min-h-[calc(100vh-64px)] overflow-hidden">
 
-          {/* Left — copy */}
+        {/* Background photo */}
+        <div className="absolute inset-0">
+          <Image
+            src="/images/hero-cyclist.jpg"
+            alt="산길을 달리는 라이더 — 석양 아래 구불구불한 산악 도로"
+            fill
+            className="object-cover object-center"
+            priority
+          />
+          {/* Gradient overlay: dark left for text legibility, transparent right to reveal photo */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(to right, #0f2818 0%, #0f2818 28%, rgba(15,40,24,0.75) 50%, rgba(15,40,24,0.25) 75%, rgba(15,40,24,0.08) 100%)',
+            }}
+          />
+        </div>
+
+        {/* Content overlay */}
+        <div className="relative z-10 mx-auto flex min-h-[calc(100vh-64px)] max-w-6xl items-center px-6 py-20 md:px-12 lg:px-20">
           <div className="max-w-2xl">
+
+            {/* Brand badge */}
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-xs font-medium tracking-[0.24em] text-white/72 uppercase">
               <span className="h-2 w-2 rounded-full bg-[#8FE36A]" />
-              Gullim
+              Gul<span className="text-[#E8690A]">.rim</span>
             </div>
 
+            {/* Headline block */}
             <div
               className="font-headline font-black leading-none"
               style={{ fontSize: 'clamp(72px, 11vw, 156px)' }}
             >
-              <span className="block text-primary">GULLIM</span>
-              <span className="mt-1 block text-xs font-semibold tracking-[0.4em] text-white/50 uppercase">
-                COURSE COMMUNITY
-              </span>
+              <span className="block text-[#E8690A]">GULLIM</span>
             </div>
+            <span className="mt-2 block text-xs font-semibold tracking-[0.4em] text-white/40 uppercase">
+              ROAD &middot; MTB
+            </span>
 
+            {/* Korean tagline */}
             <h1 className="font-headline mt-6 text-4xl font-bold leading-snug text-white md:text-5xl">
               페달을 굴리고,
               <br />
               <span className="text-white/80">함께 어울리는 코스 커뮤니티</span>
             </h1>
 
+            {/* CTA buttons */}
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/courses"
-                className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+                className="inline-flex items-center gap-2 rounded-lg px-7 py-3.5 text-sm font-bold text-white shadow-xl shadow-black/20 transition hover:opacity-90"
+                style={{ background: 'linear-gradient(135deg, #994200 0%, #c05400 100%)' }}
               >
                 코스 탐색하기
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/upload"
-                className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/8 px-6 py-3 text-sm font-medium text-white transition hover:bg-white/12"
+                className="inline-flex items-center gap-2 rounded-lg border border-white/40 px-7 py-3.5 text-sm font-bold text-white transition hover:bg-white/10"
               >
                 코스 올리기
               </Link>
             </div>
 
+            {/* Feature pills */}
             <div className="mt-8 flex flex-wrap gap-2">
               {featureCards.map(({ icon: Icon, title }) => (
                 <div
@@ -139,38 +158,47 @@ export default async function LandingPage() {
               ))}
             </div>
           </div>
+        </div>
 
-          {/* Right — rider image + overlay card */}
-          <div className="relative w-full">
-            <div className="relative overflow-hidden rounded-2xl shadow-2xl -rotate-2 transition-transform duration-500 hover:rotate-0">
-              <Image
-                src="https://images.unsplash.com/photo-1611866063945-9f5f4b157c34?w=700&q=80"
-                alt="라이더가 자전거 코스를 달리는 모습"
-                width={700}
-                height={520}
-                className="w-full object-cover"
-                priority
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+        {/* Active Ride card — GPX course card style, bottom-right over the photo */}
+        <div className="absolute bottom-8 right-8 z-20 hidden w-72 rounded-2xl border border-white/10 bg-[#0d1d15]/95 p-5 shadow-2xl backdrop-blur-sm lg:block">
+          <div className="mb-1 flex items-center justify-between">
+            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/40">Active Ride</p>
+            <span className="rounded bg-[#3a6b4a]/50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#8FE36A]">
+              Road
+            </span>
+          </div>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#3a6b4a]/40">
+              <ArrowRight className="h-4 w-4 text-[#8FE36A]" />
             </div>
-            <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-white/15 bg-black/50 px-4 py-3 backdrop-blur-md">
-              <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/50">Active Ride</p>
-              <p className="mt-1 text-sm font-semibold text-white">좌부-예당호-도고-송악</p>
-              <div className="mt-1.5 flex items-center gap-3 text-xs text-white/60">
-                <span>80 km</span>
-                <span className="h-1 w-1 rounded-full bg-white/30" />
-                <span>↑ 455 m</span>
-                <span className="h-1 w-1 rounded-full bg-white/30" />
-                <span className="text-[#8FE36A]">Road</span>
-              </div>
+            <div>
+              <p className="font-headline text-sm font-bold text-white">좌부-예당호-도고-송악 루프</p>
             </div>
           </div>
-
+          <div className="grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
+            <div>
+              <p className="text-[9px] font-bold uppercase text-white/30">Dist</p>
+              <p className="mt-0.5 font-bold text-white">80 km</p>
+            </div>
+            <div>
+              <p className="text-[9px] font-bold uppercase text-white/30">Elev</p>
+              <p className="mt-0.5 flex items-center gap-1 font-bold text-white">
+                <Mountain className="h-3 w-3 text-white/40" />
+                455 m
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 flex items-center gap-1.5 border-t border-white/10 pt-3">
+            <Download className="h-3 w-3 text-[#8FE36A]" />
+            <span className="text-[10px] font-medium text-white/50">GPX 준비됨</span>
+          </div>
         </div>
+
       </section>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Features Section */}
+      {/* Features Section                                                    */}
       {/* ------------------------------------------------------------------ */}
       <section className="bg-stitch-surface px-6 py-16 md:px-12 lg:px-20 lg:py-24">
         <div className="mx-auto max-w-6xl">
@@ -195,7 +223,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Map Preview Section */}
+      {/* Map Preview Section                                                 */}
       {/* ------------------------------------------------------------------ */}
       <section className="bg-stitch-surface-container-low px-6 py-16 md:px-12 lg:px-20 lg:py-24">
         <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-2 lg:items-center">
@@ -230,40 +258,44 @@ export default async function LandingPage() {
             </Link>
           </div>
 
-          {/* Right — map placeholder */}
-          <div
-            className="relative overflow-hidden rounded-2xl"
+          {/* Right — Korea map with SVG silhouette */}
+          <Link
+            href="/explore"
+            className="group relative overflow-hidden rounded-2xl block"
             style={{ aspectRatio: '4/3' }}
           >
+            {/* Dark green base */}
+            <div className="absolute inset-0 bg-[#0c1e12]" />
+            {/* Korea map silhouette */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/maps/sido.svg"
+              alt="한국 지역 지도"
+              className="absolute inset-0 h-full w-full object-contain py-6 px-2"
+              style={{ filter: 'brightness(0) invert(1)', opacity: 0.12 }}
+            />
+            {/* Radial green glow */}
             <div
               className="absolute inset-0"
-              style={{
-                background: 'radial-gradient(circle at 40% 45%, #3a6b4a 0%, #21422d 40%, #0f2518 100%)',
-              }}
+              style={{ background: 'radial-gradient(circle at 55% 50%, rgba(58,107,74,0.65) 0%, transparent 62%)' }}
             />
-            <div className="absolute inset-0 opacity-20"
-              style={{
-                backgroundImage: `
-                  linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-                  linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
-                `,
-                backgroundSize: '32px 32px',
-              }}
-            />
+            {/* Hover reveal overlay */}
+            <div className="absolute inset-0 bg-[#3a6b4a]/0 transition-colors duration-300 group-hover:bg-[#3a6b4a]/10" />
+            {/* Center label */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="rounded-2xl border border-white/20 bg-black/30 px-6 py-4 text-center backdrop-blur-sm">
+              <div className="rounded-2xl border border-white/20 bg-black/35 px-6 py-4 text-center backdrop-blur-sm transition group-hover:border-white/30 group-hover:bg-black/45">
                 <MapPinned className="mx-auto mb-2 h-8 w-8 text-[#8FE36A]" />
                 <p className="text-sm font-semibold text-white">지역 선택 후 탐색</p>
                 <p className="mt-1 text-xs text-white/60">카카오맵 기반 인터랙티브 지도</p>
               </div>
             </div>
-          </div>
+          </Link>
 
         </div>
       </section>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Recommended Courses Section */}
+      {/* Recommended Courses Section                                         */}
       {/* ------------------------------------------------------------------ */}
       <section className="bg-stitch-surface px-6 py-16 md:px-12 lg:px-20 lg:py-24">
         <div className="mx-auto max-w-6xl">
@@ -280,14 +312,18 @@ export default async function LandingPage() {
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {courses.length > 0 ? courses.map((course, idx) => (
+            {courses.length > 0 ? courses.map((course) => (
               <article
                 key={course.id}
                 className="overflow-hidden rounded-2xl border border-stitch-outline/20 bg-white shadow-sm transition hover:shadow-md"
               >
-                {/* Gradient image area */}
-                <div className={`relative h-40 bg-gradient-to-br ${courseGradients[idx % courseGradients.length]}`}>
-                  <span className="absolute left-3 top-3 rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
+                {/* Route map preview */}
+                <div className="relative h-44">
+                  <CourseRouteSnapshot
+                    points={course.route_preview_points ?? []}
+                    className="h-44 rounded-none"
+                  />
+                  <span className="absolute left-3 top-3 rounded-full border border-black/8 bg-white/90 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-foreground/80 backdrop-blur-sm">
                     {(course.tags ?? []).includes('mtb') ? 'MTB' : 'Road'}
                   </span>
                 </div>
@@ -299,7 +335,7 @@ export default async function LandingPage() {
                   <div className="mt-2 flex items-center gap-3 text-xs text-stitch-on-surface-variant">
                     <span>{course.distance_km} km</span>
                     <span className="h-1 w-1 rounded-full bg-stitch-outline/40" />
-                    <span>↑ {course.elevation_gain_m.toLocaleString()} m</span>
+                    <span>&uarr; {course.elevation_gain_m.toLocaleString()} m</span>
                     {course.theme && (
                       <>
                         <span className="h-1 w-1 rounded-full bg-stitch-outline/40" />
@@ -321,11 +357,11 @@ export default async function LandingPage() {
               Array.from({ length: 3 }).map((_, idx) => (
                 <div
                   key={idx}
-                  className={`overflow-hidden rounded-2xl bg-gradient-to-br ${courseGradients[idx]} opacity-60`}
-                  style={{ height: '220px' }}
+                  className="overflow-hidden rounded-2xl border border-stitch-outline/20 bg-white shadow-sm opacity-70"
                 >
-                  <div className="flex h-full items-center justify-center">
-                    <p className="text-sm text-white/70">코스 준비 중</p>
+                  <CourseRouteSnapshot points={[]} className="h-44 rounded-none" />
+                  <div className="flex items-center justify-center py-6">
+                    <p className="text-sm text-stitch-on-surface-variant">코스 준비 중</p>
                   </div>
                 </div>
               ))
@@ -335,7 +371,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ------------------------------------------------------------------ */}
-      {/* CTA Banner */}
+      {/* CTA Banner                                                          */}
       {/* ------------------------------------------------------------------ */}
       <section className="px-6 py-16 md:px-12 lg:px-20 lg:py-24" style={{ background: 'linear-gradient(135deg, #994200 0%, #c05400 100%)' }}>
         <div className="mx-auto max-w-3xl text-center">

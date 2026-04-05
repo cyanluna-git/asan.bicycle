@@ -99,7 +99,7 @@ export function InstallPromptBanner() {
       </button>
 
       <div className="pr-6">
-        <p className="text-sm font-medium">Wheeling을 홈 화면에 추가하세요</p>
+        <p className="text-sm font-medium">굴림을 홈 화면에 추가하세요</p>
         <p className="mt-1 text-xs text-muted-foreground">
           {showIOSGuide
             ? 'Safari 하단의 공유 버튼을 누른 뒤 "홈 화면에 추가"를 선택하세요.'

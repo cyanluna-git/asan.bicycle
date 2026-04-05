@@ -40,7 +40,7 @@ function hashSeed(seed: string) {
 }
 
 function getSeed(user: Pick<User, 'id' | 'email'> | null | undefined) {
-  return user?.id || user?.email || 'wheeling'
+  return user?.id || user?.email || 'gullim'
 }
 
 export function normalizeProfileName(value: string) {

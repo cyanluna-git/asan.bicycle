@@ -9,7 +9,7 @@ export function Footer() {
 
           {/* Brand */}
           <div>
-            <p className="font-headline text-xl font-bold text-stone-50">Gullim</p>
+            <p className="font-headline text-xl font-bold text-stone-50">Gul<span className="text-[#E8690A]">.rim</span></p>
             <p className="mt-3 text-sm leading-relaxed text-stone-400">
               전국 자전거 코스를 탐색하고,
               <br />

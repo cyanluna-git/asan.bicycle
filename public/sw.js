@@ -1,6 +1,6 @@
-// Wheeling Service Worker — push notifications and basic offline support
+// 굴림 Service Worker — push notifications and basic offline support
 
-const CACHE_NAME = 'wheeling-v1'
+const CACHE_NAME = 'gullim-v1'
 
 self.addEventListener('install', (event) => {
   event.waitUntil(self.skipWaiting())
@@ -12,7 +12,7 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {}
-  const title = data.title || 'Wheeling'
+  const title = data.title || '굴림'
   const options = {
     body: data.body || '',
     icon: '/icons/icon-192.png',

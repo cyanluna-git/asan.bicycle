@@ -286,7 +286,9 @@ function KakaoMapInner({
       window.clearTimeout(timer)
     }
   }, [routeQueryString, selectedCourseId, selectedCourseRouteGeoJSON])
-  const hasAnyRoute = mergedCourses.some((course) => course.route_geojson != null)
+  const hasAnyRoute = mergedCourses.some(
+    (course) => course.route_geojson != null || (course.route_preview_points?.length ?? 0) > 1
+  )
   const effectiveCourses: CourseMapItem[] = hasAnyRoute
     ? mergedCourses
     : isRoutesLoading
@@ -621,6 +623,9 @@ function RoutePolylines({
         if (coords.length < 2) return null
         const isSelected = course.id === selectedCourseId
 
+        // Hide non-selected courses when a course is selected
+        if (selectedCourseId && !isSelected) return null
+
         if (isSelected && course.slopeSegments.length > 0) {
           return [
             <Polyline
@@ -651,9 +656,9 @@ function RoutePolylines({
             key={course.id}
             path={coords}
             strokeWeight={isSelected ? 4 : 2}
-            strokeColor={isSelected ? "#3B82F6" : "#CCCCCC"}
+            strokeColor={isSelected ? "#E8690A" : "#E8690A"}
             strokeOpacity={
-              isSelected ? fadeOpacity : 0.6 * fadeOpacity
+              isSelected ? fadeOpacity : 0.35 * fadeOpacity
             }
             strokeStyle="solid"
             zIndex={isSelected ? 2 : 1}

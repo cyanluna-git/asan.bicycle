@@ -14,7 +14,7 @@ export async function generateMetadata({
 
   if (!selectedCourseId) {
     return {
-      title: '코스 탐색 | Wheeling',
+      title: '코스 탐색 | 굴림',
       description: '자전거 코스를 지도와 함께 탐색하세요.',
       alternates: {
         canonical: `${getSiteUrl()}/explore`,
@@ -29,7 +29,7 @@ export async function generateMetadata({
   const course = await fetchCourseSeoData(selectedCourseId)
   if (!course) {
     return {
-      title: '코스 탐색 | Wheeling',
+      title: '코스 탐색 | 굴림',
       robots: {
         index: false,
         follow: true,

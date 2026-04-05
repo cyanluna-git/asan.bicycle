@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og'
 
-export const alt = 'Wheeling'
+export const alt = '굴림'
 export const size = {
   width: 1200,
   height: 630,
@@ -41,7 +41,7 @@ export default function OpenGraphImage() {
               fontWeight: 700,
             }}
           >
-            Wheeling
+            굴림
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -61,7 +61,7 @@ export default function OpenGraphImage() {
             color: '#6B7280',
           }}
         >
-          <div style={{ display: 'flex' }}>wheeling</div>
+          <div style={{ display: 'flex' }}>gullim</div>
           <div style={{ display: 'flex' }}>courses · reviews · share</div>
         </div>
       </div>

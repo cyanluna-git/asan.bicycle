@@ -14,7 +14,7 @@ export async function generateMetadata({
 
   if (!course) {
     return {
-      title: '코스를 찾을 수 없음 | Wheeling',
+      title: '코스를 찾을 수 없음 | 굴림',
       robots: {
         index: false,
         follow: false,

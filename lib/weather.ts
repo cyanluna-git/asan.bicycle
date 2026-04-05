@@ -84,12 +84,14 @@ export function resolveBaseDateTime(targetDate: Date): {
   baseDate: string
   baseTime: string
 } {
-  const year = targetDate.getFullYear()
-  const month = String(targetDate.getMonth() + 1).padStart(2, '0')
-  const day = String(targetDate.getDate()).padStart(2, '0')
+  // targetDate는 Date.now() + 9h 로 만들어진 객체이므로 UTC 메서드로 읽어야 함
+  // (로컬 타임존이 KST면 getHours()가 9시간 이중 적용돼 잘못된 base_time 계산)
+  const year = targetDate.getUTCFullYear()
+  const month = String(targetDate.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(targetDate.getUTCDate()).padStart(2, '0')
 
   // 현재 시각에서 10분 버퍼를 뺀 시각으로 비교
-  const bufferedMinutes = targetDate.getHours() * 60 + targetDate.getMinutes() - 10
+  const bufferedMinutes = targetDate.getUTCHours() * 60 + targetDate.getUTCMinutes() - 10
 
   for (const bt of BASE_TIMES) {
     const btMinutes = parseInt(bt.slice(0, 2), 10) * 60 + parseInt(bt.slice(2), 10)
@@ -103,10 +105,10 @@ export function resolveBaseDateTime(targetDate: Date): {
 
   // 02:10 이전 → 전일 23:00
   const prevDay = new Date(targetDate)
-  prevDay.setDate(prevDay.getDate() - 1)
-  const pYear = prevDay.getFullYear()
-  const pMonth = String(prevDay.getMonth() + 1).padStart(2, '0')
-  const pDay = String(prevDay.getDate()).padStart(2, '0')
+  prevDay.setUTCDate(prevDay.getUTCDate() - 1)
+  const pYear = prevDay.getUTCFullYear()
+  const pMonth = String(prevDay.getUTCMonth() + 1).padStart(2, '0')
+  const pDay = String(prevDay.getUTCDate()).padStart(2, '0')
 
   return {
     baseDate: `${pYear}${pMonth}${pDay}`,
@@ -169,7 +171,7 @@ export async function fetchWeatherForecast(
 
   let res: Response
   try {
-    res = await fetch(url, { signal: controller.signal })
+    res = await fetch(url, { signal: controller.signal, cache: 'no-store' })
   } finally {
     clearTimeout(timeout)
   }

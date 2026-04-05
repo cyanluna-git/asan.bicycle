@@ -35,6 +35,7 @@ const TEMP_ID_KEY = 'temporary_region_id'
 const TEMP_NAME_KEY = 'temporary_region_name'
 
 export function RegionProvider({ children }: { children: ReactNode }) {
+  const [hasMounted, setHasMounted] = useState(false)
   const [homeRegionId, setHomeRegionId] = useState<string | null>(null)
   const [homeRegionName, setHomeRegionName] = useState<string | null>(null)
   const [tempRegionId, setTempRegionId] = useState<string | null>(null)
@@ -47,6 +48,7 @@ export function RegionProvider({ children }: { children: ReactNode }) {
       setTempRegionId(storedId)
       setTempRegionName(storedName)
     }
+    setHasMounted(true)
   }, [])
 
   useEffect(() => {
@@ -117,13 +119,15 @@ export function RegionProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<RegionContextValue>(
     () => ({
-      currentRegionId: tempRegionId ?? homeRegionId,
-      currentRegionName: tempRegionName ?? homeRegionName,
-      isTemporary: tempRegionId !== null,
+      // Gate sessionStorage-derived temp region behind hasMounted so the initial
+      // client render matches the server (both null), preventing hydration mismatches.
+      currentRegionId: hasMounted ? (tempRegionId ?? homeRegionId) : homeRegionId,
+      currentRegionName: hasMounted ? (tempRegionName ?? homeRegionName) : homeRegionName,
+      isTemporary: hasMounted ? tempRegionId !== null : false,
       setTemporaryRegion,
       clearTemporaryRegion,
     }),
-    [homeRegionId, homeRegionName, tempRegionId, tempRegionName, setTemporaryRegion, clearTemporaryRegion],
+    [hasMounted, homeRegionId, homeRegionName, tempRegionId, tempRegionName, setTemporaryRegion, clearTemporaryRegion],
   )
 
   return (

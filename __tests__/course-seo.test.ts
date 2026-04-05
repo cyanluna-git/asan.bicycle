@@ -78,7 +78,7 @@ describe('buildCourseMetadata', () => {
 
     const metadata = buildCourseMetadata(course)
 
-    expect(metadata.title).toBe('좌부-예당호-도고-송악 | Wheeling')
+    expect(metadata.title).toBe('좌부-예당호-도고-송악 | 굴림')
     expect(metadata.description).toBe('라이딩 코스 · 80km · 획득고도 455m · 호수')
     expect(metadata.alternates?.canonical).toBe('https://asan.bicycle/courses/course-123')
     expect(metadata.openGraph?.url).toBe('https://asan.bicycle/courses/course-123')
