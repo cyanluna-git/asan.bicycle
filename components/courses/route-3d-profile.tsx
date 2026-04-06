@@ -240,6 +240,8 @@ export function Route3DProfile({ routeGeoJSON, verticalExaggeration }: Route3DPr
     mesh: THREE.Mesh
     material: THREE.MeshLambertMaterial
     grid: THREE.GridHelper
+    groundPlane: THREE.Mesh | null
+    groundPlaneMat: THREE.MeshBasicMaterial | null
     frameId: number
     resizeObserver: ResizeObserver
     localPoints: { x: number; y: number; ele: number }[]
@@ -307,11 +309,47 @@ export function Route3DProfile({ routeGeoJSON, verticalExaggeration }: Route3DPr
     box.getSize(size)
     const maxDim = Math.max(size.x, size.y, size.z, 100)
 
-    // Grid
+    // Grid (visible until map texture loads)
     const gridSize = Math.ceil(maxDim * 1.5 / 100) * 100
     const grid = new THREE.GridHelper(gridSize, 20, 0xcccccc, 0xe0e0e0)
     grid.position.set(center.x, 0, center.z)
     scene.add(grid)
+
+    // Ground plane map texture (Kakao Static Map)
+    const rawCenter = {
+      lat: rawCoords.reduce((s, c) => s + c.lat, 0) / rawCoords.length,
+      lng: rawCoords.reduce((s, c) => s + c.lng, 0) / rawCoords.length,
+    }
+    let kakaoLevel = 7
+    if (maxDim < 1500) kakaoLevel = 4
+    else if (maxDim < 4000) kakaoLevel = 5
+    else if (maxDim < 10000) kakaoLevel = 6
+    else if (maxDim < 30000) kakaoLevel = 7
+    else kakaoLevel = 8
+
+    const planeSize = Math.max(size.x, size.z) * 1.8
+    const mapUrl = `/api/kakao-static-map?center=${rawCenter.lng},${rawCenter.lat}&level=${kakaoLevel}&size=640x640`
+
+    let cancelled = false
+    const textureLoader = new THREE.TextureLoader()
+    textureLoader.load(
+      mapUrl,
+      (texture) => {
+        if (cancelled || !sceneStateRef.current) { texture.dispose(); return }
+        texture.colorSpace = THREE.SRGBColorSpace
+        const planeGeo = new THREE.PlaneGeometry(planeSize, planeSize)
+        const planeMat = new THREE.MeshBasicMaterial({ map: texture })
+        const planeMesh = new THREE.Mesh(planeGeo, planeMat)
+        planeMesh.rotation.x = -Math.PI / 2
+        planeMesh.position.set(center.x, -1, center.z)
+        scene.add(planeMesh)
+        grid.visible = false
+        sceneStateRef.current.groundPlane = planeMesh
+        sceneStateRef.current.groundPlaneMat = planeMat
+      },
+      undefined,
+      () => { /* texture load failed — grid stays visible */ },
+    )
 
     // Position camera
     camera.position.set(
@@ -352,12 +390,15 @@ export function Route3DProfile({ routeGeoJSON, verticalExaggeration }: Route3DPr
       mesh,
       material,
       grid,
+      groundPlane: null,
+      groundPlaneMat: null,
       frameId: frameIdRef.current,
       resizeObserver,
       localPoints,
     }
 
     return () => {
+      cancelled = true
       const state = sceneStateRef.current
       if (state) {
         cancelAnimationFrame(frameIdRef.current)
@@ -365,6 +406,11 @@ export function Route3DProfile({ routeGeoJSON, verticalExaggeration }: Route3DPr
         state.controls.dispose()
         state.mesh.geometry.dispose()
         state.material.dispose()
+        if (state.groundPlane) {
+          state.groundPlane.geometry.dispose()
+          state.groundPlaneMat?.map?.dispose()
+          state.groundPlaneMat?.dispose()
+        }
         state.renderer.dispose()
         if (container.contains(state.renderer.domElement)) {
           container.removeChild(state.renderer.domElement)

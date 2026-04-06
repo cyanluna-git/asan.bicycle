@@ -611,7 +611,6 @@ export function ExploreShell({
             windSpeed={windSpeed}
             windSegmentsOverride={windSegmentsOverride}
             onHoverPointChange={setHoveredRoutePoint}
-            routePreviewPoints={selectedCourse.route_preview_points}
           />
         )}
       </main>

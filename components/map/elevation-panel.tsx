@@ -14,12 +14,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer'
 import { Slider } from '@/components/ui/slider'
-import type { RouteGeoJSON, ElevationPoint, RouteRenderMetadata, UphillSegment, RoutePreviewPoint } from '@/types/course'
-
-const CourseRouteSnapshot = dynamic(
-  () => import('@/components/courses/course-route-snapshot').then((m) => m.CourseRouteSnapshot),
-  { ssr: false },
-)
+import type { RouteGeoJSON, ElevationPoint, RouteRenderMetadata, UphillSegment } from '@/types/course'
 
 const ElevationChart = dynamic(
   () => import('@/components/courses/elevation-chart').then((m) => m.ElevationChart),
@@ -47,7 +42,6 @@ interface ElevationPanelProps {
   windSpeed?: number | null
   windSegmentsOverride?: WindSegment[] | null
   onHoverPointChange?: (point: RouteHoverPoint | null) => void
-  routePreviewPoints?: RoutePreviewPoint[] | null
 }
 
 export function ElevationPanel({
@@ -59,7 +53,6 @@ export function ElevationPanel({
   windSpeed,
   windSegmentsOverride,
   onHoverPointChange,
-  routePreviewPoints,
 }: ElevationPanelProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [hoveredDistanceKm, setHoveredDistanceKm] = useState<number | null>(null)
@@ -204,21 +197,11 @@ export function ElevationPanel({
                 />
               </div>
             </DrawerHeader>
-            <div className="flex flex-col overflow-y-auto px-2 pb-2 gap-3" style={{ flex: 1, minHeight: 0 }}>
-              <div className="h-[45vh] min-h-[200px] overflow-hidden rounded-md">
-                <Route3DProfile
-                  routeGeoJSON={routeGeoJSON}
-                  verticalExaggeration={verticalExaggeration}
-                />
-              </div>
-              {routePreviewPoints && routePreviewPoints.length > 1 && (
-                <div className="h-[240px] overflow-hidden rounded-md border">
-                  <CourseRouteSnapshot
-                    points={routePreviewPoints}
-                    className="h-[240px]"
-                  />
-                </div>
-              )}
+            <div className="px-2 pb-2" style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <Route3DProfile
+                routeGeoJSON={routeGeoJSON}
+                verticalExaggeration={verticalExaggeration}
+              />
             </div>
           </DrawerContent>
         </Drawer>
