@@ -2,10 +2,18 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, Box } from 'lucide-react'
 import { getElevationProfileFromMetadata, normalizeRouteRenderMetadata } from '@/lib/course-render-metadata'
 import { buildRouteHoverProfile, findNearestRouteHoverPoint, type RouteHoverPoint } from '@/lib/elevation-hover-sync'
 import { buildWindSegments, type WindSegment } from '@/lib/wind-analysis'
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHandle,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer'
+import { Slider } from '@/components/ui/slider'
 import type { RouteGeoJSON, ElevationPoint, RouteRenderMetadata, UphillSegment } from '@/types/course'
 
 const ElevationChart = dynamic(
@@ -18,6 +26,10 @@ const SlopeStripChart = dynamic(
 )
 const WindStripChart = dynamic(
   () => import('@/components/courses/wind-strip-chart').then((m) => m.WindStripChart),
+  { ssr: false },
+)
+const Route3DProfile = dynamic(
+  () => import('@/components/courses/route-3d-profile').then((m) => m.Route3DProfile),
   { ssr: false },
 )
 
@@ -44,6 +56,8 @@ export function ElevationPanel({
 }: ElevationPanelProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [hoveredDistanceKm, setHoveredDistanceKm] = useState<number | null>(null)
+  const [open3D, setOpen3D] = useState(false)
+  const [verticalExaggeration, setVerticalExaggeration] = useState(3)
 
   const normalizedMetadata = useMemo(
     () => normalizeRouteRenderMetadata(routeRenderMetadata),
@@ -70,6 +84,17 @@ export function ElevationPanel({
     },
     [routeGeoJSON, windDirection, windSpeed, windSegmentsOverride],
   )
+
+  const hasElevation = useMemo(() => {
+    if (!routeGeoJSON) return false
+    for (const feature of routeGeoJSON.features) {
+      if (feature.geometry?.type !== 'LineString') continue
+      for (const coord of feature.geometry.coordinates) {
+        if (coord.length >= 3 && typeof coord[2] === 'number') return true
+      }
+    }
+    return false
+  }, [routeGeoJSON])
 
   useEffect(() => {
     if (!onHoverPointChange || collapsed) {
@@ -99,11 +124,26 @@ export function ElevationPanel({
             <span className="ml-2 text-orange-500">▲ {uphillSegments.length}개 업힐</span>
           )}
         </span>
-        {collapsed ? (
-          <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
-        ) : (
-          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-        )}
+        <div className="flex items-center gap-1">
+          {hasElevation && (
+            <button
+              type="button"
+              className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted/60 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation()
+                setOpen3D(true)
+              }}
+            >
+              <Box className="h-3 w-3" />
+              3D 프로필
+            </button>
+          )}
+          {collapsed ? (
+            <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          )}
+        </div>
       </div>
 
       {/* Chart */}
@@ -134,6 +174,37 @@ export function ElevationPanel({
             onHoverDistanceChange={setHoveredDistanceKm}
           />
         </div>
+      )}
+
+      {/* 3D Profile Drawer */}
+      {hasElevation && routeGeoJSON && (
+        <Drawer open={open3D} onOpenChange={setOpen3D}>
+          <DrawerContent className="h-[80vh]">
+            <DrawerHandle />
+            <DrawerHeader className="flex-row items-center justify-between py-2">
+              <DrawerTitle className="text-sm">3D 고도 프로필</DrawerTitle>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  수직 배율 {verticalExaggeration}x
+                </span>
+                <Slider
+                  className="w-28"
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={[verticalExaggeration]}
+                  onValueChange={(v) => setVerticalExaggeration(v[0])}
+                />
+              </div>
+            </DrawerHeader>
+            <div className="flex-1 overflow-hidden px-2 pb-2">
+              <Route3DProfile
+                routeGeoJSON={routeGeoJSON}
+                verticalExaggeration={verticalExaggeration}
+              />
+            </div>
+          </DrawerContent>
+        </Drawer>
       )}
     </div>
   )
