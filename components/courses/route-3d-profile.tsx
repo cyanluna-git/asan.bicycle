@@ -7,6 +7,12 @@ import {
   classifySlopeBand,
   SLOPE_BANDS,
 } from '@/lib/slope-visualization'
+import {
+  chooseTileZoom,
+  getTileGrid,
+  tileGridBoundsMeters,
+  type BBox,
+} from '@/lib/osm-tile-utils'
 import type { RouteGeoJSON } from '@/types/course'
 
 interface Route3DProfileProps {
@@ -242,6 +248,7 @@ export function Route3DProfile({ routeGeoJSON, verticalExaggeration }: Route3DPr
     grid: THREE.GridHelper
     groundPlane: THREE.Mesh | null
     groundPlaneMat: THREE.MeshBasicMaterial | null
+    groundTexture: THREE.CanvasTexture | null
     frameId: number
     resizeObserver: ResizeObserver
     localPoints: { x: number; y: number; ele: number }[]
@@ -315,41 +322,115 @@ export function Route3DProfile({ routeGeoJSON, verticalExaggeration }: Route3DPr
     grid.position.set(center.x, 0, center.z)
     scene.add(grid)
 
-    // Ground plane map texture (Kakao Static Map)
-    const rawCenter = {
-      lat: rawCoords.reduce((s, c) => s + c.lat, 0) / rawCoords.length,
-      lng: rawCoords.reduce((s, c) => s + c.lng, 0) / rawCoords.length,
+    // Ground plane map texture (CyclOSM tile composite)
+    const centerLat = rawCoords.reduce((s, c) => s + c.lat, 0) / rawCoords.length
+    const centerLng = rawCoords.reduce((s, c) => s + c.lng, 0) / rawCoords.length
+
+    const abortController = new AbortController()
+
+    async function loadOsmGroundTexture() {
+      if (rawCoords.length === 0) return
+
+      const bbox: BBox = {
+        minLat: Math.min(...rawCoords.map((c) => c.lat)),
+        maxLat: Math.max(...rawCoords.map((c) => c.lat)),
+        minLng: Math.min(...rawCoords.map((c) => c.lng)),
+        maxLng: Math.max(...rawCoords.map((c) => c.lng)),
+      }
+
+      let tileGrid = chooseTileZoom(bbox)
+
+      // Hard cap: if grid still exceeds 16 tiles, lower z
+      while (tileGrid.cols * tileGrid.rows > 16 && tileGrid.z > 1) {
+        tileGrid = getTileGrid(bbox, tileGrid.z - 1)
+      }
+
+      const TILE_PX = 256
+      const canvasWidth = tileGrid.cols * TILE_PX
+      const canvasHeight = tileGrid.rows * TILE_PX
+      const offscreen = document.createElement('canvas')
+      offscreen.width = canvasWidth
+      offscreen.height = canvasHeight
+      const ctx = offscreen.getContext('2d')
+      if (!ctx) return
+
+      // Fetch all tiles with Promise.allSettled (individual failures leave blank spots)
+      type TileResult = {
+        col: number
+        row: number
+        img: HTMLImageElement
+      }
+
+      const tilePromises: Promise<TileResult | null>[] = []
+
+      for (let row = 0; row < tileGrid.rows; row++) {
+        for (let col = 0; col < tileGrid.cols; col++) {
+          const tx = tileGrid.xMin + col
+          const ty = tileGrid.yMin + row
+          const url = `/api/map-tile?z=${tileGrid.z}&x=${tx}&y=${ty}`
+
+          tilePromises.push(
+            fetch(url, { signal: abortController.signal })
+              .then((res) => {
+                if (!res.ok) throw new Error('tile failed')
+                return res.blob()
+              })
+              .then((blob) => {
+                return new Promise<TileResult | null>((resolve) => {
+                  const img = new Image()
+                  const objectUrl = URL.createObjectURL(blob)
+                  img.onload = () => {
+                    URL.revokeObjectURL(objectUrl)
+                    resolve({ col, row, img })
+                  }
+                  img.onerror = () => {
+                    URL.revokeObjectURL(objectUrl)
+                    resolve(null)
+                  }
+                  img.src = objectUrl
+                })
+              })
+              .catch(() => null),
+          )
+        }
+      }
+
+      const results = await Promise.allSettled(tilePromises)
+      if (abortController.signal.aborted || !sceneStateRef.current) return
+
+      let anySuccess = false
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value) {
+          const { col, row, img } = result.value
+          ctx.drawImage(img, col * TILE_PX, row * TILE_PX, TILE_PX, TILE_PX)
+          anySuccess = true
+        }
+      }
+
+      if (!anySuccess || abortController.signal.aborted || !sceneStateRef.current) return
+
+      const bounds = tileGridBoundsMeters(tileGrid, centerLat, centerLng)
+      const canvasTexture = new THREE.CanvasTexture(offscreen)
+      canvasTexture.colorSpace = THREE.SRGBColorSpace
+
+      const planeGeo = new THREE.PlaneGeometry(bounds.widthM, bounds.heightM)
+      const planeMat = new THREE.MeshBasicMaterial({ map: canvasTexture })
+      const planeMesh = new THREE.Mesh(planeGeo, planeMat)
+      planeMesh.rotation.x = -Math.PI / 2
+      planeMesh.position.set(bounds.offsetX, -1, -bounds.offsetZ)
+      scene.add(planeMesh)
+
+      // Remove GridHelper now that the map is loaded
+      scene.remove(grid)
+      grid.geometry.dispose()
+      ;(grid.material as THREE.Material).dispose()
+
+      sceneStateRef.current.groundPlane = planeMesh
+      sceneStateRef.current.groundPlaneMat = planeMat
+      sceneStateRef.current.groundTexture = canvasTexture
     }
-    let kakaoLevel = 7
-    if (maxDim < 1500) kakaoLevel = 4
-    else if (maxDim < 4000) kakaoLevel = 5
-    else if (maxDim < 10000) kakaoLevel = 6
-    else if (maxDim < 30000) kakaoLevel = 7
-    else kakaoLevel = 8
 
-    const planeSize = Math.max(size.x, size.z) * 1.8
-    const mapUrl = `/api/kakao-static-map?center=${rawCenter.lng},${rawCenter.lat}&level=${kakaoLevel}&size=640x640`
-
-    let cancelled = false
-    const textureLoader = new THREE.TextureLoader()
-    textureLoader.load(
-      mapUrl,
-      (texture) => {
-        if (cancelled || !sceneStateRef.current) { texture.dispose(); return }
-        texture.colorSpace = THREE.SRGBColorSpace
-        const planeGeo = new THREE.PlaneGeometry(planeSize, planeSize)
-        const planeMat = new THREE.MeshBasicMaterial({ map: texture })
-        const planeMesh = new THREE.Mesh(planeGeo, planeMat)
-        planeMesh.rotation.x = -Math.PI / 2
-        planeMesh.position.set(center.x, -1, center.z)
-        scene.add(planeMesh)
-        grid.visible = false
-        sceneStateRef.current.groundPlane = planeMesh
-        sceneStateRef.current.groundPlaneMat = planeMat
-      },
-      undefined,
-      () => { /* texture load failed — grid stays visible */ },
-    )
+    loadOsmGroundTexture().catch(() => { /* grid stays visible on failure */ })
 
     // Position camera
     camera.position.set(
@@ -392,13 +473,14 @@ export function Route3DProfile({ routeGeoJSON, verticalExaggeration }: Route3DPr
       grid,
       groundPlane: null,
       groundPlaneMat: null,
+      groundTexture: null,
       frameId: frameIdRef.current,
       resizeObserver,
       localPoints,
     }
 
     return () => {
-      cancelled = true
+      abortController.abort()
       const state = sceneStateRef.current
       if (state) {
         cancelAnimationFrame(frameIdRef.current)
@@ -408,8 +490,12 @@ export function Route3DProfile({ routeGeoJSON, verticalExaggeration }: Route3DPr
         state.material.dispose()
         if (state.groundPlane) {
           state.groundPlane.geometry.dispose()
-          state.groundPlaneMat?.map?.dispose()
+          state.groundTexture?.dispose()
           state.groundPlaneMat?.dispose()
+        } else {
+          // Texture load hadn't completed — grid is still in scene, dispose it
+          state.grid.geometry.dispose()
+          ;(state.grid.material as THREE.Material).dispose()
         }
         state.renderer.dispose()
         if (container.contains(state.renderer.domElement)) {
@@ -441,5 +527,12 @@ export function Route3DProfile({ routeGeoJSON, verticalExaggeration }: Route3DPr
     )
   }
 
-  return <div ref={containerRef} className="h-full w-full" />
+  return (
+    <div className="relative h-full w-full">
+      <div ref={containerRef} className="h-full w-full" />
+      <span className="absolute bottom-1 right-1 rounded bg-white/70 px-1 text-[10px] text-gray-500">
+        © OpenStreetMap contributors
+      </span>
+    </div>
+  )
 }
