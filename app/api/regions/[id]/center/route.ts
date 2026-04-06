@@ -8,7 +8,8 @@ export async function GET(
   const { id } = await params
   const supabase = createAnonServerClient()
 
-  const { data, error } = await supabase.rpc('region_centroid', { p_region_id: id })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any).rpc('region_centroid', { p_region_id: id })
 
   if (error) {
     // Fallback: try raw SQL query via supabase

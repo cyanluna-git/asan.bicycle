@@ -16,7 +16,7 @@ interface Route3DProfileProps {
 
 type Coord3 = { lng: number; lat: number; ele: number }
 
-const SCENE_BG = 0x0f2818
+const SCENE_BG = 0xffffff
 const RIBBON_HALF_WIDTH = 10
 
 function extractCoords(geojson: RouteGeoJSON): Coord3[] {
@@ -309,7 +309,7 @@ export function Route3DProfile({ routeGeoJSON, verticalExaggeration }: Route3DPr
 
     // Grid
     const gridSize = Math.ceil(maxDim * 1.5 / 100) * 100
-    const grid = new THREE.GridHelper(gridSize, 20, 0x3a5f3a, 0x2a4a2a)
+    const grid = new THREE.GridHelper(gridSize, 20, 0xcccccc, 0xe0e0e0)
     grid.position.set(center.x, 0, center.z)
     scene.add(grid)
 

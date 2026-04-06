@@ -40,8 +40,9 @@ export async function POST(request: Request) {
     )
   }
 
-  const { error } = await supabase
-    .from('push_subscriptions')
+  const { error } = await (supabase as ReturnType<typeof createAnonServerClient>)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .from('push_subscriptions' as any)
     .upsert(
       {
         user_id: user.id,
