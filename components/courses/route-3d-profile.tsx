@@ -3,15 +3,21 @@
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import {
   classifySlopeBand,
   SLOPE_BANDS,
 } from '@/lib/slope-visualization'
-import type { RouteGeoJSON } from '@/types/course'
+import { getPoiMeta } from '@/lib/poi'
+import type { RouteGeoJSON, UphillSegment, PoiMapItem, CourseAlbumPhoto, RouteHoverPoint } from '@/types/course'
 
 interface Route3DProfileProps {
   routeGeoJSON: RouteGeoJSON
   verticalExaggeration: number
+  uphillSegments?: UphillSegment[]
+  pois?: PoiMapItem[]
+  albumPhotos?: CourseAlbumPhoto[]
+  hoverProfile?: RouteHoverPoint[]
 }
 
 type Coord3 = { lng: number; lat: number; ele: number }
@@ -102,6 +108,15 @@ function toLocal(coords: Coord3[]): { x: number; y: number; ele: number }[] {
     y: (c.lat - centerLat) * 110540,
     ele: c.ele,
   }))
+}
+
+/** Convert lat/lng to local XZ scene coordinates using a stored center. */
+function latLngToLocal(lat: number, lng: number, centerLat: number, centerLng: number) {
+  const cosLat = Math.cos((centerLat * Math.PI) / 180)
+  return {
+    x: (lng - centerLng) * cosLat * 111320,
+    z: (lat - centerLat) * 110540,
+  }
 }
 
 function slopeColor(slopePct: number): THREE.Color {
@@ -230,10 +245,35 @@ function isWebGLAvailable(): boolean {
   }
 }
 
-export function Route3DProfile({ routeGeoJSON, verticalExaggeration }: Route3DProfileProps) {
+/** Find the nearest point in a hover profile by distanceKm. */
+function findNearestInProfile(
+  profile: RouteHoverPoint[],
+  targetKm: number,
+): RouteHoverPoint {
+  let nearest = profile[0]
+  let nearestDelta = Math.abs(nearest.distanceKm - targetKm)
+  for (let i = 1; i < profile.length; i++) {
+    const delta = Math.abs(profile[i].distanceKm - targetKm)
+    if (delta < nearestDelta) {
+      nearest = profile[i]
+      nearestDelta = delta
+    }
+  }
+  return nearest
+}
+
+export function Route3DProfile({
+  routeGeoJSON,
+  verticalExaggeration,
+  uphillSegments = [],
+  pois = [],
+  albumPhotos = [],
+  hoverProfile = [],
+}: Route3DProfileProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const sceneStateRef = useRef<{
     renderer: THREE.WebGLRenderer
+    css2dRenderer: CSS2DRenderer
     scene: THREE.Scene
     camera: THREE.PerspectiveCamera
     controls: OrbitControls
@@ -243,8 +283,15 @@ export function Route3DProfile({ routeGeoJSON, verticalExaggeration }: Route3DPr
     frameId: number
     resizeObserver: ResizeObserver
     localPoints: { x: number; y: number; ele: number }[]
+    centerLat: number
+    centerLng: number
   } | null>(null)
   const [webglFailed, setWebglFailed] = useState(false)
+
+  // CSS2DObjects we added — tracked outside sceneStateRef so label effects can clean up
+  const uphillLabelsRef = useRef<CSS2DObject[]>([])
+  const poiLabelsRef = useRef<CSS2DObject[]>([])
+  const albumLabelsRef = useRef<CSS2DObject[]>([])
 
   // Initialize scene on mount, tear down on unmount
   useEffect(() => {
@@ -266,11 +313,20 @@ export function Route3DProfile({ routeGeoJSON, verticalExaggeration }: Route3DPr
     // Camera
     const camera = new THREE.PerspectiveCamera(50, width / height, 1, 100000)
 
-    // Renderer
+    // WebGL renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setSize(width, height)
     container.appendChild(renderer.domElement)
+
+    // CSS2D renderer (label overlay)
+    const css2dRenderer = new CSS2DRenderer()
+    css2dRenderer.setSize(width, height)
+    css2dRenderer.domElement.style.position = 'absolute'
+    css2dRenderer.domElement.style.top = '0'
+    css2dRenderer.domElement.style.left = '0'
+    css2dRenderer.domElement.style.pointerEvents = 'none'
+    container.appendChild(css2dRenderer.domElement)
 
     // Controls
     const controls = new OrbitControls(camera, renderer.domElement)
@@ -287,6 +343,11 @@ export function Route3DProfile({ routeGeoJSON, verticalExaggeration }: Route3DPr
     // Extract & downsample coordinates
     const rawCoords = extractCoords(routeGeoJSON)
     const coords = downsample(rawCoords, 2000)
+
+    // Compute center for lat/lng → local conversion
+    const centerLat = coords.reduce((s, c) => s + c.lat, 0) / (coords.length || 1)
+    const centerLng = coords.reduce((s, c) => s + c.lng, 0) / (coords.length || 1)
+
     const localPoints = toLocal(coords)
 
     // Build mesh
@@ -330,22 +391,25 @@ export function Route3DProfile({ routeGeoJSON, verticalExaggeration }: Route3DPr
       camera.aspect = w / h
       camera.updateProjectionMatrix()
       renderer.setSize(w, h)
+      css2dRenderer.setSize(w, h)
     }
     const resizeObserver = new ResizeObserver(onResize)
     resizeObserver.observe(container)
 
-    // Animation loop — use a ref cell so cancelAnimationFrame always sees the latest frame ID
+    // Animation loop
     const frameIdRef = { current: 0 }
     const animate = () => {
       frameIdRef.current = requestAnimationFrame(animate)
       controls.update()
       renderer.render(scene, camera)
+      css2dRenderer.render(scene, camera)
     }
     animate()
 
     // Store state for exaggeration updates
     sceneStateRef.current = {
       renderer,
+      css2dRenderer,
       scene,
       camera,
       controls,
@@ -355,6 +419,8 @@ export function Route3DProfile({ routeGeoJSON, verticalExaggeration }: Route3DPr
       frameId: frameIdRef.current,
       resizeObserver,
       localPoints,
+      centerLat,
+      centerLng,
     }
 
     return () => {
@@ -370,6 +436,9 @@ export function Route3DProfile({ routeGeoJSON, verticalExaggeration }: Route3DPr
         state.renderer.dispose()
         if (container.contains(state.renderer.domElement)) {
           container.removeChild(state.renderer.domElement)
+        }
+        if (container.contains(state.css2dRenderer.domElement)) {
+          container.removeChild(state.css2dRenderer.domElement)
         }
         sceneStateRef.current = null
       }
@@ -389,6 +458,131 @@ export function Route3DProfile({ routeGeoJSON, verticalExaggeration }: Route3DPr
     state.mesh.geometry = geometry
   }, [verticalExaggeration])
 
+  // Uphill labels — rebuild when uphillSegments, hoverProfile, or verticalExaggeration change
+  useEffect(() => {
+    const state = sceneStateRef.current
+    if (!state) return
+
+    // Remove previous uphill labels
+    for (const obj of uphillLabelsRef.current) {
+      state.scene.remove(obj)
+    }
+    uphillLabelsRef.current = []
+
+    if (!uphillSegments.length || !hoverProfile.length || !state.localPoints.length) return
+
+    for (const seg of uphillSegments) {
+      const endPt = findNearestInProfile(hoverProfile, seg.end_km)
+      const startPt = findNearestInProfile(hoverProfile, seg.start_km)
+      const distM = (seg.end_km - seg.start_km) * 1000
+      const grade = distM > 0 ? ((endPt.elevationM - startPt.elevationM) / distM) * 100 : 0
+
+      const { x, z } = latLngToLocal(endPt.lat, endPt.lng, state.centerLat, state.centerLng)
+      const y = endPt.elevationM * verticalExaggeration
+
+      const div = document.createElement('div')
+      div.style.cssText =
+        'background:white;color:#f97316;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.2);white-space:nowrap;pointer-events:none'
+      div.textContent = `▲ ${grade.toFixed(1)}%`
+
+      const obj = new CSS2DObject(div)
+      obj.position.set(x, y, z)
+      state.scene.add(obj)
+      uphillLabelsRef.current.push(obj)
+    }
+
+    return () => {
+      const currentState = sceneStateRef.current
+      if (!currentState) return
+      for (const obj of uphillLabelsRef.current) {
+        currentState.scene.remove(obj)
+      }
+      uphillLabelsRef.current = []
+    }
+  }, [uphillSegments, hoverProfile, verticalExaggeration])
+
+  // POI labels — rebuild when pois change
+  useEffect(() => {
+    const state = sceneStateRef.current
+    if (!state) return
+
+    for (const obj of poiLabelsRef.current) {
+      state.scene.remove(obj)
+    }
+    poiLabelsRef.current = []
+
+    if (!pois.length) return
+
+    for (const poi of pois) {
+      const { x, z } = latLngToLocal(poi.lat, poi.lng, state.centerLat, state.centerLng)
+      const meta = getPoiMeta(poi.category)
+
+      const div = document.createElement('div')
+      div.style.cssText =
+        'background:white;color:#374151;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,0.2);white-space:nowrap;pointer-events:none'
+      div.textContent = `${meta.emoji} ${poi.name}`
+
+      const obj = new CSS2DObject(div)
+      obj.position.set(x, 0, z)
+      state.scene.add(obj)
+      poiLabelsRef.current.push(obj)
+    }
+
+    return () => {
+      const currentState = sceneStateRef.current
+      if (!currentState) return
+      for (const obj of poiLabelsRef.current) {
+        currentState.scene.remove(obj)
+      }
+      poiLabelsRef.current = []
+    }
+  }, [pois])
+
+  // Album photo labels — rebuild when albumPhotos change
+  useEffect(() => {
+    const state = sceneStateRef.current
+    if (!state) return
+
+    for (const obj of albumLabelsRef.current) {
+      state.scene.remove(obj)
+    }
+    albumLabelsRef.current = []
+
+    const geotagged = albumPhotos.filter(
+      (p) => p.lat !== null && p.lng !== null,
+    )
+    if (!geotagged.length) return
+
+    for (const photo of geotagged) {
+      // lat/lng already confirmed non-null by filter above
+      const { x, z } = latLngToLocal(
+        photo.lat as number,
+        photo.lng as number,
+        state.centerLat,
+        state.centerLng,
+      )
+
+      const div = document.createElement('div')
+      div.style.cssText =
+        'background:white;color:#374151;padding:2px 5px;border-radius:4px;font-size:12px;box-shadow:0 1px 3px rgba(0,0,0,0.2);white-space:nowrap;pointer-events:none'
+      div.textContent = '📷'
+
+      const obj = new CSS2DObject(div)
+      obj.position.set(x, 0, z)
+      state.scene.add(obj)
+      albumLabelsRef.current.push(obj)
+    }
+
+    return () => {
+      const currentState = sceneStateRef.current
+      if (!currentState) return
+      for (const obj of albumLabelsRef.current) {
+        currentState.scene.remove(obj)
+      }
+      albumLabelsRef.current = []
+    }
+  }, [albumPhotos])
+
   if (webglFailed) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
@@ -397,5 +591,5 @@ export function Route3DProfile({ routeGeoJSON, verticalExaggeration }: Route3DPr
     )
   }
 
-  return <div ref={containerRef} className="h-full w-full" />
+  return <div ref={containerRef} className="relative h-full w-full" />
 }

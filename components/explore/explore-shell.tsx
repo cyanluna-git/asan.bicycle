@@ -606,6 +606,8 @@ export function ExploreShell({
             routeGeoJSON={selectedCourse.route_geojson}
             routeRenderMetadata={selectedCourse.route_render_metadata ?? null}
             uphillSegments={uphillSegments}
+            pois={localPois}
+            albumPhotos={albumPreviewPhotos}
             courseTitle={selectedCourse.title}
             windDirection={windDirection}
             windSpeed={windSpeed}

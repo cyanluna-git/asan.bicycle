@@ -14,7 +14,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer'
 import { Slider } from '@/components/ui/slider'
-import type { RouteGeoJSON, ElevationPoint, RouteRenderMetadata, UphillSegment } from '@/types/course'
+import type { RouteGeoJSON, ElevationPoint, RouteRenderMetadata, UphillSegment, PoiMapItem, CourseAlbumPhoto } from '@/types/course'
 
 const ElevationChart = dynamic(
   () => import('@/components/courses/elevation-chart').then((m) => m.ElevationChart),
@@ -37,6 +37,8 @@ interface ElevationPanelProps {
   routeGeoJSON: RouteGeoJSON | null | undefined
   routeRenderMetadata?: RouteRenderMetadata | null
   uphillSegments?: UphillSegment[]
+  pois?: PoiMapItem[]
+  albumPhotos?: CourseAlbumPhoto[]
   courseTitle?: string
   windDirection?: number | null
   windSpeed?: number | null
@@ -48,6 +50,8 @@ export function ElevationPanel({
   routeGeoJSON,
   routeRenderMetadata,
   uphillSegments = [],
+  pois = [],
+  albumPhotos = [],
   courseTitle,
   windDirection,
   windSpeed,
@@ -201,6 +205,10 @@ export function ElevationPanel({
               <Route3DProfile
                 routeGeoJSON={routeGeoJSON}
                 verticalExaggeration={verticalExaggeration}
+                uphillSegments={uphillSegments}
+                pois={pois}
+                albumPhotos={albumPhotos}
+                hoverProfile={hoverProfile}
               />
             </div>
           </DrawerContent>
