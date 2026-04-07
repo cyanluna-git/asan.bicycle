@@ -429,6 +429,87 @@ export type Database = {
           },
         ]
       }
+      famous_uphills: {
+        Row: {
+          id: string
+          strava_segment_id: number | null
+          name: string
+          distance_m: number | null
+          avg_grade: number | null
+          max_grade: number | null
+          elevation_gain_m: number | null
+          climb_category: number | null
+          start_latlng: unknown // PostGIS geography(Point, 4326)
+          end_latlng: unknown // PostGIS geography(Point, 4326)
+          route: unknown // PostGIS geography(LineString, 4326)
+          raw_strava: Json | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          strava_segment_id?: number | null
+          name: string
+          distance_m?: number | null
+          avg_grade?: number | null
+          max_grade?: number | null
+          elevation_gain_m?: number | null
+          climb_category?: number | null
+          start_latlng?: unknown
+          end_latlng?: unknown
+          route?: unknown
+          raw_strava?: Json | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          strava_segment_id?: number | null
+          name?: string
+          distance_m?: number | null
+          avg_grade?: number | null
+          max_grade?: number | null
+          elevation_gain_m?: number | null
+          climb_category?: number | null
+          start_latlng?: unknown
+          end_latlng?: unknown
+          route?: unknown
+          raw_strava?: Json | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      course_uphills: {
+        Row: {
+          course_id: string
+          famous_uphill_id: string
+          matched_at: string | null
+        }
+        Insert: {
+          course_id: string
+          famous_uphill_id: string
+          matched_at?: string | null
+        }
+        Update: {
+          course_id?: string
+          famous_uphill_id?: string
+          matched_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'course_uphills_course_id_fkey'
+            columns: ['course_id']
+            isOneToOne: false
+            referencedRelation: 'courses'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'course_uphills_famous_uphill_id_fkey'
+            columns: ['famous_uphill_id']
+            isOneToOne: false
+            referencedRelation: 'famous_uphills'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Views: {
       course_review_stats: {
