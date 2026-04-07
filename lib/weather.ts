@@ -141,7 +141,7 @@ type KmaItem = {
 export async function fetchWeatherForecast(
   lat: number,
   lng: number,
-  date: Date,
+  _date: Date,
 ): Promise<WeatherForecastResponse> {
   const apiKey = process.env.WEATHER_API_KEY
   if (!apiKey) {
