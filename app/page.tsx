@@ -160,40 +160,6 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        {/* Active Ride card — GPX course card style, bottom-right over the photo */}
-        <div className="absolute bottom-8 right-8 z-20 hidden w-72 rounded-2xl border border-white/10 bg-[#0d1d15]/95 p-5 shadow-2xl backdrop-blur-sm lg:block">
-          <div className="mb-1 flex items-center justify-between">
-            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/40">Active Ride</p>
-            <span className="rounded bg-[#3a6b4a]/50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#8FE36A]">
-              Road
-            </span>
-          </div>
-          <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#3a6b4a]/40">
-              <ArrowRight className="h-4 w-4 text-[#8FE36A]" />
-            </div>
-            <div>
-              <p className="font-headline text-sm font-bold text-white">좌부-예당호-도고-송악 루프</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
-            <div>
-              <p className="text-[9px] font-bold uppercase text-white/30">Dist</p>
-              <p className="mt-0.5 font-bold text-white">80 km</p>
-            </div>
-            <div>
-              <p className="text-[9px] font-bold uppercase text-white/30">Elev</p>
-              <p className="mt-0.5 flex items-center gap-1 font-bold text-white">
-                <Mountain className="h-3 w-3 text-white/40" />
-                455 m
-              </p>
-            </div>
-          </div>
-          <div className="mt-3 flex items-center gap-1.5 border-t border-white/10 pt-3">
-            <Download className="h-3 w-3 text-[#8FE36A]" />
-            <span className="text-[10px] font-medium text-white/50">GPX 준비됨</span>
-          </div>
-        </div>
 
       </section>
 

@@ -42,6 +42,16 @@ export function Header() {
   }, []);
 
   useEffect(() => {
+    if (searchParams.get("setup-region") === "1") {
+      setRegionMapOpen(true);
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("setup-region");
+      const newUrl = params.size > 0 ? `${pathname}?${params}` : pathname;
+      window.history.replaceState(null, "", newUrl);
+    }
+  }, [pathname, searchParams]);
+
+  useEffect(() => {
     if (pathname === "/courses") {
       setSearchValue(searchParams.get("q") ?? "");
       return;
@@ -80,6 +90,7 @@ export function Header() {
       <button
         type="button"
         onClick={() => setRegionMapOpen(true)}
+        suppressHydrationWarning
         className={
           currentRegionName
             ? "mr-4 flex min-h-[36px] items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-accent"
@@ -87,7 +98,7 @@ export function Header() {
         }
       >
         <MapPin className="h-3.5 w-3.5 shrink-0" />
-        <span className="max-w-[120px] truncate">
+        <span suppressHydrationWarning className="max-w-[120px] truncate">
           {currentRegionName ?? (user ? "지역 설정" : "지역 선택")}
         </span>
         <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />

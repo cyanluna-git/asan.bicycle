@@ -42,22 +42,21 @@ export function getAuthRedirectUrl(currentUrl?: string) {
   }
 }
 
-export async function signInWithGoogle(currentUrl?: string) {
-  const redirectTo = getAuthRedirectUrl(currentUrl);
-
+export async function signInWithGoogle() {
+  const origin = typeof window !== "undefined" ? window.location.origin : ""
   return supabase.auth.signInWithOAuth({
     provider: "google",
-    options: redirectTo ? { redirectTo } : undefined,
+    options: { redirectTo: `${origin}/auth/callback` },
   });
 }
 
-export async function signInWithKakao(currentUrl?: string) {
-  const redirectTo = getAuthRedirectUrl(currentUrl);
-
+export async function signInWithKakao() {
+  const origin = typeof window !== "undefined" ? window.location.origin : ""
   return supabase.auth.signInWithOAuth({
     provider: "kakao",
-    options: redirectTo
-      ? { redirectTo: `${redirectTo.replace(/\/+$/, "")}/auth/callback` }
-      : { redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback` },
+    options: {
+      redirectTo: `${origin}/auth/callback`,
+      scopes: "profile_nickname profile_image",
+    },
   });
 }
