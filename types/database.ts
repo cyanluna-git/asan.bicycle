@@ -621,6 +621,12 @@ export type Database = {
           parent_name: string | null
         }>
       }
+      match_course_uphills: {
+        Args: {
+          p_course_id: string
+        }
+        Returns: number
+      }
     }
     Enums: {
       course_difficulty: 'easy' | 'moderate' | 'hard'

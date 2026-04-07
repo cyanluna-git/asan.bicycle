@@ -305,6 +305,18 @@ export default function UploadPage() {
       }
 
       const courseId = insertResponse.data.id
+
+      // Non-blocking: match famous uphills after course insert
+      void supabase
+        .rpc('match_course_uphills', { p_course_id: courseId })
+        .then(({ data: matchCount, error: matchError }) => {
+          if (matchError) {
+            console.error('[uphill-match] non-critical error:', matchError.message)
+            return
+          }
+          console.log('[uphill-match] matched', matchCount, 'famous uphills')
+        })
+
       const validSegments = uphillSegments.filter((segment) => segment.start_km < segment.end_km)
       if (validSegments.length > 0) {
         const { error: segmentError } = await supabase

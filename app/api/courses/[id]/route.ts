@@ -222,6 +222,17 @@ export async function PATCH(request: Request, context: PatchContext) {
     return jsonError(`코스 저장 실패: ${updateResponse.error.message}`, 400)
   }
 
+  // Non-blocking: re-match famous uphills after edit
+  void writeClient
+    .rpc('match_course_uphills', { p_course_id: id })
+    .then(({ data: matchCount, error: matchError }) => {
+      if (matchError) {
+        console.error('[uphill-match] non-critical error:', matchError.message)
+        return
+      }
+      console.log('[uphill-match] re-matched', matchCount, 'famous uphills for course', id)
+    })
+
   const existingPoiResponse = await authClient
     .from('pois')
     .select('id, photo_url')
