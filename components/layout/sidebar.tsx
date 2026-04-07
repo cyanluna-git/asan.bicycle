@@ -8,6 +8,7 @@ import type {
   CourseDetail,
   CourseReview,
   CourseReviewStats,
+  FamousUphill,
   PoiMapItem,
   UphillSegment,
 } from '@/types/course'
@@ -23,6 +24,7 @@ interface SidebarProps {
   selectedPoiId?: string | null
   onSelectPoi?: (id: string | null) => void
   uphillSegments?: UphillSegment[]
+  famousUphills?: FamousUphill[]
   canEditSelectedCourse?: boolean
   reviews?: CourseReview[]
   reviewStats?: CourseReviewStats | null
@@ -49,6 +51,7 @@ export function Sidebar({
   selectedPoiId,
   onSelectPoi,
   uphillSegments,
+  famousUphills,
   canEditSelectedCourse = false,
   reviews,
   reviewStats,
@@ -78,6 +81,7 @@ export function Sidebar({
               selectedPoiId={selectedPoiId}
               onSelectPoi={onSelectPoi}
               uphillSegments={uphillSegments ?? []}
+              famousUphills={famousUphills ?? []}
               canEditCourse={canEditSelectedCourse}
               reviews={reviews ?? []}
               reviewStats={reviewStats ?? null}

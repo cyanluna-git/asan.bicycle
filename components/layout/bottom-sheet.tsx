@@ -23,6 +23,7 @@ import type {
   CourseDetail,
   CourseReview,
   CourseReviewStats,
+  FamousUphill,
   PoiMapItem,
   UphillSegment,
 } from '@/types/course'
@@ -38,6 +39,7 @@ interface BottomSheetProps {
   selectedPoiId?: string | null
   onSelectPoi?: (id: string | null) => void
   uphillSegments?: UphillSegment[]
+  famousUphills?: FamousUphill[]
   canEditSelectedCourse?: boolean
   reviews?: CourseReview[]
   reviewStats?: CourseReviewStats | null
@@ -66,6 +68,7 @@ export function BottomSheet({
   selectedPoiId,
   onSelectPoi,
   uphillSegments,
+  famousUphills,
   canEditSelectedCourse = false,
   reviews,
   reviewStats,
@@ -160,6 +163,7 @@ export function BottomSheet({
                   selectedPoiId={selectedPoiId}
                   onSelectPoi={onSelectPoi}
                   uphillSegments={uphillSegments ?? []}
+                  famousUphills={famousUphills ?? []}
                   canEditCourse={canEditSelectedCourse}
                   reviews={reviews ?? []}
                   reviewStats={reviewStats ?? null}

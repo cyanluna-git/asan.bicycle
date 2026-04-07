@@ -44,6 +44,7 @@ import type {
   CourseDetail,
   CourseReview,
   CourseReviewStats,
+  FamousUphill,
   PoiMapItem,
   UphillSegment,
 } from '@/types/course'
@@ -55,6 +56,7 @@ interface CourseDetailPanelProps {
   selectedPoiId?: string | null
   onSelectPoi?: (id: string | null) => void
   uphillSegments?: UphillSegment[]
+  famousUphills?: FamousUphill[]
   canEditCourse?: boolean
   reviews?: CourseReview[]
   reviewStats?: CourseReviewStats | null
@@ -72,12 +74,24 @@ interface CourseDetailPanelProps {
   onWeatherMapPointsChange?: (points: import('@/lib/wind-analysis').WeatherMapPoint[]) => void
 }
 
+function getClimbCategoryMeta(cat: number | null): { label: string; className: string } | null {
+  switch (cat) {
+    case 5: return { label: 'HC', className: 'bg-red-500 text-white' }
+    case 4: return { label: 'Cat1', className: 'bg-orange-500 text-white' }
+    case 3: return { label: 'Cat2', className: 'bg-yellow-400 text-black' }
+    case 2: return { label: 'Cat3', className: 'bg-green-500 text-white' }
+    case 1: return { label: 'Cat4', className: 'bg-gray-400 text-white' }
+    default: return null
+  }
+}
+
 export function CourseDetailPanel({
   course,
   pois = [],
   selectedPoiId = null,
   onSelectPoi,
   uphillSegments = [],
+  famousUphills = [],
   canEditCourse = false,
   reviews = [],
   reviewStats = null,
@@ -619,6 +633,41 @@ export function CourseDetailPanel({
                 })()}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {famousUphills.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            유명 업힐
+          </h3>
+          <div className="flex flex-col gap-1">
+            {famousUphills.map((uphill) => {
+              const catMeta = getClimbCategoryMeta(uphill.climb_category)
+              return (
+                <div key={uphill.id} className="rounded-xl border bg-card px-3 py-2.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="truncate text-sm font-medium text-foreground">
+                      {uphill.name}
+                    </span>
+                    {catMeta ? (
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${catMeta.className}`}>
+                        {catMeta.label}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 text-[11px] text-muted-foreground">
+                    {uphill.avg_grade != null && (
+                      <span>평균 경사도 {uphill.avg_grade.toFixed(1)}%</span>
+                    )}
+                    {uphill.distance_m != null && (
+                      <span>길이 {(uphill.distance_m / 1000).toFixed(1)}km</span>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

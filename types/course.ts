@@ -91,6 +91,14 @@ export type UphillSegment = {
   created_at: string
 }
 
+export type FamousUphill = {
+  id: string
+  name: string
+  avg_grade: number | null
+  climb_category: number | null
+  distance_m: number | null
+}
+
 // ---------------------------------------------------------------------------
 // GeoJSON types for route rendering
 // ---------------------------------------------------------------------------

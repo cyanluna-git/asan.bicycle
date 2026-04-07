@@ -7,6 +7,7 @@ import type {
   CourseListItem,
   CourseReview,
   CourseReviewStats,
+  FamousUphill,
   PoiMapItem,
   UphillSegment,
 } from '@/types/course'
@@ -234,6 +235,17 @@ export async function loadExplorePageData({
 
   const uphillSegments: UphillSegment[] = (uphillRaw ?? []) as UphillSegment[]
 
+  const { data: famousUphillsRaw } = selectedCourseId
+    ? await supabase
+      .from('course_uphills')
+      .select('famous_uphill_id, famous_uphills(id, name, avg_grade, climb_category, distance_m)')
+      .eq('course_id', selectedCourseId)
+    : { data: [] }
+
+  const famousUphills: FamousUphill[] = ((famousUphillsRaw ?? []) as unknown as Array<{ famous_uphills: FamousUphill | null }>)
+    .map((row) => row.famous_uphills)
+    .filter((u): u is FamousUphill => u != null)
+
   const { data: reviewStatsRaw } = selectedCourseId
     ? await supabase
       .from('course_review_stats')
@@ -291,6 +303,7 @@ export async function loadExplorePageData({
     selectedCourse,
     pois,
     uphillSegments,
+    famousUphills,
     reviews,
     reviewStats,
   }

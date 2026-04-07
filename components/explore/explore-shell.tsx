@@ -31,6 +31,7 @@ import type {
   CourseReview,
   CourseReviewStats,
   CourseListItem,
+  FamousUphill,
   PoiMapItem,
   UphillSegment,
 } from '@/types/course'
@@ -51,6 +52,7 @@ interface ExploreShellProps {
   selectedCourse: CourseDetail | null
   pois: PoiMapItem[]
   uphillSegments: UphillSegment[]
+  famousUphills: FamousUphill[]
   reviews: CourseReview[]
   reviewStats: CourseReviewStats | null
 }
@@ -65,6 +67,7 @@ export function ExploreShell({
   selectedCourse,
   pois,
   uphillSegments,
+  famousUphills,
   reviews,
   reviewStats,
 }: ExploreShellProps) {
@@ -423,6 +426,7 @@ export function ExploreShell({
         selectedPoiId={selectedPoiId}
         onSelectPoi={setSelectedPoiId}
         uphillSegments={uphillSegments}
+        famousUphills={famousUphills}
         canEditSelectedCourse={canEditSelectedCourse}
         reviews={reviews}
         reviewStats={reviewStats}
@@ -527,6 +531,7 @@ export function ExploreShell({
             selectedPoiId={selectedPoiId}
             onSelectPoi={setSelectedPoiId}
             uphillSegments={uphillSegments}
+            famousUphills={famousUphills}
             canEditSelectedCourse={canEditSelectedCourse}
             reviews={reviews}
             reviewStats={reviewStats}
