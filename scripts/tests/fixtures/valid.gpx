@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test-fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>Test Route</name>
+    <trkseg>
+      <trkpt lat="37.5665" lon="126.9780">
+        <ele>50.0</ele>
+      </trkpt>
+      <trkpt lat="37.5765" lon="126.9780">
+        <ele>55.0</ele>
+      </trkpt>
+      <trkpt lat="37.5865" lon="126.9880">
+        <ele>62.0</ele>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>
