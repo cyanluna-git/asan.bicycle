@@ -137,8 +137,10 @@ def parse_gpx_metrics(gpx_path: Path) -> ParsedGeometry:
         if previous is not None:
             prev_lat, prev_lng, prev_ele = previous
             total_distance_km += haversine_km(prev_lat, prev_lng, lat, lng)
-            if prev_ele is not None and ele is not None and ele > prev_ele:
-                total_elevation_gain += ele - prev_ele
+            if prev_ele is not None and ele is not None:
+                delta = ele - prev_ele
+                if delta >= 3.0:  # 3m threshold to filter GPS elevation noise
+                    total_elevation_gain += delta
         previous = (lat, lng, ele)
 
     return ParsedGeometry(
