@@ -34,7 +34,7 @@ function ElevationTooltip({
 }: {
   active?: boolean
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  payload?: any[]
+  payload?: readonly any[]
   label?: number
   data: ElevationPoint[]
 }) {
