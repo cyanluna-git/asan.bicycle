@@ -9,5 +9,9 @@ export default defineConfig({
     environment: 'happy-dom',
     include: ['__tests__/**/*.test.ts'],
     setupFiles: ['__tests__/setup/env.ts'],
+    // API integration tests hit real Supabase — 5s default is too tight when
+    // multiple files run in parallel and share the remote.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
   },
 })

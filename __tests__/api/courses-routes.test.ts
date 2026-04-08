@@ -33,10 +33,21 @@ type DbCourse = {
 }
 
 async function callRoutes(query: string): Promise<RoutesResponse> {
-  const req = new Request(`http://localhost/api/courses/routes${query}`)
-  const res = await getCourseRoutes(req)
-  expect(res.status).toBe(200)
-  return (await res.json()) as RoutesResponse
+  // Real Supabase occasionally hiccups under concurrent load — retry once on
+  // transient 5xx so tests don't flake in parallel runs.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const req = new Request(`http://localhost/api/courses/routes${query}`)
+    const res = await getCourseRoutes(req)
+    if (res.status === 200) {
+      return (await res.json()) as RoutesResponse
+    }
+    if (attempt === 0 && res.status >= 500) {
+      await new Promise((r) => setTimeout(r, 400))
+      continue
+    }
+    expect(res.status).toBe(200)
+  }
+  throw new Error('unreachable')
 }
 
 async function fetchCoursesByIds(ids: string[]): Promise<DbCourse[]> {
@@ -54,11 +65,7 @@ async function fetchCoursesByIds(ids: string[]): Promise<DbCourse[]> {
 // Suite
 // ---------------------------------------------------------------------------
 
-// Network round-trips to Supabase — default 5s is too aggressive for the
-// unfiltered "return every course" case.
-const TEST_TIMEOUT = 30_000
-
-describeIfDb('GET /api/courses/routes filter combinations', { timeout: TEST_TIMEOUT }, () => {
+describeIfDb('GET /api/courses/routes filter combinations', () => {
   let gangwonRegionId: string | null = null
 
   beforeAll(async () => {
