@@ -343,9 +343,6 @@ function KakaoMapInner({
           <WeatherCardOverlay points={weatherPoints} />
         ) : null}
       </Map>
-      {effectiveSelectedId ? (
-        <SlopeLegend />
-      ) : null}
       {isRoutesLoading && !selectedCourseRouteGeoJSON ? (
         <div className="pointer-events-none absolute right-4 top-4 rounded-full bg-background/90 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm ring-1 ring-black/5 backdrop-blur">
           경로 불러오는 중
