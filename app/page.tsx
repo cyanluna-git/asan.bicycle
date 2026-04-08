@@ -104,9 +104,9 @@ export default async function LandingPage() {
           <div className="max-w-2xl">
 
             {/* Brand badge */}
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-xs font-medium tracking-[0.24em] text-white/72 uppercase">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-xs font-medium tracking-[0.24em] uppercase">
               <span className="h-2 w-2 rounded-full bg-[#8FE36A]" />
-              Gul<span className="text-[#E8690A]">.rim</span>
+              <span className="text-white">Gul</span><span className="text-[#E8690A]">.rim</span>
             </div>
 
             {/* Headline block */}
@@ -114,7 +114,7 @@ export default async function LandingPage() {
               className="font-headline font-black leading-none"
               style={{ fontSize: 'clamp(72px, 11vw, 156px)' }}
             >
-              <span className="block text-[#E8690A]">GULLIM</span>
+              <span className="text-white">Gul</span><span className="text-[#E8690A]">.rim</span>
             </div>
             <span className="mt-2 block text-xs font-semibold tracking-[0.4em] text-white/40 uppercase">
               ROAD &middot; MTB
