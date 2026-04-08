@@ -20,20 +20,19 @@ type Coord3 = { lng: number; lat: number; ele: number }
 
 const RIBBON_HALF_WIDTH = 10
 
-// Continuous slope → color stops (slope%, [r,g,b] 0-1)
+// Continuous slope → color stops (slope%, [r,g,b] 0-1) — VeloViewer-style vibrant palette
 const SLOPE_COLOR_STOPS: [number, [number, number, number]][] = [
-  [-20,  [0.78, 0.85, 0.91]],  // descent  — slate
-  [  0,  [0.78, 0.85, 0.91]],  // descent
-  [  0,  [0.30, 0.87, 0.50]],  // flat     — bright green
-  [  1,  [0.30, 0.87, 0.50]],
-  [  3,  [0.99, 0.83, 0.30]],  // gentle   — golden yellow
-  [  5,  [0.99, 0.83, 0.30]],
-  [  6,  [0.98, 0.57, 0.24]],  // moderate — orange
-  [  8,  [0.98, 0.57, 0.24]],
-  [ 10,  [0.97, 0.44, 0.44]],  // steep    — warm red
-  [ 12,  [0.97, 0.44, 0.44]],
-  [ 15,  [1.00, 0.18, 0.18]],  // extreme  — bright red
-  [ 30,  [1.00, 0.18, 0.18]],
+  [-20,  [0.10, 0.30, 0.95]],  // steep descent   — strong blue
+  [-10,  [0.20, 0.55, 1.00]],  // moderate descent — bright blue
+  [ -3,  [0.30, 0.80, 1.00]],  // gentle descent  — sky blue
+  [  0,  [0.20, 0.85, 0.30]],  // flat            — vivid green
+  [  2,  [0.70, 0.95, 0.10]],  // very gentle     — yellow-green
+  [  4,  [1.00, 0.92, 0.00]],  // gentle climb    — bright yellow
+  [  6,  [1.00, 0.65, 0.00]],  // moderate climb  — vivid orange
+  [  9,  [1.00, 0.30, 0.10]],  // steep climb     — red-orange
+  [ 12,  [0.95, 0.05, 0.05]],  // very steep      — bright red
+  [ 18,  [0.60, 0.00, 0.10]],  // extreme         — dark red
+  [ 30,  [0.40, 0.00, 0.05]],  // insane          — maroon
 ]
 
 function slopeToColor(slopePct: number): THREE.Color {
@@ -316,7 +315,7 @@ export function Route3DProfile({
     camera: THREE.PerspectiveCamera
     controls: OrbitControls
     mesh: THREE.Mesh
-    material: THREE.MeshLambertMaterial
+    material: THREE.MeshBasicMaterial
     grid: THREE.GridHelper
     frameId: number
     resizeObserver: ResizeObserver
@@ -372,13 +371,6 @@ export function Route3DProfile({
     controls.enableDamping = true
     controls.dampingFactor = 0.1
 
-    // Lights
-    const ambient = new THREE.AmbientLight(0xffffff, 0.6)
-    scene.add(ambient)
-    const directional = new THREE.DirectionalLight(0xffffff, 0.8)
-    directional.position.set(1, 2, 1).normalize()
-    scene.add(directional)
-
     // Extract & downsample coordinates
     const rawCoords = extractCoords(routeGeoJSON)
     const coords = downsample(rawCoords, 2000)
@@ -389,9 +381,9 @@ export function Route3DProfile({
 
     const localPoints = toLocal(coords)
 
-    // Build mesh
+    // Build mesh — MeshBasicMaterial for pure vertex colors (unlit, max vibrancy)
     const geometry = buildRibbonGeometry(localPoints, verticalExaggeration)
-    const material = new THREE.MeshLambertMaterial({
+    const material = new THREE.MeshBasicMaterial({
       vertexColors: true,
       side: THREE.DoubleSide,
     })
@@ -432,26 +424,28 @@ export function Route3DProfile({
       compassObjects.push(obj)
     }
 
-    // Solid white floor platform (sits just below grid at y=0)
+    // Translucent floor platform — lets mirror ribbon show through
     const mirrorGeo = new THREE.PlaneGeometry(gridSize, gridSize)
     mirrorGeo.rotateX(-Math.PI / 2)
     const mirrorMat = new THREE.MeshBasicMaterial({
       color: 0xffffff,
-      depthWrite: true,
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
     })
     const mirrorPlane = new THREE.Mesh(mirrorGeo, mirrorMat)
-    mirrorPlane.position.set(center.x, -0.5, center.z)
+    mirrorPlane.position.set(center.x, -0.2, center.z)
     scene.add(mirrorPlane)
 
-    // Reflected ribbon — flipped Y, faint mirror below floor
+    // Reflected ribbon — flipped Y, visible below translucent floor
     const mirrorMesh = mesh.clone()
     mirrorMesh.scale.set(1, -1, 1)
-    mirrorMesh.position.y = -1
-    const mirrorRibbonMat = new THREE.MeshLambertMaterial({
+    mirrorMesh.position.y = -0.5
+    const mirrorRibbonMat = new THREE.MeshBasicMaterial({
       vertexColors: true,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.18,
+      opacity: 0.35,
     })
     mirrorMesh.material = mirrorRibbonMat
     scene.add(mirrorMesh)
