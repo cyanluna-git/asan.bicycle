@@ -345,14 +345,15 @@ export function Route3DProfile({
     const width = container.clientWidth
     const height = container.clientHeight
 
-    // Scene (transparent background)
+    // Scene — light off-white background (VeloViewer-style)
     const scene = new THREE.Scene()
+    scene.background = new THREE.Color(0xfafafa)
 
     // Camera
     const camera = new THREE.PerspectiveCamera(50, width / height, 1, 100000)
 
     // WebGL renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    const renderer = new THREE.WebGLRenderer({ antialias: true })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setSize(width, height)
     container.appendChild(renderer.domElement)
@@ -409,7 +410,7 @@ export function Route3DProfile({
     // Grid — denser divisions
     const gridSize = Math.ceil(maxDim * 1.5 / 100) * 100
     const gridDivisions = Math.max(40, Math.ceil(gridSize / 500) * 20)
-    const grid = new THREE.GridHelper(gridSize, gridDivisions, 0xbbbbbb, 0xdddddd)
+    const grid = new THREE.GridHelper(gridSize, gridDivisions, 0xc8c8c8, 0xe4e4e4)
     grid.position.set(center.x, 0, center.z)
     scene.add(grid)
 
@@ -432,28 +433,26 @@ export function Route3DProfile({
       compassObjects.push(obj)
     }
 
-    // Floor mirror — faint reflection below ground
+    // Solid white floor platform (sits just below grid at y=0)
     const mirrorGeo = new THREE.PlaneGeometry(gridSize, gridSize)
     mirrorGeo.rotateX(-Math.PI / 2)
     const mirrorMat = new THREE.MeshBasicMaterial({
-      color: 0xe8eef4,
-      transparent: true,
-      opacity: 0.18,
-      depthWrite: false,
+      color: 0xffffff,
+      depthWrite: true,
     })
     const mirrorPlane = new THREE.Mesh(mirrorGeo, mirrorMat)
-    mirrorPlane.position.set(center.x, -1, center.z)
+    mirrorPlane.position.set(center.x, -0.5, center.z)
     scene.add(mirrorPlane)
 
-    // Reflected ribbon — flipped Y, very faint
+    // Reflected ribbon — flipped Y, faint mirror below floor
     const mirrorMesh = mesh.clone()
     mirrorMesh.scale.set(1, -1, 1)
-    mirrorMesh.position.y = -2
+    mirrorMesh.position.y = -1
     const mirrorRibbonMat = new THREE.MeshLambertMaterial({
       vertexColors: true,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.12,
+      opacity: 0.18,
     })
     mirrorMesh.material = mirrorRibbonMat
     scene.add(mirrorMesh)
