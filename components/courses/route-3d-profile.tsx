@@ -355,7 +355,12 @@ export function Route3DProfile({
     const camera = new THREE.PerspectiveCamera(50, width / height, 1, 100000)
 
     // WebGL renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true })
+    // logarithmicDepthBuffer fixes Z-fighting on overlapping ribbon walls
+    // that occur when the route doubles back on itself (out-and-back, loops)
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      logarithmicDepthBuffer: true,
+    })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setSize(width, height)
     container.appendChild(renderer.domElement)
