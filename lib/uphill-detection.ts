@@ -16,7 +16,7 @@ export interface UphillSegmentDraft {
   name: string
 }
 
-const GRADIENT_THRESHOLD = 0.07 // 7% — only meaningful climbs
+const GRADIENT_THRESHOLD = 0.03 // 3% — catches meaningful climbs including gentle passes
 const MIN_SEGMENT_LENGTH_KM = 1.0 // 1 km minimum
 const MERGE_GAP_KM = 0.5          // merge uphills separated by < 500 m
 

@@ -40,14 +40,14 @@ describe('detectUphillSegments — basic', () => {
     expect(detectUphillSegments(profile)).toEqual([])
   })
 
-  it('detects a single uphill segment with gradient >= 7%', () => {
-    // 8% gradient = 80m rise over 1km
+  it('detects a single uphill segment with gradient >= 3%', () => {
+    // 4% gradient = 40m rise over 1km
     const profile = buildProfile([
       [0, 100],
-      [0.5, 140], // 40m / 500m = 8%
-      [1.0, 180], // 40m / 500m = 8%
-      [1.5, 220], // 8%
-      [3.0, 220], // flat
+      [0.5, 120], // 40m / 1000m = 4% (over 0.5km = 20m)
+      [1.0, 140],
+      [1.5, 160],
+      [3.0, 160], // flat
     ])
     const result = detectUphillSegments(profile)
     expect(result.length).toBe(1)
@@ -56,13 +56,13 @@ describe('detectUphillSegments — basic', () => {
     expect(result[0].name).toBe('업힐 1')
   })
 
-  it('ignores segments below 7% gradient', () => {
-    // 6% gradient — below new threshold
+  it('ignores segments below 3% gradient', () => {
+    // 2% gradient — below threshold
     const profile = buildProfile([
       [0, 100],
-      [1.0, 160], // 60m / 1000m = 6%
-      [2.0, 220], // 6%
-      [3.0, 280],
+      [1.0, 120], // 20m / 1000m = 2%
+      [2.0, 140],
+      [3.0, 160],
     ])
     expect(detectUphillSegments(profile)).toEqual([])
   })
@@ -164,14 +164,14 @@ describe('detectUphillSegments — naming', () => {
 // ---------------------------------------------------------------------------
 
 describe('detectUphillSegments — edge cases', () => {
-  it('treats gradient exactly at 7% threshold as uphill (boundary inclusive)', () => {
-    // exactly 7%: 70m rise over 1000m
+  it('treats gradient exactly at 3% threshold as uphill (boundary inclusive)', () => {
+    // exactly 3%: 30m rise over 1000m
     const profile = buildProfile([
       [0, 100],
-      [1.0, 170], // 70m / 1000m = 7%
-      [2.0, 240], // 7%
-      [2.5, 275], // 7%
-      [4.0, 275], // flat
+      [1.0, 130], // 30m / 1000m = 3%
+      [2.0, 160], // 3%
+      [2.5, 175], // 3%
+      [4.0, 175], // flat
     ])
     const result = detectUphillSegments(profile)
     expect(result.length).toBe(1)
@@ -234,13 +234,13 @@ describe('detectUphillSegments — edge cases', () => {
     }
   })
 
-  it('gradient just below 7% is not detected as uphill', () => {
-    // 6.9% gradient
+  it('gradient just below 3% is not detected as uphill', () => {
+    // 2.9% gradient
     const profile = buildProfile([
       [0, 100],
-      [1.0, 169], // 69m / 1000m = 6.9% < 7%
-      [2.0, 238],
-      [3.0, 307],
+      [1.0, 129], // 29m / 1000m = 2.9% < 3%
+      [2.0, 158],
+      [3.0, 187],
     ])
     expect(detectUphillSegments(profile)).toEqual([])
   })
