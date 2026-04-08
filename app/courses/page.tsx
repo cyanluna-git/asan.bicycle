@@ -58,7 +58,7 @@ export default async function CoursesBrowsePage({
               {courses.length}개 코스
             </p>
             <p className="text-xs text-muted-foreground">
-              {activeFilterCount > 0 ? `${activeFilterCount}개 필터 적용 중` : '전체 코스 보기'}
+              {activeFilterCount > 0 ? `${activeFilterCount}개 필터 적용 중` : '랜덤 추천 — 새로고침하면 바뀌어요'}
             </p>
           </div>
         </div>
