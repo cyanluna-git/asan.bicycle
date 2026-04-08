@@ -19,11 +19,62 @@ import {
   buildSlopeGradientStops,
   buildSlopeGradientStopsFromSegments,
   inflateSlopeDistanceSegments,
+  getSlopeBandMeta,
 } from '@/lib/slope-visualization'
 import {
   ELEVATION_CHART_RIGHT_INSET,
   ELEVATION_CHART_Y_AXIS_WIDTH,
 } from '@/lib/elevation-chart-layout'
+
+function ElevationTooltip({
+  active,
+  payload,
+  label,
+  data,
+}: {
+  active?: boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  payload?: any[]
+  label?: number
+  data: ElevationPoint[]
+}) {
+  if (!active || !payload?.length || label == null) return null
+
+  const elevationM = payload[0]?.value as number
+  const distanceKm = Number(label)
+
+  // Find index and compute gradient via centered finite difference
+  const idx = data.findIndex((p) => p.distanceKm === distanceKm)
+  let gradientPct: number | null = null
+  if (idx > 0 && idx < data.length - 1) {
+    const dEle = data[idx + 1].elevationM - data[idx - 1].elevationM
+    const dKm = data[idx + 1].distanceKm - data[idx - 1].distanceKm
+    if (dKm > 0) gradientPct = (dEle / (dKm * 1000)) * 100
+  } else if (idx === 0 && data.length > 1) {
+    const dEle = data[1].elevationM - data[0].elevationM
+    const dKm = data[1].distanceKm - data[0].distanceKm
+    if (dKm > 0) gradientPct = (dEle / (dKm * 1000)) * 100
+  } else if (idx === data.length - 1 && data.length > 1) {
+    const dEle = data[idx].elevationM - data[idx - 1].elevationM
+    const dKm = data[idx].distanceKm - data[idx - 1].distanceKm
+    if (dKm > 0) gradientPct = (dEle / (dKm * 1000)) * 100
+  }
+
+  const bandMeta = gradientPct !== null ? getSlopeBandMeta(gradientPct) : null
+
+  return (
+    <div className="rounded-lg border border-white/20 bg-gray-900/90 px-3 py-2 text-xs shadow-lg backdrop-blur-sm">
+      <p className="font-medium text-white/70">{distanceKm.toFixed(2)} km</p>
+      <p className="mt-0.5 text-white">고도: {elevationM.toFixed(1)} m</p>
+      {gradientPct !== null && bandMeta && (
+        <p className="mt-0.5 font-semibold" style={{ color: bandMeta.color }}>
+          경사도: {gradientPct >= 0 ? '+' : ''}{gradientPct.toFixed(1)}%
+          <span className="ml-1 font-normal opacity-80">({bandMeta.label})</span>
+        </p>
+      )}
+    </div>
+  )
+}
 
 function UphillPeakLabel({
   viewBox,
@@ -194,8 +245,14 @@ export function ElevationChart({
               label={{ value: 'm', position: 'insideTopLeft', offset: 10, fontSize: 11 }}
             />
             <Tooltip
-              formatter={(value) => [`${value} m`, '고도']}
-              labelFormatter={(label) => `${Number(label).toFixed(2)} km`}
+              content={(props) => (
+                <ElevationTooltip
+                  active={props.active}
+                  payload={props.payload}
+                  label={props.label as number}
+                  data={data}
+                />
+              )}
             />
             <Area
               type="monotone"
