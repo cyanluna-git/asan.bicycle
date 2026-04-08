@@ -333,24 +333,76 @@ export default function UploadPage() {
         }
       }
 
-      // Step 2: Save auto-detected uphills that don't overlap with famous uphills
+      // Step 2: Handle auto-detected / user-edited uphill segments
       const OVERLAP_MARGIN_KM = 0.5
-      const validSegments = uphillSegments
-        .filter((segment) => segment.start_km < segment.end_km)
-        .filter((seg) =>
-          !famousRanges.some(
-            (f) => seg.start_km < f.end_km + OVERLAP_MARGIN_KM && seg.end_km > f.start_km - OVERLAP_MARGIN_KM,
-          ),
+      const DEFAULT_NAME_RE = /^업힐 \d+$/
+
+      const candidates = uphillSegments.filter((seg) => seg.start_km < seg.end_km)
+
+      // 2a: Segments with a custom name → promote to famous_uphills DB
+      const toPromote = candidates.filter(
+        (seg) => seg.name?.trim() && !DEFAULT_NAME_RE.test(seg.name.trim()),
+      )
+      let promotedCount = 0
+      for (const seg of toPromote) {
+        try {
+          const res = await fetch('/api/famous-uphills', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              course_id: courseId,
+              name: seg.name,
+              start_km: seg.start_km,
+              end_km: seg.end_km,
+            }),
+          })
+          if (res.ok) {
+            promotedCount++
+            console.log('[famous-uphill] 등록됨:', seg.name)
+          } else {
+            console.warn('[famous-uphill] 등록 실패:', seg.name, await res.text())
+          }
+        } catch (e) {
+          console.error('[famous-uphill] 네트워크 오류:', e)
+        }
+      }
+
+      // 2b: Re-run matching and refresh exclusion zones if new famous uphills were added
+      if (promotedCount > 0) {
+        await supabase.rpc('match_course_uphills', { p_course_id: courseId })
+        await fetch(`/api/courses/${courseId}/chart-uphills`, { method: 'POST' })
+        famousRanges.length = 0
+        const { data: refreshed } = await supabase
+          .from('course_uphills')
+          .select('chart_start_km, chart_end_km')
+          .eq('course_id', courseId)
+          .not('chart_start_km', 'is', null)
+          .not('chart_end_km', 'is', null)
+        for (const row of refreshed ?? []) {
+          if (row.chart_start_km != null && row.chart_end_km != null) {
+            famousRanges.push({ start_km: row.chart_start_km, end_km: row.chart_end_km })
+          }
+        }
+      }
+
+      // 2c: Default-named segments → save to uphill_segments (excluding overlaps)
+      const toSave = candidates
+        .filter((seg) => !seg.name?.trim() || DEFAULT_NAME_RE.test(seg.name.trim()))
+        .filter(
+          (seg) =>
+            !famousRanges.some(
+              (f) => seg.start_km < f.end_km + OVERLAP_MARGIN_KM && seg.end_km > f.start_km - OVERLAP_MARGIN_KM,
+            ),
         )
-      if (validSegments.length > 0) {
+      if (toSave.length > 0) {
         const { error: segmentError } = await supabase
           .from('uphill_segments')
           .insert(
-            validSegments.map((segment) => ({
+            toSave.map((seg) => ({
               course_id: courseId,
-              name: segment.name || null,
-              start_km: segment.start_km,
-              end_km: segment.end_km,
+              name: null,
+              start_km: seg.start_km,
+              end_km: seg.end_km,
             })),
           )
         if (segmentError) {
