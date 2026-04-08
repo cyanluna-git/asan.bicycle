@@ -424,31 +424,18 @@ export function Route3DProfile({
       compassObjects.push(obj)
     }
 
-    // Translucent floor platform — lets mirror ribbon show through
-    const mirrorGeo = new THREE.PlaneGeometry(gridSize, gridSize)
-    mirrorGeo.rotateX(-Math.PI / 2)
-    const mirrorMat = new THREE.MeshBasicMaterial({
+    // Translucent floor platform — subtle white tint, grid on top
+    const floorGeo = new THREE.PlaneGeometry(gridSize, gridSize)
+    floorGeo.rotateX(-Math.PI / 2)
+    const floorMat = new THREE.MeshBasicMaterial({
       color: 0xffffff,
       transparent: true,
-      opacity: 0.55,
+      opacity: 0.65,
       depthWrite: false,
     })
-    const mirrorPlane = new THREE.Mesh(mirrorGeo, mirrorMat)
-    mirrorPlane.position.set(center.x, -0.2, center.z)
-    scene.add(mirrorPlane)
-
-    // Reflected ribbon — flipped Y, visible below translucent floor
-    const mirrorMesh = mesh.clone()
-    mirrorMesh.scale.set(1, -1, 1)
-    mirrorMesh.position.y = -0.5
-    const mirrorRibbonMat = new THREE.MeshBasicMaterial({
-      vertexColors: true,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.35,
-    })
-    mirrorMesh.material = mirrorRibbonMat
-    scene.add(mirrorMesh)
+    const floorPlane = new THREE.Mesh(floorGeo, floorMat)
+    floorPlane.position.set(center.x, -0.2, center.z)
+    scene.add(floorPlane)
 
     // Position camera
     camera.position.set(
@@ -509,9 +496,8 @@ export function Route3DProfile({
         state.material.dispose()
         state.grid.geometry.dispose()
         ;(state.grid.material as THREE.Material).dispose()
-        mirrorPlane.geometry.dispose()
-        mirrorMat.dispose()
-        mirrorRibbonMat.dispose()
+        floorPlane.geometry.dispose()
+        floorMat.dispose()
         for (const obj of compassObjects) scene.remove(obj)
         state.renderer.dispose()
         if (container.contains(state.renderer.domElement)) {
