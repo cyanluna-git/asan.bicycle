@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="asan.bicycle e2e fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>e2e test route</name>
+    <desc>Synthetic 5.25km route with 1.5km @ 4% climb (Asan area)</desc>
+  </metadata>
+  <trk>
+    <name>e2e test route</name>
+    <trkseg>
+      <trkpt lat="36.7800000" lon="127.0000000">
+        <ele>80.0</ele>
+        <time>2026-04-08T09:00:00Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0028027">
+        <ele>80.0</ele>
+        <time>2026-04-08T09:00:30Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0056054">
+        <ele>80.0</ele>
+        <time>2026-04-08T09:01:00Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0084081">
+        <ele>80.0</ele>
+        <time>2026-04-08T09:01:30Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0112108">
+        <ele>80.0</ele>
+        <time>2026-04-08T09:02:00Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0140135">
+        <ele>80.0</ele>
+        <time>2026-04-08T09:02:30Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0168161">
+        <ele>80.0</ele>
+        <time>2026-04-08T09:03:00Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0196188">
+        <ele>80.0</ele>
+        <time>2026-04-08T09:03:30Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0224215">
+        <ele>80.0</ele>
+        <time>2026-04-08T09:04:00Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0252242">
+        <ele>90.0</ele>
+        <time>2026-04-08T09:04:30Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0280269">
+        <ele>100.0</ele>
+        <time>2026-04-08T09:05:00Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0308296">
+        <ele>110.0</ele>
+        <time>2026-04-08T09:05:30Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0336323">
+        <ele>120.0</ele>
+        <time>2026-04-08T09:06:00Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0364350">
+        <ele>130.0</ele>
+        <time>2026-04-08T09:06:30Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0392377">
+        <ele>140.0</ele>
+        <time>2026-04-08T09:07:00Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0420404">
+        <ele>134.3</ele>
+        <time>2026-04-08T09:07:30Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0448430">
+        <ele>128.6</ele>
+        <time>2026-04-08T09:08:00Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0476457">
+        <ele>122.9</ele>
+        <time>2026-04-08T09:08:30Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0504484">
+        <ele>117.1</ele>
+        <time>2026-04-08T09:09:00Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0532511">
+        <ele>111.4</ele>
+        <time>2026-04-08T09:09:30Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0560538">
+        <ele>105.7</ele>
+        <time>2026-04-08T09:10:00Z</time>
+      </trkpt>
+      <trkpt lat="36.7800000" lon="127.0588565">
+        <ele>100.0</ele>
+        <time>2026-04-08T09:10:30Z</time>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>

@@ -35,6 +35,13 @@ yarn-error.log*
 .env*
 !.env.local.example
 !.env.production.example
+!.env.test.local.example
+
+# playwright
+/playwright/.auth/
+/playwright-report/
+/test-results/
+/blob-report/
 
 # vercel
 .vercel
