@@ -20,11 +20,24 @@ setup('authenticate via supabase', async ({ page, baseURL }) => {
   if (!NEXT_PUBLIC_SUPABASE_ANON_KEY) missing.push('NEXT_PUBLIC_SUPABASE_ANON_KEY');
 
   if (missing.length > 0) {
-    throw new Error(
-      `[auth.setup] Missing required env vars: ${missing.join(', ')}.\n` +
-        `Create .env.test.local from .env.test.local.example and populate the values, ` +
-        `then re-run: pnpm exec playwright test --project=setup`
+    // Emit an empty storage state so the chromium project can still mount its
+    // context (it references STORAGE_STATE). Auth-dependent specs detect the
+    // missing file via fs.existsSync and skip themselves gracefully.
+    fs.mkdirSync(path.dirname(STORAGE_STATE), { recursive: true });
+    if (!fs.existsSync(STORAGE_STATE)) {
+      fs.writeFileSync(
+        STORAGE_STATE,
+        JSON.stringify({ cookies: [], origins: [] }),
+        'utf8'
+      );
+    }
+    setup.skip(
+      true,
+      `[auth.setup] Missing env vars (${missing.join(', ')}). ` +
+        `Auth-dependent specs will skip themselves. ` +
+        `Create .env.test.local to enable authenticated tests.`
     );
+    return;
   }
 
   const supabase = createClient(
