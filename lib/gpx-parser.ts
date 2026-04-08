@@ -105,17 +105,42 @@ function calculateDistanceKm(coords: number[][]): number {
 }
 
 /** Sum positive elevation deltas from 3D coordinates [lng, lat, ele].
- *  Applies a 3m threshold per step to suppress GPS elevation noise. */
+ *  Applies a 5-point moving-average smoothing to suppress GPS noise, then
+ *  sums positive deltas without a per-sample threshold. A per-sample
+ *  threshold (e.g. ≥3 m) drops the sub-meter deltas from long gradual
+ *  climbs recorded at 1Hz, which severely under-counts total gain on
+ *  long courses like 설악그란폰도 (real ~3500 m vs filtered ~1369 m). */
 function calculateElevationGain(coords: number[][]): number {
-  let gain = 0
-  for (let i = 1; i < coords.length; i++) {
-    const prevEle = coords[i - 1][2]
-    const currEle = coords[i][2]
-    if (prevEle != null && currEle != null) {
-      const delta = currEle - prevEle
-      if (delta >= 3.0) gain += delta
-    }
+  const eles: number[] = []
+  for (const c of coords) {
+    const e = c[2]
+    if (e != null && !Number.isNaN(e)) eles.push(e)
   }
+  if (eles.length < 2) return 0
+
+  // Apply 5-point moving-average smoothing only for realistic inputs.
+  // For tiny inputs (<5 points) smoothing averages the whole signal away.
+  let smoothed: number[]
+  if (eles.length >= 5) {
+    smoothed = new Array<number>(eles.length)
+    for (let i = 0; i < eles.length; i++) {
+      const lo = Math.max(0, i - 2)
+      const hi = Math.min(eles.length - 1, i + 2)
+      let sum = 0
+      for (let j = lo; j <= hi; j++) sum += eles[j]
+      smoothed[i] = sum / (hi - lo + 1)
+    }
+  } else {
+    smoothed = eles
+  }
+
+  // Sum positive deltas on smoothed profile (no per-sample threshold)
+  let gain = 0
+  for (let i = 1; i < smoothed.length; i++) {
+    const delta = smoothed[i] - smoothed[i - 1]
+    if (delta > 0) gain += delta
+  }
+
   return Math.round(gain)
 }
 

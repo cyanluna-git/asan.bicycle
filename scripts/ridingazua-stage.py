@@ -72,6 +72,38 @@ def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     return 2 * radius_km * math.asin(math.sqrt(a))
 
 
+def _calculate_elevation_gain(eles: list[float]) -> float:
+    """Sum positive elevation deltas after 5-point moving-average smoothing.
+
+    A per-sample threshold (e.g. >=3m) drops the sub-meter deltas from long
+    gradual climbs recorded at 1Hz, which severely under-counts total gain
+    on long courses (e.g. 설악그란폰도 real ~3500m vs filtered ~1369m).
+    Smoothing suppresses GPS noise; without a per-sample threshold, true
+    gradual climbs are counted correctly.
+    """
+    if len(eles) < 2:
+        return 0.0
+
+    # Apply 5-point moving-average smoothing only for realistic inputs.
+    # For tiny inputs (<5 points) smoothing averages the whole signal away.
+    if len(eles) >= 5:
+        smoothed: list[float] = []
+        for i in range(len(eles)):
+            lo = max(0, i - 2)
+            hi = min(len(eles) - 1, i + 2)
+            window = eles[lo:hi + 1]
+            smoothed.append(sum(window) / len(window))
+    else:
+        smoothed = list(eles)
+
+    gain = 0.0
+    for i in range(1, len(smoothed)):
+        delta = smoothed[i] - smoothed[i - 1]
+        if delta > 0:
+            gain += delta
+    return gain
+
+
 def detect_namespace(root: ET.Element) -> str | None:
     tag = root.tag or ""
     if tag.startswith("{") and "}" in tag:
@@ -123,7 +155,6 @@ def parse_gpx_metrics(gpx_path: Path) -> ParsedGeometry:
     min_lat = max_lat = start_lat
     min_lng = max_lng = start_lng
     total_distance_km = 0.0
-    total_elevation_gain = 0.0
     route_hasher = hashlib.sha1()
     previous = None
 
@@ -135,13 +166,11 @@ def parse_gpx_metrics(gpx_path: Path) -> ParsedGeometry:
         route_hasher.update(f"{lat:.6f},{lng:.6f},{'' if ele is None else round(ele, 1)}|".encode("utf-8"))
 
         if previous is not None:
-            prev_lat, prev_lng, prev_ele = previous
+            prev_lat, prev_lng, _prev_ele = previous
             total_distance_km += haversine_km(prev_lat, prev_lng, lat, lng)
-            if prev_ele is not None and ele is not None:
-                delta = ele - prev_ele
-                if delta >= 3.0:  # 3m threshold to filter GPS elevation noise
-                    total_elevation_gain += delta
         previous = (lat, lng, ele)
+
+    total_elevation_gain = _calculate_elevation_gain([e for _, _, e in points if e is not None])
 
     return ParsedGeometry(
         point_count=len(points),
