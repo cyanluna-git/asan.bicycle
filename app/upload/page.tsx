@@ -32,6 +32,7 @@ const EMPTY_FORM: UploadMetadataFormData = {
   title: '',
   description: '',
   difficulty: 'moderate',
+  surface_type: 'road',
   theme: '',
   tags: '',
   startPointId: '',
@@ -253,6 +254,7 @@ export default function UploadPage() {
         title: form.title.trim(),
         description: form.description.trim() || null,
         difficulty: form.difficulty,
+        surface_type: form.surface_type,
         distance_km: parsed.distanceKm,
         elevation_gain_m: parsed.elevationGainM,
         gpx_url: publicUrl,
@@ -306,15 +308,18 @@ export default function UploadPage() {
 
       const courseId = insertResponse.data.id
 
-      // Non-blocking: match famous uphills after course insert
+      // Non-blocking: match famous uphills, then compute chart positions
       void supabase
         .rpc('match_course_uphills', { p_course_id: courseId })
-        .then(({ data: matchCount, error: matchError }) => {
+        .then(async ({ data: matchCount, error: matchError }) => {
           if (matchError) {
             console.error('[uphill-match] non-critical error:', matchError.message)
             return
           }
           console.log('[uphill-match] matched', matchCount, 'famous uphills')
+          if ((matchCount ?? 0) > 0) {
+            await fetch(`/api/courses/${courseId}/chart-uphills`, { method: 'POST' })
+          }
         })
 
       const validSegments = uphillSegments.filter((segment) => segment.start_km < segment.end_km)

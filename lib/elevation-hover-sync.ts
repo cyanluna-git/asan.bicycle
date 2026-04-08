@@ -63,6 +63,47 @@ export function buildRouteHoverProfile(routeGeoJSON: RouteGeoJSON | null | undef
   return points
 }
 
+/**
+ * Smooth a raw GPS elevation profile:
+ * 1. Linear-interpolate over zero-elevation gaps (GPX trkpt without <ele> tag → 0)
+ * 2. Apply a 5-point moving-average to reduce GPS elevation noise
+ */
+export function smoothElevationProfile<T extends { distanceKm: number; elevationM: number }>(
+  points: T[],
+): T[] {
+  if (points.length < 3) return points
+
+  // Step 1: interpolate over elevation=0 runs (artifacts from missing <ele>)
+  const buf = points.map((p) => ({ ...p })) as T[]
+  let gapStart = -1
+  for (let i = 0; i <= buf.length; i++) {
+    const isGap = i < buf.length && buf[i].elevationM <= 0
+    if (isGap) {
+      if (gapStart === -1) gapStart = i
+    } else {
+      if (gapStart !== -1 && gapStart > 0 && i < buf.length) {
+        const startEle = buf[gapStart - 1].elevationM
+        const endEle = buf[i].elevationM
+        const span = i - gapStart + 1
+        for (let j = gapStart; j < i; j++) {
+          const t = (j - gapStart + 1) / span
+          buf[j] = { ...buf[j], elevationM: Math.round((startEle + t * (endEle - startEle)) * 10) / 10 }
+        }
+      }
+      gapStart = -1
+    }
+  }
+
+  // Step 2: 5-point moving average
+  return buf.map((p, i) => {
+    const lo = Math.max(0, i - 2)
+    const hi = Math.min(buf.length - 1, i + 2)
+    let sum = 0
+    for (let j = lo; j <= hi; j++) sum += buf[j].elevationM
+    return { ...p, elevationM: Math.round((sum / (hi - lo + 1)) * 10) / 10 }
+  })
+}
+
 export function findNearestRouteHoverPoint(
   profile: RouteHoverPoint[],
   targetDistanceKm: number | null | undefined,

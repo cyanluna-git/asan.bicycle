@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { ChevronDown, ChevronUp, Box } from 'lucide-react'
 import { getElevationProfileFromMetadata, normalizeRouteRenderMetadata } from '@/lib/course-render-metadata'
-import { buildRouteHoverProfile, findNearestRouteHoverPoint, type RouteHoverPoint } from '@/lib/elevation-hover-sync'
+import { buildRouteHoverProfile, findNearestRouteHoverPoint, smoothElevationProfile, type RouteHoverPoint } from '@/lib/elevation-hover-sync'
 import { buildWindSegments, type WindSegment } from '@/lib/wind-analysis'
 import {
   Drawer,
@@ -72,9 +72,11 @@ export function ElevationPanel({
     [normalizedMetadata, routeGeoJSON],
   )
   const elevationProfile = useMemo<ElevationPoint[]>(
-    () => normalizedMetadata
-      ? getElevationProfileFromMetadata(normalizedMetadata)
-      : hoverProfile.map(({ distanceKm, elevationM }) => ({ distanceKm, elevationM })),
+    () => {
+      if (normalizedMetadata) return getElevationProfileFromMetadata(normalizedMetadata)
+      const raw = hoverProfile.map(({ distanceKm, elevationM }) => ({ distanceKm, elevationM }))
+      return smoothElevationProfile(raw)
+    },
     [hoverProfile, normalizedMetadata],
   )
   const windSegments = useMemo<WindSegment[]>(

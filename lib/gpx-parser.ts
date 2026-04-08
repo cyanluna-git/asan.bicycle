@@ -104,14 +104,16 @@ function calculateDistanceKm(coords: number[][]): number {
   return Math.round(total * 10) / 10
 }
 
-/** Sum positive elevation deltas from 3D coordinates [lng, lat, ele]. */
+/** Sum positive elevation deltas from 3D coordinates [lng, lat, ele].
+ *  Applies a 3m threshold per step to suppress GPS elevation noise. */
 function calculateElevationGain(coords: number[][]): number {
   let gain = 0
   for (let i = 1; i < coords.length; i++) {
     const prevEle = coords[i - 1][2]
     const currEle = coords[i][2]
-    if (prevEle != null && currEle != null && currEle > prevEle) {
-      gain += currEle - prevEle
+    if (prevEle != null && currEle != null) {
+      const delta = currEle - prevEle
+      if (delta >= 3.0) gain += delta
     }
   }
   return Math.round(gain)

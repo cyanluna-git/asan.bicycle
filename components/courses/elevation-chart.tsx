@@ -25,6 +25,29 @@ import {
   ELEVATION_CHART_Y_AXIS_WIDTH,
 } from '@/lib/elevation-chart-layout'
 
+function UphillPeakLabel({
+  viewBox,
+  name,
+}: {
+  viewBox?: { x: number; y: number; height: number }
+  name: string
+}) {
+  if (!viewBox || !name) return null
+  const { x, y } = viewBox
+  return (
+    <text
+      x={x}
+      y={y + 11}
+      fontSize={10}
+      fill="#ef4444"
+      textAnchor="middle"
+      fontWeight={500}
+    >
+      {name}
+    </text>
+  )
+}
+
 interface ElevationChartProps {
   data: ElevationPoint[]
   persistedSegments?: RouteSlopeSegment[]
@@ -193,6 +216,21 @@ export function ElevationChart({
                 strokeOpacity={0.3}
               />
             ))}
+            {segments.map((seg, i) => {
+              const name = (seg as { name?: string | null }).name
+              if (!name) return null
+              return (
+                <ReferenceLine
+                  key={`uphill-peak-${i}`}
+                  x={seg.end_km}
+                  stroke="#ef4444"
+                  strokeOpacity={0.4}
+                  strokeDasharray="3 2"
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  label={(props: any) => <UphillPeakLabel viewBox={props.viewBox} name={name} />}
+                />
+              )
+            })}
             {hoveredDistanceKm != null ? (
               <ReferenceLine
                 x={hoveredDistanceKm}

@@ -28,6 +28,8 @@ export type PoiDraft = {
   photoPreviewUrl: string | null
 }
 
+export type SurfaceType = 'road' | 'gravel' | 'mtb'
+
 export type UploadMetadataFormData = {
   title: string
   description: string
@@ -35,6 +37,7 @@ export type UploadMetadataFormData = {
   theme: string
   tags: string
   startPointId: string
+  surface_type: SurfaceType
 }
 
 export type MetadataHistoryEntry = {

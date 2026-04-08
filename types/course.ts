@@ -11,6 +11,7 @@ export type CourseListItem = Pick<
   | 'tags'
   | 'uploader_name'
   | 'created_by'
+  | 'surface_type'
 > & {
   uploader_emoji?: string | null
 }
@@ -65,6 +66,7 @@ export type CourseDetail = Pick<
   | 'created_by'
   | 'start_point_id'
   | 'route_preview_points'
+  | 'source_url'
 > & {
   uploader_emoji?: string | null
   route_geojson?: RouteGeoJSON | null

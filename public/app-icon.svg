@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Background -->
+  <rect width="128" height="128" rx="24" fill="white"/>
+
+  <!-- Route path line -->
+  <path d="M18 82 Q38 60 64 64 Q90 68 110 46"
+        stroke="#E8690A" stroke-width="3.5" fill="none"
+        stroke-linecap="round" stroke-linejoin="round"
+        stroke-dasharray="0"/>
+
+  <!-- Rear wheel -->
+  <circle cx="40" cy="88" r="20" stroke="#222" stroke-width="3" fill="none" opacity="0.92"/>
+  <!-- Rear spokes -->
+  <line x1="40" y1="68" x2="40" y2="108" stroke="#222" stroke-width="1.5" opacity="0.4"/>
+  <line x1="20" y1="88" x2="60" y2="88" stroke="#222" stroke-width="1.5" opacity="0.4"/>
+  <line x1="26" y1="74" x2="54" y2="102" stroke="#222" stroke-width="1.5" opacity="0.4"/>
+  <line x1="54" y1="74" x2="26" y2="102" stroke="#222" stroke-width="1.5" opacity="0.4"/>
+  <circle cx="40" cy="88" r="3" fill="#222" opacity="0.9"/>
+
+  <!-- Front wheel -->
+  <circle cx="90" cy="88" r="20" stroke="#222" stroke-width="3" fill="none" opacity="0.92"/>
+  <!-- Front spokes -->
+  <line x1="90" y1="68" x2="90" y2="108" stroke="#222" stroke-width="1.5" opacity="0.4"/>
+  <line x1="70" y1="88" x2="110" y2="88" stroke="#222" stroke-width="1.5" opacity="0.4"/>
+  <line x1="76" y1="74" x2="104" y2="102" stroke="#222" stroke-width="1.5" opacity="0.4"/>
+  <line x1="104" y1="74" x2="76" y2="102" stroke="#222" stroke-width="1.5" opacity="0.4"/>
+  <circle cx="90" cy="88" r="3" fill="#222" opacity="0.9"/>
+
+  <!-- Frame - chain stay -->
+  <line x1="40" y1="88" x2="65" y2="72" stroke="#222" stroke-width="3" stroke-linecap="round"/>
+  <!-- Frame - seat stay -->
+  <line x1="40" y1="88" x2="52" y2="68" stroke="#222" stroke-width="2.5" stroke-linecap="round" opacity="0.8"/>
+  <!-- Frame - top tube -->
+  <line x1="52" y1="68" x2="78" y2="64" stroke="#222" stroke-width="3" stroke-linecap="round"/>
+  <!-- Frame - down tube -->
+  <line x1="65" y1="72" x2="78" y2="64" stroke="#222" stroke-width="3" stroke-linecap="round"/>
+  <!-- Frame - fork -->
+  <line x1="78" y1="64" x2="90" y2="88" stroke="#222" stroke-width="3" stroke-linecap="round"/>
+  <!-- Seat tube -->
+  <line x1="65" y1="72" x2="62" y2="58" stroke="#222" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Saddle -->
+  <line x1="55" y1="57" x2="69" y2="57" stroke="#E8690A" stroke-width="3" stroke-linecap="round"/>
+  <!-- Handlebar -->
+  <line x1="78" y1="64" x2="84" y2="56" stroke="#222" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="80" y1="55" x2="88" y2="55" stroke="#E8690A" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Route dot markers -->
+  <circle cx="18" cy="82" r="4" fill="#E8690A"/>
+  <circle cx="110" cy="46" r="4" fill="#E8690A"/>
+  <!-- Summit flag -->
+  <line x1="110" y1="46" x2="110" y2="30" stroke="#E8690A" stroke-width="2"/>
+  <polygon points="110,30 122,35 110,40" fill="#E8690A"/>
+</svg>

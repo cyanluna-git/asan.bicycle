@@ -18,6 +18,7 @@ type PatchPayload = {
   title?: string
   description?: string | null
   difficulty?: 'easy' | 'moderate' | 'hard'
+  surface_type?: 'road' | 'gravel' | 'mtb'
   theme?: string | null
   tags?: string[]
   startPointId?: string | null
@@ -160,6 +161,7 @@ export async function PATCH(request: Request, context: PatchContext) {
     title,
     description: body.description?.trim() || null,
     difficulty,
+    surface_type: body.surface_type ?? null,
     theme: body.theme?.trim() || null,
     tags,
     start_point_id: body.startPointId || null,
@@ -190,6 +192,7 @@ export async function PATCH(request: Request, context: PatchContext) {
             title,
             description: body.description?.trim() || '',
             difficulty,
+            surface_type: body.surface_type ?? 'road',
             theme: body.theme?.trim() || '',
             tags: tags.join(','),
             startPointId: body.startPointId || '',
@@ -222,15 +225,19 @@ export async function PATCH(request: Request, context: PatchContext) {
     return jsonError(`코스 저장 실패: ${updateResponse.error.message}`, 400)
   }
 
-  // Non-blocking: re-match famous uphills after edit
+  // Non-blocking: re-match famous uphills, then compute chart positions
   void writeClient
     .rpc('match_course_uphills', { p_course_id: id })
-    .then(({ data: matchCount, error: matchError }) => {
+    .then(async ({ data: matchCount, error: matchError }) => {
       if (matchError) {
         console.error('[uphill-match] non-critical error:', matchError.message)
         return
       }
       console.log('[uphill-match] re-matched', matchCount, 'famous uphills for course', id)
+      if ((matchCount ?? 0) > 0) {
+        const { computeAndSaveUphillChartPositions } = await import('@/lib/uphill-chart-positions')
+        await computeAndSaveUphillChartPositions(id)
+      }
     })
 
   const existingPoiResponse = await authClient

@@ -257,9 +257,7 @@ export function CourseDetailPanel({
           </div>
 
           {compactDescription ? (
-            <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm text-foreground/75">
-              {compactDescription}
-            </p>
+            <SourceDescription description={compactDescription} sourceUrl={course.source_url ?? null} />
           ) : null}
 
           <div className="grid grid-cols-2 gap-2">
@@ -288,12 +286,25 @@ export function CourseDetailPanel({
           {course.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {course.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-white/85 px-2.5 py-1 text-[11px] font-medium text-foreground/70 ring-1 ring-black/5"
-                >
-                  {tag}
-                </span>
+                tag === '라이딩가즈아' && course.source_url ? (
+                  <a
+                    key={tag}
+                    href={course.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="rounded-full bg-white/85 px-2.5 py-1 text-[11px] font-medium text-foreground/70 ring-1 ring-black/5 hover:ring-black/20"
+                  >
+                    {tag}
+                  </a>
+                ) : (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-white/85 px-2.5 py-1 text-[11px] font-medium text-foreground/70 ring-1 ring-black/5"
+                  >
+                    {tag}
+                  </span>
+                )
               ))}
             </div>
           )}
@@ -702,9 +713,51 @@ export function CourseDetailPanel({
                 GPX 다운로드
               </Button>
             )}
+
         </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * Renders the course description, turning "출처: 라이딩가즈아 | ..." into a
+ * clickable link when source_url is available.
+ */
+function SourceDescription({ description, sourceUrl }: { description: string; sourceUrl: string | null }) {
+  const SOURCE_PREFIX = '출처: '
+  if (!description.startsWith(SOURCE_PREFIX)) {
+    return (
+      <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm text-foreground/75">
+        {description}
+      </p>
+    )
+  }
+
+  // Format: "출처: 라이딩가즈아 | 지역 | 거리"
+  const rest = description.slice(SOURCE_PREFIX.length) // "라이딩가즈아 | ..."
+  const pipeIdx = rest.indexOf(' | ')
+  const sourceName = pipeIdx >= 0 ? rest.slice(0, pipeIdx) : rest
+  const suffix = pipeIdx >= 0 ? rest.slice(pipeIdx) : ''  // " | 지역 | 거리"
+
+  return (
+    <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm text-foreground/75">
+      {SOURCE_PREFIX}
+      {sourceUrl ? (
+        <a
+          href={sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium text-foreground/90 underline underline-offset-2 hover:text-foreground"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {sourceName}
+        </a>
+      ) : (
+        sourceName
+      )}
+      {suffix}
+    </p>
   )
 }
 

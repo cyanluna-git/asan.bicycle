@@ -41,6 +41,7 @@ type EditableCourseRow = {
   title: string
   description: string | null
   difficulty: Difficulty
+  surface_type: 'road' | 'gravel' | 'mtb' | null
   distance_km: number
   elevation_gain_m: number
   theme: string | null
@@ -75,19 +76,21 @@ const EMPTY_FORM: UploadMetadataFormData = {
   title: '',
   description: '',
   difficulty: 'moderate',
+  surface_type: 'road',
   theme: '',
   tags: '',
   startPointId: '',
 }
 
-const COURSE_FIELDS = 'id, title, description, difficulty, distance_km, elevation_gain_m, theme, tags, start_point_id, region_id, route_geojson, route_render_metadata, created_by, uploader_name, uploader_emoji'
-const COURSE_FIELDS_FALLBACK = 'id, title, description, difficulty, distance_km, elevation_gain_m, theme, tags, start_point_id, region_id, route_geojson, created_by'
+const COURSE_FIELDS = 'id, title, description, difficulty, surface_type, distance_km, elevation_gain_m, theme, tags, start_point_id, region_id, route_geojson, route_render_metadata, created_by, uploader_name, uploader_emoji'
+const COURSE_FIELDS_FALLBACK = 'id, title, description, difficulty, surface_type, distance_km, elevation_gain_m, theme, tags, start_point_id, region_id, route_geojson, created_by'
 
 function toInitialForm(course: EditableCourseRow): UploadMetadataFormData {
   return {
     title: course.title,
     description: course.description ?? '',
     difficulty: course.difficulty,
+    surface_type: course.surface_type ?? 'road',
     theme: course.theme ?? '',
     tags: course.tags.join(', '),
     startPointId: course.start_point_id ?? '',
@@ -452,6 +455,7 @@ export function CourseEditPageClient({
           title: form.title.trim(),
           description: form.description.trim() || null,
           difficulty: form.difficulty,
+          surface_type: form.surface_type,
           theme: form.theme.trim() || null,
           tags,
           startPointId: form.startPointId || null,

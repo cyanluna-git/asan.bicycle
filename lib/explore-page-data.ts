@@ -12,11 +12,12 @@ import type {
   UphillSegment,
 } from '@/types/course'
 
-const COURSE_LIST_FIELDS = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, created_by'
+
+const COURSE_LIST_FIELDS = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, created_by, surface_type'
 const COURSE_LIST_FIELDS_WITH_UPLOADER = `${COURSE_LIST_FIELDS}, uploader_name, uploader_emoji`
-const COURSE_DETAIL_FIELDS = 'id, title, description, difficulty, distance_km, elevation_gain_m, gpx_url, theme, tags, route_geojson, route_preview_points, route_render_metadata, created_by, start_point_id'
+const COURSE_DETAIL_FIELDS = 'id, title, description, difficulty, distance_km, elevation_gain_m, gpx_url, theme, tags, route_geojson, route_preview_points, route_render_metadata, created_by, start_point_id, source_url'
 const COURSE_DETAIL_FIELDS_WITH_UPLOADER = `${COURSE_DETAIL_FIELDS}, uploader_name, uploader_emoji`
-const COURSE_DETAIL_FIELDS_FALLBACK = 'id, title, description, difficulty, distance_km, elevation_gain_m, gpx_url, theme, tags, route_geojson, route_preview_points, created_by, start_point_id'
+const COURSE_DETAIL_FIELDS_FALLBACK = 'id, title, description, difficulty, distance_km, elevation_gain_m, gpx_url, theme, tags, route_geojson, route_preview_points, created_by, start_point_id, source_url'
 const COURSE_DETAIL_FIELDS_FALLBACK_WITH_UPLOADER = `${COURSE_DETAIL_FIELDS_FALLBACK}, uploader_name, uploader_emoji`
 
 type ExploreSearchParams = Record<string, string | string[] | undefined>
@@ -32,6 +33,7 @@ type CourseListRow = {
   created_by: string | null
   uploader_name?: string | null
   uploader_emoji?: string | null
+  surface_type: 'road' | 'gravel' | 'mtb' | null
 }
 
 type CourseDetailRow = {
@@ -49,6 +51,7 @@ type CourseDetailRow = {
   route_render_metadata: CourseDetail['route_render_metadata']
   created_by: string | null
   start_point_id: string | null
+  source_url: string | null
   uploader_name?: string | null
   uploader_emoji?: string | null
 }
@@ -159,7 +162,7 @@ export async function loadExplorePageData({
   )
 
   const courseList: CourseListItem[] = courseRows.map(
-    ({ id, title, difficulty, distance_km, elevation_gain_m, theme, tags, created_by, uploader_name, uploader_emoji }) => ({
+    ({ id, title, difficulty, distance_km, elevation_gain_m, theme, tags, created_by, uploader_name, uploader_emoji, surface_type }) => ({
       id,
       title,
       difficulty,
@@ -170,6 +173,7 @@ export async function loadExplorePageData({
       created_by,
       uploader_name: uploader_name ?? null,
       uploader_emoji: uploader_emoji ?? null,
+      surface_type: surface_type ?? null,
     }),
   )
 
@@ -233,18 +237,41 @@ export async function loadExplorePageData({
       .order('start_km')
     : { data: [] }
 
-  const uphillSegments: UphillSegment[] = (uphillRaw ?? []) as UphillSegment[]
+  const manualUphillSegments: UphillSegment[] = (uphillRaw ?? []) as UphillSegment[]
 
+  // Read pre-computed chart positions from course_uphills (populated at upload/rematch time)
   const { data: famousUphillsRaw } = selectedCourseId
     ? await supabase
       .from('course_uphills')
-      .select('famous_uphill_id, famous_uphills(id, name, avg_grade, climb_category, distance_m)')
+      .select('chart_start_km, chart_end_km, famous_uphills(id, name, avg_grade, climb_category, distance_m)')
       .eq('course_id', selectedCourseId)
     : { data: [] }
 
-  const famousUphills: FamousUphill[] = ((famousUphillsRaw ?? []) as unknown as Array<{ famous_uphills: FamousUphill | null }>)
+  type CourseUphillRow = {
+    chart_start_km: number | null
+    chart_end_km: number | null
+    famous_uphills: FamousUphill | null
+  }
+
+  const uphillRows = ((famousUphillsRaw ?? []) as unknown as CourseUphillRow[])
+
+  const famousUphills: FamousUphill[] = uphillRows
     .map((row) => row.famous_uphills)
     .filter((u): u is FamousUphill => u != null)
+
+  // Build chart segments from pre-computed km positions (only rows with ascending direction)
+  const famousUphillChartSegments: UphillSegment[] = uphillRows.flatMap((row) => {
+    if (row.chart_start_km == null || row.chart_end_km == null) return []
+    if (!row.famous_uphills) return []
+    return [{
+      id: row.famous_uphills.id,
+      course_id: selectedCourseId!,
+      name: row.famous_uphills.name,
+      start_km: row.chart_start_km,
+      end_km: row.chart_end_km,
+      created_at: '',
+    }]
+  })
 
   const { data: reviewStatsRaw } = selectedCourseId
     ? await supabase
@@ -292,6 +319,11 @@ export async function loadExplorePageData({
     : { data: [] }
 
   const pois: PoiMapItem[] = (poisRaw ?? []) as PoiMapItem[]
+
+  const uphillSegments: UphillSegment[] = [
+    ...manualUphillSegments,
+    ...famousUphillChartSegments,
+  ].sort((a, b) => a.start_km - b.start_km)
 
   return {
     courses: courseList,

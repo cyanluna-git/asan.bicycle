@@ -7,6 +7,7 @@ import type { RegionInfo } from '@/lib/region-detect'
 import type {
   Difficulty,
   StartPointOption,
+  SurfaceType,
   UploadMetadataFormData,
 } from '@/lib/course-upload'
 
@@ -37,6 +38,12 @@ const DIFFICULTY_OPTIONS: Array<{ value: Difficulty; label: string }> = [
   { value: 'easy', label: '초급 (Easy)' },
   { value: 'moderate', label: '중급 (Moderate)' },
   { value: 'hard', label: '고급 (Hard)' },
+]
+
+const SURFACE_TYPE_OPTIONS: Array<{ value: SurfaceType; label: string }> = [
+  { value: 'road', label: '로드 (포장도로)' },
+  { value: 'gravel', label: '그래블 (비포장 혼합)' },
+  { value: 'mtb', label: '임도 / 산악' },
 ]
 
 export function CourseMetadataForm({
@@ -123,6 +130,24 @@ export function CourseMetadataForm({
           </select>
         </div>
 
+        <div>
+          <Label htmlFor="surface-type">노면 타입</Label>
+          <select
+            id="surface-type"
+            value={form.surface_type}
+            onChange={(event) => onChangeForm('surface_type', event.target.value as SurfaceType)}
+            className="mt-1.5 h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {SURFACE_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid gap-5 md:grid-cols-2">
         <div>
           <Label htmlFor="start-point">
             출발 기점 {startPoints.length > 0 && <span className="text-red-500">*</span>}

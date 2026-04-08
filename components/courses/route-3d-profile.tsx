@@ -292,6 +292,7 @@ export function Route3DProfile({
   const uphillLabelsRef = useRef<CSS2DObject[]>([])
   const poiLabelsRef = useRef<CSS2DObject[]>([])
   const albumLabelsRef = useRef<CSS2DObject[]>([])
+  const startFinishLabelsRef = useRef<CSS2DObject[]>([])
 
   // Initialize scene on mount, tear down on unmount
   useEffect(() => {
@@ -480,10 +481,38 @@ export function Route3DProfile({
       const { x, z } = latLngToLocal(endPt.lat, endPt.lng, state.centerLat, state.centerLng)
       const y = endPt.elevationM * verticalExaggeration
 
+      // Outer wrapper: 1×1px anchor point; CSS2DRenderer centers it at the 3D summit
       const div = document.createElement('div')
-      div.style.cssText =
-        'background:white;color:#f97316;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.2);white-space:nowrap;pointer-events:none'
-      div.textContent = `▲ ${grade.toFixed(1)}%`
+      div.style.cssText = 'pointer-events:none;position:relative;width:1px;height:1px'
+
+      // Label + tail above the anchor
+      const tag = document.createElement('div')
+      tag.style.cssText =
+        'position:absolute;bottom:6px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;width:max-content'
+
+      const box = document.createElement('div')
+      box.style.cssText =
+        'background:white;color:#f97316;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,0.18);white-space:nowrap;line-height:1.4;text-align:center;border:1px solid #fed7aa'
+      const distKm = (seg.end_km - seg.start_km).toFixed(1)
+      if (seg.name) {
+        box.innerHTML = `<div style="font-size:10px;font-weight:500;color:#9a3412">${seg.name}</div><div>▲ ${grade.toFixed(1)}% · ${distKm}km</div>`
+      } else {
+        box.textContent = `▲ ${grade.toFixed(1)}% · ${distKm}km`
+      }
+
+      const tail = document.createElement('div')
+      tail.style.cssText = 'width:1.5px;height:10px;background:#f97316;opacity:0.55'
+
+      tag.appendChild(box)
+      tag.appendChild(tail)
+
+      // Dot at the summit anchor
+      const dot = document.createElement('div')
+      dot.style.cssText =
+        'position:absolute;top:-4px;left:-4px;width:7px;height:7px;border-radius:50%;background:#f97316;border:1.5px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.25)'
+
+      div.appendChild(tag)
+      div.appendChild(dot)
 
       const obj = new CSS2DObject(div)
       obj.position.set(x, y, z)
@@ -582,6 +611,66 @@ export function Route3DProfile({
       albumLabelsRef.current = []
     }
   }, [albumPhotos])
+
+  // Start / Finish flag labels — rebuild when hoverProfile or verticalExaggeration change
+  useEffect(() => {
+    const state = sceneStateRef.current
+    if (!state) return
+
+    for (const obj of startFinishLabelsRef.current) {
+      state.scene.remove(obj)
+    }
+    startFinishLabelsRef.current = []
+
+    if (!hoverProfile.length) return
+
+    const flags: { pt: (typeof hoverProfile)[0]; label: string; color: string; dotColor: string }[] = [
+      { pt: hoverProfile[0], label: '출발', color: '#16a34a', dotColor: '#16a34a' },
+      { pt: hoverProfile[hoverProfile.length - 1], label: '도착', color: '#dc2626', dotColor: '#dc2626' },
+    ]
+
+    for (const { pt, label, color, dotColor } of flags) {
+      const { x, z } = latLngToLocal(pt.lat, pt.lng, state.centerLat, state.centerLng)
+      const y = pt.elevationM * verticalExaggeration
+
+      const div = document.createElement('div')
+      div.style.cssText = 'pointer-events:none;position:relative;width:1px;height:1px'
+
+      const tag = document.createElement('div')
+      tag.style.cssText =
+        'position:absolute;bottom:6px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;width:max-content'
+
+      const box = document.createElement('div')
+      box.style.cssText = `background:white;color:${color};padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,0.18);white-space:nowrap;border:1px solid ${color}40;line-height:1.4;text-align:center`
+      box.textContent = label
+
+      const tail = document.createElement('div')
+      tail.style.cssText = `width:1.5px;height:10px;background:${color};opacity:0.55`
+
+      tag.appendChild(box)
+      tag.appendChild(tail)
+
+      const dot = document.createElement('div')
+      dot.style.cssText = `position:absolute;top:-4px;left:-4px;width:7px;height:7px;border-radius:50%;background:${dotColor};border:1.5px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.25)`
+
+      div.appendChild(tag)
+      div.appendChild(dot)
+
+      const obj = new CSS2DObject(div)
+      obj.position.set(x, y, z)
+      state.scene.add(obj)
+      startFinishLabelsRef.current.push(obj)
+    }
+
+    return () => {
+      const currentState = sceneStateRef.current
+      if (!currentState) return
+      for (const obj of startFinishLabelsRef.current) {
+        currentState.scene.remove(obj)
+      }
+      startFinishLabelsRef.current = []
+    }
+  }, [hoverProfile, verticalExaggeration])
 
   if (webglFailed) {
     return (

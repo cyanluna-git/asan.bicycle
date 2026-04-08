@@ -66,6 +66,8 @@ export type Database = {
           route_render_metadata: Json | null
           metadata_history: Json
           download_count: number
+          surface_type: 'road' | 'gravel' | 'mtb' | null
+          source_url: string | null
         }
         Insert: {
           id?: string
@@ -92,6 +94,8 @@ export type Database = {
           route_render_metadata?: Json | null
           metadata_history?: Json
           download_count?: number
+          surface_type?: 'road' | 'gravel' | 'mtb' | null
+          source_url?: string | null
         }
         Update: {
           id?: string
@@ -118,6 +122,8 @@ export type Database = {
           route_render_metadata?: Json | null
           metadata_history?: Json
           download_count?: number
+          surface_type?: 'road' | 'gravel' | 'mtb' | null
+          source_url?: string | null
         }
         Relationships: [
           {
@@ -482,16 +488,22 @@ export type Database = {
           course_id: string
           famous_uphill_id: string
           matched_at: string | null
+          chart_start_km: number | null
+          chart_end_km: number | null
         }
         Insert: {
           course_id: string
           famous_uphill_id: string
           matched_at?: string | null
+          chart_start_km?: number | null
+          chart_end_km?: number | null
         }
         Update: {
           course_id?: string
           famous_uphill_id?: string
           matched_at?: string | null
+          chart_start_km?: number | null
+          chart_end_km?: number | null
         }
         Relationships: [
           {

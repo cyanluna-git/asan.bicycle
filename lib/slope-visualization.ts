@@ -188,56 +188,74 @@ export function inflateSlopeDistanceSegments(
     })
 }
 
+/**
+ * Build slope-colored polyline segments for map rendering.
+ *
+ * Instead of one 2-point Polyline per GPS segment (which creates thousands of
+ * independent components and causes visual artifacts at sharp corners), this
+ * groups consecutive same-band GPS points into a single continuous Polyline.
+ * Each group shares one endpoint with the next group to ensure gapless rendering.
+ *
+ * Result: ~5–50 Polyline components instead of thousands.
+ */
 export function buildSlopePolylineSegments(routeGeoJSON: RouteGeoJSON | null | undefined): SlopePolylineSegment[] {
   if (!routeGeoJSON) return []
 
-  const rawSegments: Array<{
-    path: Array<{ lat: number; lng: number }>
-    slopePct: number
-  }> = []
+  type RawPt = { lat: number; lng: number }
+  type RawSeg = { start: RawPt; end: RawPt; slopePct: number }
+
+  const rawSegs: RawSeg[] = []
 
   for (const feature of routeGeoJSON.features) {
     if (feature.geometry?.type !== 'LineString') continue
-
-    const coordinates = feature.geometry.coordinates
-    for (let i = 1; i < coordinates.length; i++) {
-      const previous = coordinates[i - 1]
-      const current = coordinates[i]
-      const previousElevation = previous[2]
-      const currentElevation = current[2]
-
-      if (typeof previousElevation !== 'number' || typeof currentElevation !== 'number') {
-        continue
-      }
-
-      const distanceKm = haversineKm(previous[1], previous[0], current[1], current[0])
-      if (distanceKm <= 0) continue
-
-      rawSegments.push({
-        path: [
-          { lat: previous[1], lng: previous[0] },
-          { lat: current[1], lng: current[0] },
-        ],
-        slopePct: ((currentElevation - previousElevation) / (distanceKm * 1000)) * 100,
+    const coords = feature.geometry.coordinates
+    for (let i = 1; i < coords.length; i++) {
+      const prev = coords[i - 1]
+      const curr = coords[i]
+      const prevEle = prev[2]
+      const currEle = curr[2]
+      if (typeof prevEle !== 'number' || typeof currEle !== 'number') continue
+      const distKm = haversineKm(prev[1], prev[0], curr[1], curr[0])
+      if (distKm <= 0) continue
+      rawSegs.push({
+        start: { lat: prev[1], lng: prev[0] },
+        end: { lat: curr[1], lng: curr[0] },
+        slopePct: ((currEle - prevEle) / (distKm * 1000)) * 100,
       })
     }
   }
 
-  if (rawSegments.length === 0) return []
+  if (rawSegs.length === 0) return []
 
-  const smoothed = smoothSlopeValues(rawSegments.map((segment) => segment.slopePct))
+  const smoothed = smoothSlopeValues(rawSegs.map((s) => s.slopePct))
 
-  return rawSegments.map((segment, index) => {
-    const slopePct = smoothed[index]
-    const band = classifySlopeBand(slopePct)
+  // Assign a band to each raw segment
+  const bands = smoothed.map((s) => classifySlopeBand(s))
 
-    return {
-      path: segment.path,
-      slopePct,
-      band,
-      color: SLOPE_BANDS[band].color,
+  // Group consecutive same-band segments into one continuous Polyline.
+  // Each group's path includes the start of the first seg through the end of
+  // the last seg. Adjacent groups share one endpoint (no visual gap).
+  const grouped: SlopePolylineSegment[] = []
+  let groupStart = 0
+
+  for (let i = 1; i <= rawSegs.length; i++) {
+    if (i === rawSegs.length || bands[i] !== bands[groupStart]) {
+      const band = bands[groupStart]
+      const path: RawPt[] = [rawSegs[groupStart].start]
+      for (let j = groupStart; j < i; j++) {
+        path.push(rawSegs[j].end)
+      }
+      grouped.push({
+        path,
+        slopePct: smoothed[groupStart],
+        band,
+        color: SLOPE_BANDS[band].color,
+      })
+      groupStart = i
     }
-  })
+  }
+
+  return grouped
 }
 
 export function getSlopeBandMeta(slopePct: number) {

@@ -1,6 +1,61 @@
 import type { RouteGeoJSON, RoutePreviewPoint } from '@/types/course'
 
-const MAX_ROUTE_PREVIEW_POINTS = 48
+const MAX_ROUTE_PREVIEW_POINTS = 200
+// RDP tolerance in degree units (~5.5 m at Korean latitudes)
+const RDP_EPSILON = 0.00005
+
+/** Perpendicular distance from `pt` to line segment `[a, b]` in degree space. */
+function rdpDistance(
+  pt: RoutePreviewPoint,
+  a: RoutePreviewPoint,
+  b: RoutePreviewPoint,
+): number {
+  const dx = b.lng - a.lng
+  const dy = b.lat - a.lat
+  if (dx === 0 && dy === 0) {
+    return Math.hypot(pt.lng - a.lng, pt.lat - a.lat)
+  }
+  const t = ((pt.lng - a.lng) * dx + (pt.lat - a.lat) * dy) / (dx * dx + dy * dy)
+  return Math.hypot(pt.lng - (a.lng + t * dx), pt.lat - (a.lat + t * dy))
+}
+
+/**
+ * Iterative Ramer-Douglas-Peucker simplification.
+ * Preserves corners and tight curves; discards collinear points.
+ */
+function rdpSimplify(points: RoutePreviewPoint[], epsilon: number): RoutePreviewPoint[] {
+  if (points.length <= 2) return points
+
+  const keep = new Uint8Array(points.length)
+  keep[0] = 1
+  keep[points.length - 1] = 1
+
+  const stack: Array<[number, number]> = [[0, points.length - 1]]
+  while (stack.length > 0) {
+    const [start, end] = stack.pop()!
+    let maxDist = 0
+    let maxIdx = start
+    for (let i = start + 1; i < end; i++) {
+      const d = rdpDistance(points[i], points[start], points[end])
+      if (d > maxDist) { maxDist = d; maxIdx = i }
+    }
+    if (maxDist > epsilon) {
+      keep[maxIdx] = 1
+      stack.push([start, maxIdx], [maxIdx, end])
+    }
+  }
+
+  const result: RoutePreviewPoint[] = []
+  for (let i = 0; i < points.length; i++) {
+    if (keep[i]) result.push(points[i])
+  }
+  return result
+}
+
+function uniformSample(points: RoutePreviewPoint[], n: number): RoutePreviewPoint[] {
+  const step = (points.length - 1) / (n - 1)
+  return Array.from({ length: n }, (_, i) => points[Math.round(i * step)])
+}
 
 export function buildRoutePreview(
   routeGeoJson: RouteGeoJSON | null,
@@ -16,17 +71,18 @@ export function buildRoutePreview(
     }
   }
 
-  if (points.length <= maxPoints) {
-    return points
+  if (points.length <= maxPoints) return points
+
+  // RDP: keeps curves, drops collinear points
+  const simplified = rdpSimplify(points, RDP_EPSILON)
+
+  if (simplified.length <= maxPoints) {
+    // RDP result is already compact enough — use it as-is
+    return simplified.length >= 4 ? simplified : uniformSample(points, Math.min(maxPoints, points.length))
   }
 
-  const sampled: RoutePreviewPoint[] = []
-  const step = (points.length - 1) / (maxPoints - 1)
-  for (let index = 0; index < maxPoints; index += 1) {
-    sampled.push(points[Math.round(index * step)])
-  }
-
-  return sampled
+  // RDP still exceeds maxPoints (very dense winding route) — uniform sample down
+  return uniformSample(simplified, maxPoints)
 }
 
 export function normalizeRoutePreviewPoints(points: RoutePreviewPoint[]) {
