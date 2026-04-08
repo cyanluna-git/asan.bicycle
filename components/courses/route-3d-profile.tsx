@@ -407,10 +407,9 @@ export function Route3DProfile({
     box.getSize(size)
     const maxDim = Math.max(size.x, size.y, size.z, 100)
 
-    // Grid — denser divisions
+    // Grid
     const gridSize = Math.ceil(maxDim * 1.5 / 100) * 100
-    const gridDivisions = Math.max(40, Math.ceil(gridSize / 500) * 20)
-    const grid = new THREE.GridHelper(gridSize, gridDivisions, 0xc8c8c8, 0xe4e4e4)
+    const grid = new THREE.GridHelper(gridSize, 20, 0xc8c8c8, 0xe4e4e4)
     grid.position.set(center.x, 0, center.z)
     scene.add(grid)
 
