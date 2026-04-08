@@ -4,10 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
-import {
-  classifySlopeBand,
-  SLOPE_BANDS,
-} from '@/lib/slope-visualization'
 import { getPoiMeta } from '@/lib/poi'
 import type { RouteGeoJSON, UphillSegment, PoiMapItem, CourseAlbumPhoto, RouteHoverPoint } from '@/types/course'
 
@@ -22,17 +18,56 @@ interface Route3DProfileProps {
 
 type Coord3 = { lng: number; lat: number; ele: number }
 
-const SCENE_BG = 0xffffff
 const RIBBON_HALF_WIDTH = 10
 
-// Brighter color palette for 3D rendering
-const SLOPE_COLORS_3D: Record<string, number> = {
-  descent: 0xc8d8e8,
-  flat:    0x4ade80,
-  gentle:  0xfcd34d,
-  moderate:0xfb923c,
-  steep:   0xf87171,
-  extreme: 0xff3030,
+// Continuous slope → color stops (slope%, [r,g,b] 0-1)
+const SLOPE_COLOR_STOPS: [number, [number, number, number]][] = [
+  [-20,  [0.78, 0.85, 0.91]],  // descent  — slate
+  [  0,  [0.78, 0.85, 0.91]],  // descent
+  [  0,  [0.30, 0.87, 0.50]],  // flat     — bright green
+  [  1,  [0.30, 0.87, 0.50]],
+  [  3,  [0.99, 0.83, 0.30]],  // gentle   — golden yellow
+  [  5,  [0.99, 0.83, 0.30]],
+  [  6,  [0.98, 0.57, 0.24]],  // moderate — orange
+  [  8,  [0.98, 0.57, 0.24]],
+  [ 10,  [0.97, 0.44, 0.44]],  // steep    — warm red
+  [ 12,  [0.97, 0.44, 0.44]],
+  [ 15,  [1.00, 0.18, 0.18]],  // extreme  — bright red
+  [ 30,  [1.00, 0.18, 0.18]],
+]
+
+function slopeToColor(slopePct: number): THREE.Color {
+  const stops = SLOPE_COLOR_STOPS
+  if (slopePct <= stops[0][0]) return new THREE.Color(...stops[0][1])
+  if (slopePct >= stops[stops.length - 1][0]) return new THREE.Color(...stops[stops.length - 1][1])
+  for (let i = 0; i < stops.length - 1; i++) {
+    const [s0, c0] = stops[i]
+    const [s1, c1] = stops[i + 1]
+    if (slopePct >= s0 && slopePct <= s1) {
+      const t = s1 === s0 ? 0 : (slopePct - s0) / (s1 - s0)
+      return new THREE.Color(
+        c0[0] + t * (c1[0] - c0[0]),
+        c0[1] + t * (c1[1] - c0[1]),
+        c0[2] + t * (c1[2] - c0[2]),
+      )
+    }
+  }
+  return new THREE.Color(...stops[stops.length - 1][1])
+}
+
+/** Gaussian-weighted slope smoothing over a window of radius `r` points. */
+function smoothSlopes(slopes: number[], r = 6): number[] {
+  const weights: number[] = []
+  for (let k = -r; k <= r; k++) weights.push(Math.exp(-(k * k) / (2 * (r / 2) ** 2)))
+  const wSum = weights.reduce((s, w) => s + w, 0)
+  return slopes.map((_, i) => {
+    let acc = 0
+    for (let k = -r; k <= r; k++) {
+      const j = Math.max(0, Math.min(slopes.length - 1, i + k))
+      acc += slopes[j] * weights[k + r]
+    }
+    return acc / wSum
+  })
 }
 
 function extractCoords(geojson: RouteGeoJSON): Coord3[] {
@@ -129,11 +164,6 @@ function latLngToLocal(lat: number, lng: number, centerLat: number, centerLng: n
   }
 }
 
-function slopeColor(slopePct: number): THREE.Color {
-  const band = classifySlopeBand(slopePct)
-  return new THREE.Color(SLOPE_COLORS_3D[band] ?? SLOPE_BANDS[band].color)
-}
-
 function buildRibbonGeometry(
   localPoints: { x: number; y: number; ele: number }[],
   vScale: number,
@@ -142,6 +172,22 @@ function buildRibbonGeometry(
   if (n < 2) {
     return new THREE.BufferGeometry()
   }
+
+  // Pre-compute raw slopes, then smooth with Gaussian
+  const rawSlopes = localPoints.map((p, i) => {
+    if (i < n - 1) {
+      const next = localPoints[i + 1]
+      const dist = Math.sqrt((next.x - p.x) ** 2 + (next.y - p.y) ** 2)
+      return dist > 0 ? ((next.ele - p.ele) / dist) * 100 : 0
+    }
+    if (i > 0) {
+      const prev = localPoints[i - 1]
+      const dist = Math.sqrt((p.x - prev.x) ** 2 + (p.y - prev.y) ** 2)
+      return dist > 0 ? ((p.ele - prev.ele) / dist) * 100 : 0
+    }
+    return 0
+  })
+  const slopes = smoothSlopes(rawSlopes, 6)
 
   const vertCount = n * 4
   // 3 faces (top, left wall, right wall) × 2 triangles × 3 vertices = 18 indices per segment
@@ -189,25 +235,7 @@ function buildRibbonGeometry(
     positions[(base + 3) * 3 + 1] = 0
     positions[(base + 3) * 3 + 2] = p.y + oy
 
-    // Slope color for this segment
-    let slope = 0
-    if (i < n - 1) {
-      const distM = Math.sqrt(
-        (localPoints[i + 1].x - p.x) ** 2 + (localPoints[i + 1].y - p.y) ** 2,
-      )
-      if (distM > 0) {
-        slope = ((localPoints[i + 1].ele - p.ele) / distM) * 100
-      }
-    } else if (i > 0) {
-      const distM = Math.sqrt(
-        (p.x - localPoints[i - 1].x) ** 2 + (p.y - localPoints[i - 1].y) ** 2,
-      )
-      if (distM > 0) {
-        slope = ((p.ele - localPoints[i - 1].ele) / distM) * 100
-      }
-    }
-
-    const col = slopeColor(slope)
+    const col = slopeToColor(slopes[i])
     for (let v = 0; v < 4; v++) {
       colors[(base + v) * 3 + 0] = col.r
       colors[(base + v) * 3 + 1] = col.g
@@ -317,15 +345,14 @@ export function Route3DProfile({
     const width = container.clientWidth
     const height = container.clientHeight
 
-    // Scene
+    // Scene (transparent background)
     const scene = new THREE.Scene()
-    scene.background = new THREE.Color(SCENE_BG)
 
     // Camera
     const camera = new THREE.PerspectiveCamera(50, width / height, 1, 100000)
 
     // WebGL renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true })
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setSize(width, height)
     container.appendChild(renderer.domElement)
