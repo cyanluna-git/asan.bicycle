@@ -7,7 +7,10 @@
     "build": "next build --turbopack",
     "start": "next start -p 3102",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:unit": "vitest run --exclude '__tests__/api/**'",
+    "test:integration": "vitest run __tests__/api __tests__/lib",
     "test:e2e": "playwright test",
     "ridingazua:download": "node scripts/ridingazua-download.mjs"
   },
