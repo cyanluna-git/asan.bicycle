@@ -1,8 +1,11 @@
 /**
  * Uphill segment detection from elevation profile data.
  *
- * Detects segments with average gradient >= 5%, merges adjacent segments
- * separated by < 0.1 km, and filters out segments shorter than 0.2 km.
+ * Detects segments with average gradient >= 7%, merges adjacent segments
+ * separated by < 0.5 km, and filters out segments shorter than 1.0 km.
+ *
+ * This is a secondary fallback detector — famous uphills from the DB
+ * are matched first; only non-overlapping uphills >= 1 km are saved.
  */
 
 import type { ElevationPoint } from '@/types/course'
@@ -13,9 +16,9 @@ export interface UphillSegmentDraft {
   name: string
 }
 
-const GRADIENT_THRESHOLD = 0.05 // 5%
-const MIN_SEGMENT_LENGTH_KM = 0.2
-const MERGE_GAP_KM = 0.1
+const GRADIENT_THRESHOLD = 0.07 // 7% — only meaningful climbs
+const MIN_SEGMENT_LENGTH_KM = 1.0 // 1 km minimum
+const MERGE_GAP_KM = 0.5          // merge uphills separated by < 500 m
 
 /**
  * Detect uphill segments from an elevation profile.

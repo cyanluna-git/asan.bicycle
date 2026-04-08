@@ -308,21 +308,40 @@ export default function UploadPage() {
 
       const courseId = insertResponse.data.id
 
-      // Non-blocking: match famous uphills, then compute chart positions
-      void supabase
+      // Step 1: Match famous uphills from DB (primary)
+      const famousRanges: { start_km: number; end_km: number }[] = []
+      const { data: matchCount, error: matchError } = await supabase
         .rpc('match_course_uphills', { p_course_id: courseId })
-        .then(async ({ data: matchCount, error: matchError }) => {
-          if (matchError) {
-            console.error('[uphill-match] non-critical error:', matchError.message)
-            return
+      if (matchError) {
+        console.error('[uphill-match] non-critical error:', matchError.message)
+      } else {
+        console.log('[uphill-match] matched', matchCount, 'famous uphills')
+        if ((matchCount ?? 0) > 0) {
+          await fetch(`/api/courses/${courseId}/chart-uphills`, { method: 'POST' })
+          // Fetch chart positions to use as exclusion zones
+          const { data: chartData } = await supabase
+            .from('course_uphills')
+            .select('chart_start_km, chart_end_km')
+            .eq('course_id', courseId)
+            .not('chart_start_km', 'is', null)
+            .not('chart_end_km', 'is', null)
+          for (const row of chartData ?? []) {
+            if (row.chart_start_km != null && row.chart_end_km != null) {
+              famousRanges.push({ start_km: row.chart_start_km, end_km: row.chart_end_km })
+            }
           }
-          console.log('[uphill-match] matched', matchCount, 'famous uphills')
-          if ((matchCount ?? 0) > 0) {
-            await fetch(`/api/courses/${courseId}/chart-uphills`, { method: 'POST' })
-          }
-        })
+        }
+      }
 
-      const validSegments = uphillSegments.filter((segment) => segment.start_km < segment.end_km)
+      // Step 2: Save auto-detected uphills that don't overlap with famous uphills
+      const OVERLAP_MARGIN_KM = 0.5
+      const validSegments = uphillSegments
+        .filter((segment) => segment.start_km < segment.end_km)
+        .filter((seg) =>
+          !famousRanges.some(
+            (f) => seg.start_km < f.end_km + OVERLAP_MARGIN_KM && seg.end_km > f.start_km - OVERLAP_MARGIN_KM,
+          ),
+        )
       if (validSegments.length > 0) {
         const { error: segmentError } = await supabase
           .from('uphill_segments')
@@ -334,7 +353,6 @@ export default function UploadPage() {
               end_km: segment.end_km,
             })),
           )
-
         if (segmentError) {
           console.error('업힐 구간 저장 실패:', segmentError.message)
         }
