@@ -147,8 +147,11 @@ function toLocal(coords: Coord3[]): { x: number; y: number; ele: number }[] {
   const centerLng = coords.reduce((s, c) => s + c.lng, 0) / coords.length
   const cosLat = Math.cos((centerLat * Math.PI) / 180)
 
+  // Negate X so real-world East maps to -X in scene. With Three.js top-down
+  // view (camera +Y looking at -Y), -X appears on the right of the screen,
+  // giving correct East-right orientation for a map-like view.
   return coords.map((c) => ({
-    x: (c.lng - centerLng) * cosLat * 111320,
+    x: -(c.lng - centerLng) * cosLat * 111320,
     y: (c.lat - centerLat) * 110540,
     ele: c.ele,
   }))
@@ -158,7 +161,7 @@ function toLocal(coords: Coord3[]): { x: number; y: number; ele: number }[] {
 function latLngToLocal(lat: number, lng: number, centerLat: number, centerLng: number) {
   const cosLat = Math.cos((centerLat * Math.PI) / 180)
   return {
-    x: (lng - centerLng) * cosLat * 111320,
+    x: -(lng - centerLng) * cosLat * 111320,
     z: (lat - centerLat) * 110540,
   }
 }
@@ -410,8 +413,9 @@ export function Route3DProfile({
     const compassDefs = [
       { label: 'N', x: center.x,           z: center.z + halfGrid * 0.95 },
       { label: 'S', x: center.x,           z: center.z - halfGrid * 0.95 },
-      { label: 'E', x: center.x + halfGrid * 0.95, z: center.z },
-      { label: 'W', x: center.x - halfGrid * 0.95, z: center.z },
+      // After X negation: real East is at -X, real West is at +X
+      { label: 'E', x: center.x - halfGrid * 0.95, z: center.z },
+      { label: 'W', x: center.x + halfGrid * 0.95, z: center.z },
     ]
     const compassObjects: CSS2DObject[] = []
     for (const { label, x, z } of compassDefs) {
