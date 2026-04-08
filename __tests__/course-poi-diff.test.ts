@@ -102,4 +102,98 @@ describe('buildCoursePoiDiffPlan', () => {
     expect(plan.duplicateIds).toEqual(['poi-1'])
     expect(plan.toUpdate).toHaveLength(1)
   })
+
+  it('marks every existing POI for deletion when nothing is submitted', () => {
+    const plan = buildCoursePoiDiffPlan(
+      [{ id: 'poi-1' }, { id: 'poi-2' }, { id: 'poi-3' }],
+      [],
+    )
+
+    expect(plan.toDeleteIds).toEqual(['poi-1', 'poi-2', 'poi-3'])
+    expect(plan.toInsert).toEqual([])
+    expect(plan.toUpdate).toEqual([])
+    expect(plan.invalidIds).toEqual([])
+    expect(plan.duplicateIds).toEqual([])
+  })
+
+  it('treats every submitted POI without an id as an insert when there are no existing POIs', () => {
+    const plan = buildCoursePoiDiffPlan(
+      [],
+      [
+        {
+          name: '편의점 A',
+          category: 'convenience_store',
+          description: null,
+          photo_url: null,
+          lat: 36.78,
+          lng: 127.01,
+        },
+        {
+          name: '카페 B',
+          category: 'cafe',
+          description: null,
+          photo_url: null,
+          lat: 36.79,
+          lng: 127.02,
+        },
+      ],
+    )
+
+    expect(plan.toInsert).toHaveLength(2)
+    expect(plan.toDeleteIds).toEqual([])
+    expect(plan.toUpdate).toEqual([])
+    expect(plan.invalidIds).toEqual([])
+  })
+
+  it('handles a mixed payload with insert, update and delete in the same call', () => {
+    const plan = buildCoursePoiDiffPlan(
+      [{ id: 'keep' }, { id: 'drop' }],
+      [
+        {
+          id: 'keep',
+          name: '유지되는 카페',
+          category: 'cafe',
+          description: '수정',
+          photo_url: 'https://example.com/keep.jpg',
+          lat: 36.78,
+          lng: 127.01,
+        },
+        {
+          name: '새로 추가되는 식당',
+          category: 'restaurant',
+          description: null,
+          photo_url: null,
+          lat: 36.81,
+          lng: 127.05,
+        },
+      ],
+    )
+
+    expect(plan.toUpdate).toHaveLength(1)
+    expect(plan.toUpdate[0].id).toBe('keep')
+    expect(plan.toInsert).toHaveLength(1)
+    expect(plan.toDeleteIds).toEqual(['drop'])
+    expect(plan.invalidIds).toEqual([])
+    expect(plan.duplicateIds).toEqual([])
+  })
+
+  it('does not leak the optional id field into insert payloads', () => {
+    const plan = buildCoursePoiDiffPlan(
+      [],
+      [
+        {
+          id: null,
+          name: '익명 POI',
+          category: null,
+          description: null,
+          photo_url: null,
+          lat: 36.78,
+          lng: 127.01,
+        },
+      ],
+    )
+
+    expect(plan.toInsert).toHaveLength(1)
+    expect(plan.toInsert[0]).not.toHaveProperty('id')
+  })
 })
