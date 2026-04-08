@@ -8,5 +8,6 @@ export default defineConfig({
     // The validation tests are pure functions and work fine in any environment.
     environment: 'happy-dom',
     include: ['__tests__/**/*.test.ts'],
+    setupFiles: ['__tests__/setup/env.ts'],
   },
 })
