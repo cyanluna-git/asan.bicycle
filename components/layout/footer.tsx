@@ -66,7 +66,7 @@ export function Footer() {
         </div>
 
         <div className="mt-10 border-t border-stone-700 pt-6 text-xs text-stone-500">
-          © 2025 Gullim Cycling. All rights reserved.
+          © 2026 Gullim Cycling. All rights reserved.
         </div>
       </div>
     </footer>

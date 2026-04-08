@@ -61,7 +61,7 @@ export function ElevationPanel({
   const [collapsed, setCollapsed] = useState(false)
   const [hoveredDistanceKm, setHoveredDistanceKm] = useState<number | null>(null)
   const [open3D, setOpen3D] = useState(false)
-  const [verticalExaggeration, setVerticalExaggeration] = useState(3)
+  const [verticalExaggeration, setVerticalExaggeration] = useState(5)
 
   const normalizedMetadata = useMemo(
     () => normalizeRouteRenderMetadata(routeRenderMetadata),

@@ -79,13 +79,6 @@ export function Header() {
   return (
     <>
     <header className="fixed top-0 left-0 right-0 z-50 flex h-16 items-center border-b bg-stitch-surface/90 backdrop-blur-md px-4 md:px-6">
-      {/* Logo */}
-      <Link href="/" className="mr-4 flex items-center gap-1.5">
-        <span className="font-headline text-2xl font-black tracking-tighter">
-          Gul<span className="text-[#E8690A]">.rim</span>
-        </span>
-      </Link>
-
       {/* Region Button */}
       <button
         type="button"

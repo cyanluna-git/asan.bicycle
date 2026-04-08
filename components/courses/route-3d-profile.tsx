@@ -25,6 +25,16 @@ type Coord3 = { lng: number; lat: number; ele: number }
 const SCENE_BG = 0xffffff
 const RIBBON_HALF_WIDTH = 10
 
+// Brighter color palette for 3D rendering
+const SLOPE_COLORS_3D: Record<string, number> = {
+  descent: 0xc8d8e8,
+  flat:    0x4ade80,
+  gentle:  0xfcd34d,
+  moderate:0xfb923c,
+  steep:   0xf87171,
+  extreme: 0xff3030,
+}
+
 function extractCoords(geojson: RouteGeoJSON): Coord3[] {
   const coords: Coord3[] = []
   for (const feature of geojson.features) {
@@ -121,7 +131,7 @@ function latLngToLocal(lat: number, lng: number, centerLat: number, centerLng: n
 
 function slopeColor(slopePct: number): THREE.Color {
   const band = classifySlopeBand(slopePct)
-  return new THREE.Color(SLOPE_BANDS[band].color)
+  return new THREE.Color(SLOPE_COLORS_3D[band] ?? SLOPE_BANDS[band].color)
 }
 
 function buildRibbonGeometry(
@@ -369,11 +379,57 @@ export function Route3DProfile({
     box.getSize(size)
     const maxDim = Math.max(size.x, size.y, size.z, 100)
 
-    // Grid
+    // Grid — denser divisions
     const gridSize = Math.ceil(maxDim * 1.5 / 100) * 100
-    const grid = new THREE.GridHelper(gridSize, 20, 0xcccccc, 0xe0e0e0)
+    const gridDivisions = Math.max(40, Math.ceil(gridSize / 500) * 20)
+    const grid = new THREE.GridHelper(gridSize, gridDivisions, 0xbbbbbb, 0xdddddd)
     grid.position.set(center.x, 0, center.z)
     scene.add(grid)
+
+    // Compass direction labels (N/S/E/W)
+    const halfGrid = gridSize / 2
+    const compassDefs = [
+      { label: 'N', x: center.x,           z: center.z + halfGrid * 0.95 },
+      { label: 'S', x: center.x,           z: center.z - halfGrid * 0.95 },
+      { label: 'E', x: center.x + halfGrid * 0.95, z: center.z },
+      { label: 'W', x: center.x - halfGrid * 0.95, z: center.z },
+    ]
+    const compassObjects: CSS2DObject[] = []
+    for (const { label, x, z } of compassDefs) {
+      const div = document.createElement('div')
+      div.textContent = label
+      div.style.cssText = 'font-size:13px;font-weight:700;color:#888;opacity:0.7;pointer-events:none;'
+      const obj = new CSS2DObject(div)
+      obj.position.set(x, 0, z)
+      scene.add(obj)
+      compassObjects.push(obj)
+    }
+
+    // Floor mirror — faint reflection below ground
+    const mirrorGeo = new THREE.PlaneGeometry(gridSize, gridSize)
+    mirrorGeo.rotateX(-Math.PI / 2)
+    const mirrorMat = new THREE.MeshBasicMaterial({
+      color: 0xe8eef4,
+      transparent: true,
+      opacity: 0.18,
+      depthWrite: false,
+    })
+    const mirrorPlane = new THREE.Mesh(mirrorGeo, mirrorMat)
+    mirrorPlane.position.set(center.x, -1, center.z)
+    scene.add(mirrorPlane)
+
+    // Reflected ribbon — flipped Y, very faint
+    const mirrorMesh = mesh.clone()
+    mirrorMesh.scale.set(1, -1, 1)
+    mirrorMesh.position.y = -2
+    const mirrorRibbonMat = new THREE.MeshLambertMaterial({
+      vertexColors: true,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.12,
+    })
+    mirrorMesh.material = mirrorRibbonMat
+    scene.add(mirrorMesh)
 
     // Position camera
     camera.position.set(
@@ -434,6 +490,10 @@ export function Route3DProfile({
         state.material.dispose()
         state.grid.geometry.dispose()
         ;(state.grid.material as THREE.Material).dispose()
+        mirrorPlane.geometry.dispose()
+        mirrorMat.dispose()
+        mirrorRibbonMat.dispose()
+        for (const obj of compassObjects) scene.remove(obj)
         state.renderer.dispose()
         if (container.contains(state.renderer.domElement)) {
           container.removeChild(state.renderer.domElement)
