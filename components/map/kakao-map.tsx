@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, useCallback } from "react"
+import { useEffect, useMemo, useRef, useState, useCallback, memo } from "react"
 import {
   Map,
   ZoomControl,
@@ -300,18 +300,25 @@ function KakaoMapInner({
       ? null
       : SAMPLE_COURSE_ID
 
+  // Memoize object/array props so memo'd children skip re-renders on hover updates
+  const visiblePois = useMemo(
+    () => selectedCourseId
+      ? (pois ?? []).filter((p) => p.course_id === selectedCourseId)
+      : [],
+    [selectedCourseId, pois],
+  )
+
+  const selectedCourseBounds = useMemo(
+    () => normalizeRouteRenderMetadata(selectedCourseRouteRenderMetadata)?.bounds ?? null,
+    [selectedCourseRouteRenderMetadata],
+  )
+
   if (error) {
     return <MapError message="지도를 불러오는 중 오류가 발생했습니다." />
   }
   if (loading) {
     return <MapSkeleton />
   }
-
-  // Only show POIs when a course is selected
-  const visiblePois =
-    selectedCourseId
-      ? (pois ?? []).filter((p) => p.course_id === selectedCourseId)
-      : []
 
   return (
     <div
@@ -320,10 +327,10 @@ function KakaoMapInner({
     >
       <Map center={KOREA_CENTER} style={{ width: "100%", height: "100%" }} level={13}>
         <ZoomControl position="RIGHT" />
-        <RoutePolylines
+        <MemoRoutePolylines
           courses={effectiveCourses}
           selectedCourseId={effectiveSelectedId ?? null}
-          selectedCourseBounds={normalizeRouteRenderMetadata(selectedCourseRouteRenderMetadata)?.bounds ?? null}
+          selectedCourseBounds={selectedCourseBounds}
         />
         <PoiMarkers
           pois={visiblePois}
@@ -377,32 +384,46 @@ function SlopeLegend() {
   )
 }
 
+/** Imperative hover marker — repositions a single native overlay instead of
+ *  re-rendering React components, eliminating DOM churn on every mouse move. */
 function HoveredRouteMarker({ point }: { point: RouteHoverPoint | null }) {
-  if (!point) return null
+  const map = useMap()
+  const overlayRef = useRef<kakao.maps.CustomOverlay | null>(null)
 
-  return (
-    <CustomOverlayMap
-      position={{ lat: point.lat, lng: point.lng }}
-      yAnchor={0.5}
-      xAnchor={0.5}
-      zIndex={6}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 18,
-          height: 18,
-          borderRadius: '999px',
-          backgroundColor: '#f97316',
-          border: '3px solid white',
-          boxShadow: '0 0 0 6px rgba(249,115,22,0.18), 0 4px 10px rgba(0,0,0,0.18)',
-        }}
-        aria-label={`${point.distanceKm.toFixed(2)}km 지점`}
-      />
-    </CustomOverlayMap>
-  )
+  useEffect(() => {
+    const el = document.createElement('div')
+    el.setAttribute('aria-label', '호버 마커')
+    el.style.cssText =
+      'display:flex;align-items:center;justify-content:center;' +
+      'width:18px;height:18px;border-radius:999px;' +
+      'background:#f97316;border:3px solid white;' +
+      'box-shadow:0 0 0 6px rgba(249,115,22,0.18),0 4px 10px rgba(0,0,0,0.18);'
+
+    const overlay = new kakao.maps.CustomOverlay({
+      content: el,
+      yAnchor: 0.5,
+      xAnchor: 0.5,
+      zIndex: 6,
+    })
+    overlayRef.current = overlay
+    return () => {
+      overlay.setMap(null)
+      overlayRef.current = null
+    }
+  }, [map])
+
+  useEffect(() => {
+    const overlay = overlayRef.current
+    if (!overlay) return
+    if (!point) {
+      overlay.setMap(null)
+      return
+    }
+    overlay.setPosition(new kakao.maps.LatLng(point.lat, point.lng))
+    if (!overlay.getMap()) overlay.setMap(map)
+  }, [map, point])
+
+  return null
 }
 
 function AlbumPhotoMarkers({
@@ -717,6 +738,8 @@ function RoutePolylines({
     </>
   )
 }
+
+const MemoRoutePolylines = memo(RoutePolylines)
 
 // ---------------------------------------------------------------------------
 // BoundsController — auto-fit map bounds when selection changes

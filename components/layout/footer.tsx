@@ -65,8 +65,11 @@ export function Footer() {
 
         </div>
 
-        <div className="mt-10 border-t border-stone-700 pt-6 text-xs text-stone-500">
-          © 2026 Gullim Cycling. All rights reserved.
+        <div className="mt-10 flex flex-col gap-2 border-t border-stone-700 pt-6 text-xs text-stone-500 sm:flex-row sm:items-center sm:justify-between">
+          <span>© 2026 Gullim Cycling. All rights reserved.</span>
+          <Link href="/privacy" className="transition hover:text-stone-50">
+            개인정보처리방침
+          </Link>
         </div>
       </div>
     </footer>
