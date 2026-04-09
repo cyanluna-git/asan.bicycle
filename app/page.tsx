@@ -36,8 +36,6 @@ async function fetchRecentCourses(): Promise<RecentCourse[]> {
   }
 }
 
-export const revalidate = 300 // re-render every 5 minutes
-
 // ---------------------------------------------------------------------------
 // Static content
 // ---------------------------------------------------------------------------
