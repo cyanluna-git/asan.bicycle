@@ -103,12 +103,6 @@ export default async function LandingPage() {
         <div className="relative z-10 mx-auto flex min-h-[calc(100vh-64px)] max-w-6xl items-center px-6 py-20 md:px-12 lg:px-20">
           <div className="max-w-2xl">
 
-            {/* Brand badge */}
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-xs font-medium tracking-[0.24em] uppercase">
-              <span className="h-2 w-2 rounded-full bg-[#8FE36A]" />
-              <span className="text-white">Gul</span><span className="text-[#E8690A]">.rim</span>
-            </div>
-
             {/* Headline block */}
             <div
               className="font-headline font-black leading-none"
