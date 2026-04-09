@@ -400,6 +400,7 @@ function HoveredRouteMarker({ point }: { point: RouteHoverPoint | null }) {
       'box-shadow:0 0 0 6px rgba(249,115,22,0.18),0 4px 10px rgba(0,0,0,0.18);'
 
     const overlay = new kakao.maps.CustomOverlay({
+      position: new kakao.maps.LatLng(0, 0),
       content: el,
       yAnchor: 0.5,
       xAnchor: 0.5,
