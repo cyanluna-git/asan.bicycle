@@ -104,26 +104,30 @@ export function smoothElevationProfile<T extends { distanceKm: number; elevation
   })
 }
 
+/** Binary search for the nearest point — profile is sorted by distanceKm. */
 export function findNearestRouteHoverPoint(
   profile: RouteHoverPoint[],
   targetDistanceKm: number | null | undefined,
-) {
+): RouteHoverPoint | null {
   if (profile.length === 0 || typeof targetDistanceKm !== 'number' || Number.isNaN(targetDistanceKm)) {
     return null
   }
 
-  let nearest = profile[0]
-  let nearestDelta = Math.abs(profile[0].distanceKm - targetDistanceKm)
+  let lo = 0
+  let hi = profile.length - 1
 
-  for (let i = 1; i < profile.length; i++) {
-    const candidate = profile[i]
-    const delta = Math.abs(candidate.distanceKm - targetDistanceKm)
-
-    if (delta < nearestDelta) {
-      nearest = candidate
-      nearestDelta = delta
-    }
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1
+    if (profile[mid].distanceKm < targetDistanceKm) lo = mid + 1
+    else hi = mid
   }
 
-  return nearest
+  // lo is the first element >= target; compare with predecessor
+  if (lo > 0) {
+    const deltaLo = Math.abs(profile[lo].distanceKm - targetDistanceKm)
+    const deltaPrev = Math.abs(profile[lo - 1].distanceKm - targetDistanceKm)
+    if (deltaPrev < deltaLo) return profile[lo - 1]
+  }
+
+  return profile[lo]
 }

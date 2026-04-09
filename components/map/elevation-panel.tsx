@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { ChevronDown, ChevronUp, Box } from 'lucide-react'
 import { getElevationProfileFromMetadata, normalizeRouteRenderMetadata } from '@/lib/course-render-metadata'
@@ -102,18 +102,30 @@ export function ElevationPanel({
     return false
   }, [routeGeoJSON])
 
-  useEffect(() => {
-    if (!onHoverPointChange || collapsed) {
-      onHoverPointChange?.(null)
-      return
-    }
-
-    onHoverPointChange(findNearestRouteHoverPoint(hoverProfile, hoveredDistanceKm))
-  }, [collapsed, hoverProfile, hoveredDistanceKm, onHoverPointChange])
+  // Sync map marker via rAF-throttled direct callback — avoids the
+  // setState → render → useEffect → setState double-render cycle.
+  const rafRef = useRef(0)
+  const handleHoverDistanceChange = useCallback(
+    (distanceKm: number | null) => {
+      setHoveredDistanceKm(distanceKm)
+      if (!onHoverPointChange) return
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = requestAnimationFrame(() => {
+        if (collapsed) {
+          onHoverPointChange(null)
+          return
+        }
+        onHoverPointChange(findNearestRouteHoverPoint(hoverProfile, distanceKm))
+      })
+    },
+    [collapsed, hoverProfile, onHoverPointChange],
+  )
+  useEffect(() => () => cancelAnimationFrame(rafRef.current), [])
 
   useEffect(() => {
     setHoveredDistanceKm(null)
-  }, [routeGeoJSON])
+    onHoverPointChange?.(null)
+  }, [routeGeoJSON, onHoverPointChange])
 
   if (elevationProfile.length === 0) return null
 
@@ -160,7 +172,7 @@ export function ElevationPanel({
               profile={elevationProfile}
               persistedSegments={normalizedMetadata?.slopeSegments ?? []}
               hoveredDistanceKm={hoveredDistanceKm}
-              onHoverDistanceChange={setHoveredDistanceKm}
+              onHoverDistanceChange={handleHoverDistanceChange}
             />
           </div>
           {windSegments.length > 0 && (
@@ -168,7 +180,7 @@ export function ElevationPanel({
               <WindStripChart
                 segments={windSegments}
                 hoveredDistanceKm={hoveredDistanceKm}
-                onHoverDistanceChange={setHoveredDistanceKm}
+                onHoverDistanceChange={handleHoverDistanceChange}
               />
             </div>
           )}
@@ -177,7 +189,7 @@ export function ElevationPanel({
             persistedSegments={normalizedMetadata?.slopeSegments ?? []}
             segments={uphillSegments}
             hoveredDistanceKm={hoveredDistanceKm}
-            onHoverDistanceChange={setHoveredDistanceKm}
+            onHoverDistanceChange={handleHoverDistanceChange}
           />
         </div>
       )}
