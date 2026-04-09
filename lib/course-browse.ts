@@ -110,11 +110,14 @@ function summarizeReview(content: string | null | undefined, maxLength = 88) {
   return `${normalized.slice(0, maxLength - 1).trimEnd()}…`
 }
 
+const ASAN_REGION_ID = 'ce971a8a-8f74-4d94-b2cb-4c84b91e7bb3'
+
 export async function fetchBrowseCourses(rawParams: URLSearchParams | Record<string, string | string[] | undefined>) {
   const browseQuery = applyCourseFilters(
     supabase
       .from('courses')
       .select(COURSE_BROWSE_FIELDS)
+      .eq('region_id', ASAN_REGION_ID)
       .order('created_at', { ascending: false }),
     rawParams,
   )
@@ -137,6 +140,7 @@ export async function fetchBrowseCourses(rawParams: URLSearchParams | Record<str
       supabase
         .from('courses')
         .select(COURSE_BROWSE_FIELDS_FALLBACK)
+        .eq('region_id', ASAN_REGION_ID)
         .order('created_at', { ascending: false }),
       rawParams,
     )

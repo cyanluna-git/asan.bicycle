@@ -98,11 +98,14 @@ export async function fetchCourseSeoData(courseId: string): Promise<CourseSeoDat
   }
 }
 
+const ASAN_REGION_ID = 'ce971a8a-8f74-4d94-b2cb-4c84b91e7bb3'
+
 export async function fetchCourseSitemapEntries() {
   const supabase = createAnonServerClient()
   const { data } = await supabase
     .from('courses')
     .select('id, updated_at')
+    .eq('region_id', ASAN_REGION_ID)
     .order('updated_at', { ascending: false })
 
   return (data ?? []) as Array<{ id: string; updated_at: string }>

@@ -13,6 +13,8 @@ type CourseRouteRow = {
   route_render_metadata: unknown
 }
 
+const ASAN_REGION_ID = 'ce971a8a-8f74-4d94-b2cb-4c84b91e7bb3'
+
 function buildCourseRoutesQuery(
   filters: ReturnType<typeof parseFilterParams>,
   selectFields = ROUTE_FIELDS,
@@ -20,6 +22,7 @@ function buildCourseRoutesQuery(
   let query = supabase
     .from('courses')
     .select(selectFields)
+    .eq('region_id', ASAN_REGION_ID)
     .order('created_at', { ascending: false })
 
   if (filters.startPoint) {
