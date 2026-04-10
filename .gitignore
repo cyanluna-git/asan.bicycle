@@ -51,3 +51,9 @@ yarn-error.log*
 next-env.d.ts
 /courses/
 .mcp.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
