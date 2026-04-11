@@ -8,18 +8,22 @@ import {
 import { getSiteUrl } from '@/lib/site-url'
 
 const originalAppUrl = process.env.NEXT_PUBLIC_APP_URL
+const originalVercelProductionUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+const originalVercelUrl = process.env.VERCEL_URL
 
-function restoreAppUrl() {
-  if (originalAppUrl === undefined) {
-    delete process.env.NEXT_PUBLIC_APP_URL
+function restoreEnv(name: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[name]
     return
   }
 
-  process.env.NEXT_PUBLIC_APP_URL = originalAppUrl
+  process.env[name] = value
 }
 
 afterEach(() => {
-  restoreAppUrl()
+  restoreEnv('NEXT_PUBLIC_APP_URL', originalAppUrl)
+  restoreEnv('VERCEL_PROJECT_PRODUCTION_URL', originalVercelProductionUrl)
+  restoreEnv('VERCEL_URL', originalVercelUrl)
 })
 
 describe('getSiteUrl', () => {
@@ -29,10 +33,20 @@ describe('getSiteUrl', () => {
     expect(getSiteUrl()).toBe('https://asan.bicycle')
   })
 
-  it('falls back to the default deployment url when the env var is missing', () => {
+  it('falls back to the Vercel production url when the public app url is missing', () => {
     delete process.env.NEXT_PUBLIC_APP_URL
+    process.env.VERCEL_PROJECT_PRODUCTION_URL = 'gulrim.com/'
+    delete process.env.VERCEL_URL
 
-    expect(getSiteUrl()).toBe('https://wheeling.cyanluna.com')
+    expect(getSiteUrl()).toBe('https://gulrim.com')
+  })
+
+  it('falls back to the default site url when no env is configured', () => {
+    delete process.env.NEXT_PUBLIC_APP_URL
+    delete process.env.VERCEL_PROJECT_PRODUCTION_URL
+    delete process.env.VERCEL_URL
+
+    expect(getSiteUrl()).toBe('https://www.gulrim.com')
   })
 })
 

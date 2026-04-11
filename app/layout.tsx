@@ -38,10 +38,39 @@ const googleSiteVerification =
   process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim() ||
   undefined;
 
+const siteUrl = getSiteUrl();
+const defaultTitle = "굴림 — 전국 자전거 코스 탐색";
+const defaultDescription = "전국 자전거 코스를 탐색하고 공유하는 라이딩 커뮤니티";
+
 export const metadata: Metadata = {
-  metadataBase: new URL(getSiteUrl()),
-  title: "굴림 — 전국 자전거 코스 탐색",
-  description: "전국 자전거 코스를 탐색하고 공유하는 라이딩 커뮤니티",
+  metadataBase: new URL(siteUrl),
+  title: defaultTitle,
+  description: defaultDescription,
+  alternates: {
+    canonical: `${siteUrl}/`,
+  },
+  openGraph: {
+    type: "website",
+    locale: "ko_KR",
+    url: `${siteUrl}/`,
+    siteName: "굴림",
+    title: defaultTitle,
+    description: defaultDescription,
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "굴림",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: defaultTitle,
+    description: defaultDescription,
+    images: ["/opengraph-image"],
+  },
   verification: googleSiteVerification
     ? {
         google: googleSiteVerification,
