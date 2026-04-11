@@ -40,7 +40,7 @@ export function buildCourseMetadata(course: CourseSeoData): Metadata {
   const siteUrl = getSiteUrl()
   const canonical = `${siteUrl}/courses/${course.id}`
   const description = buildCourseSeoDescription(course)
-  const imageUrl = course.imageUrl ?? `${siteUrl}/opengraph-image`
+  const imageUrl = course.imageUrl ?? `${siteUrl}/opengraph-image?v=20260411`
 
   return {
     title: `${course.title} | 굴림`,

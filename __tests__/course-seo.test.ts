@@ -112,7 +112,7 @@ describe('buildCourseMetadata', () => {
       imageUrl: null,
     })
 
-    expect(metadata.twitter?.images).toEqual(['https://asan.bicycle/opengraph-image'])
+    expect(metadata.twitter?.images).toEqual(['https://asan.bicycle/opengraph-image?v=20260411'])
   })
 })
 

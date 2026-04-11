@@ -41,6 +41,7 @@ const googleSiteVerification =
 const siteUrl = getSiteUrl();
 const defaultTitle = "굴림 — 전국 자전거 코스 탐색";
 const defaultDescription = "전국 자전거 코스를 탐색하고 공유하는 라이딩 커뮤니티";
+const defaultOgImage = "/opengraph-image?v=20260411";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -58,7 +59,7 @@ export const metadata: Metadata = {
     description: defaultDescription,
     images: [
       {
-        url: "/opengraph-image",
+        url: defaultOgImage,
         width: 1200,
         height: 630,
         alt: "굴림",
@@ -69,7 +70,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: defaultTitle,
     description: defaultDescription,
-    images: ["/opengraph-image"],
+    images: [defaultOgImage],
   },
   verification: googleSiteVerification
     ? {
