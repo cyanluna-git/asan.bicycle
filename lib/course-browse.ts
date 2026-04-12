@@ -21,8 +21,8 @@ import type {
   RoutePreviewPoint,
 } from '@/types/course'
 
-const COURSE_BROWSE_FIELDS = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, created_by, uploader_name, uploader_emoji, route_preview_points, surface_type'
-const COURSE_BROWSE_FIELDS_FALLBACK = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, created_by, route_preview_points, surface_type'
+const COURSE_BROWSE_FIELDS = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, created_by, uploader_name, uploader_emoji, route_preview_points, surface_type, preview_image_url'
+const COURSE_BROWSE_FIELDS_FALLBACK = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, created_by, route_preview_points, surface_type, preview_image_url'
 type CourseBrowseRow = {
   id: string
   title: string
@@ -36,6 +36,7 @@ type CourseBrowseRow = {
   uploader_emoji?: string | null
   route_preview_points: RoutePreviewPoint[] | null
   surface_type: 'road' | 'gravel' | 'mtb' | null
+  preview_image_url: string | null
 }
 
 type CourseReviewRow = {
@@ -276,6 +277,7 @@ export async function fetchBrowseCourses(rawParams: URLSearchParams | Record<str
       review_author_name: latestReview?.author_name ?? null,
       review_author_emoji: latestReview?.author_emoji ?? null,
       route_preview: (course.route_preview_points ?? []) as RoutePreviewPoint[],
+      preview_image_url: course.preview_image_url ?? null,
     } satisfies CourseBrowseItem
   })
 }

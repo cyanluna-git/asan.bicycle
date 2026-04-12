@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { MessageCircle, Star } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -29,7 +30,19 @@ export function BrowseCourseCard({
       )}
     >
       <div className="space-y-4 p-4">
-        <CourseRouteSnapshot points={course.route_preview} className="h-32" />
+        {course.preview_image_url ? (
+          <div className="relative h-32 overflow-hidden rounded-[20px]">
+            <Image
+              src={course.preview_image_url}
+              alt={`${course.title} 루트 미리보기`}
+              fill
+              className="object-contain"
+              sizes="(max-width: 640px) 100vw, 400px"
+            />
+          </div>
+        ) : (
+          <CourseRouteSnapshot points={course.route_preview} className="h-32" />
+        )}
 
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">

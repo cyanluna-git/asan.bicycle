@@ -308,6 +308,15 @@ export default function UploadPage() {
 
       const courseId = insertResponse.data.id
 
+      // Fire-and-forget: generate preview image in background
+      const previewToken = (await supabase.auth.getSession()).data.session?.access_token
+      if (previewToken) {
+        fetch(`/api/courses/${courseId}/preview-image`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${previewToken}` },
+        }).catch(() => {})
+      }
+
       // Step 1: Match famous uphills from DB (primary)
       const famousRanges: { start_km: number; end_km: number }[] = []
       const { data: matchCount, error: matchError } = await supabase
