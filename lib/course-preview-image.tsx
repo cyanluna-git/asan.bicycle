@@ -4,16 +4,22 @@ import type { RoutePreviewPoint } from '@/types/course'
 
 const IMAGE_WIDTH = 600
 const IMAGE_HEIGHT = 400
-const PADDING = 40
+const TILE_SIZE = 256
+const ROUTE_PADDING = 48
 
 export const PREVIEW_BUCKET = 'course-previews'
 
-function computeBounds(points: RoutePreviewPoint[]): {
+// CartoDB Positron (light) — free, no API key
+const TILE_URL = 'https://a.basemaps.cartocdn.com/light_all'
+
+interface Bounds {
   minLat: number
   maxLat: number
   minLng: number
   maxLng: number
-} {
+}
+
+function computeBounds(points: RoutePreviewPoint[]): Bounds {
   let minLat = Infinity
   let maxLat = -Infinity
   let minLng = Infinity
@@ -27,29 +33,87 @@ function computeBounds(points: RoutePreviewPoint[]): {
   return { minLat, maxLat, minLng, maxLng }
 }
 
-function projectPoints(
+function lngToWorldX(lng: number, zoom: number): number {
+  return ((lng + 180) / 360) * Math.pow(2, zoom) * TILE_SIZE
+}
+
+function latToWorldY(lat: number, zoom: number): number {
+  const rad = (lat * Math.PI) / 180
+  return (
+    ((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2) *
+    Math.pow(2, zoom) *
+    TILE_SIZE
+  )
+}
+
+function fitZoom(bounds: Bounds): number {
+  for (let z = 15; z >= 1; z--) {
+    const x1 = lngToWorldX(bounds.minLng, z)
+    const x2 = lngToWorldX(bounds.maxLng, z)
+    const y1 = latToWorldY(bounds.maxLat, z)
+    const y2 = latToWorldY(bounds.minLat, z)
+
+    if (
+      x2 - x1 <= IMAGE_WIDTH - ROUTE_PADDING * 2 &&
+      y2 - y1 <= IMAGE_HEIGHT - ROUTE_PADDING * 2
+    ) {
+      return z
+    }
+  }
+  return 1
+}
+
+interface TileInfo {
+  x: number
+  y: number
+  screenX: number
+  screenY: number
+}
+
+function computeTilesAndViewport(
+  bounds: Bounds,
+  zoom: number,
+): { tiles: TileInfo[]; viewLeft: number; viewTop: number } {
+  const centerLng = (bounds.minLng + bounds.maxLng) / 2
+  const centerLat = (bounds.minLat + bounds.maxLat) / 2
+  const centerWX = lngToWorldX(centerLng, zoom)
+  const centerWY = latToWorldY(centerLat, zoom)
+
+  const viewLeft = centerWX - IMAGE_WIDTH / 2
+  const viewTop = centerWY - IMAGE_HEIGHT / 2
+  const viewRight = viewLeft + IMAGE_WIDTH
+  const viewBottom = viewTop + IMAGE_HEIGHT
+
+  const tileXMin = Math.floor(viewLeft / TILE_SIZE)
+  const tileXMax = Math.floor(viewRight / TILE_SIZE)
+  const tileYMin = Math.floor(viewTop / TILE_SIZE)
+  const tileYMax = Math.floor(viewBottom / TILE_SIZE)
+
+  const tiles: TileInfo[] = []
+  for (let tx = tileXMin; tx <= tileXMax; tx++) {
+    for (let ty = tileYMin; ty <= tileYMax; ty++) {
+      tiles.push({
+        x: tx,
+        y: ty,
+        screenX: tx * TILE_SIZE - viewLeft,
+        screenY: ty * TILE_SIZE - viewTop,
+      })
+    }
+  }
+
+  return { tiles, viewLeft, viewTop }
+}
+
+function projectPointsToScreen(
   points: RoutePreviewPoint[],
-  bounds: ReturnType<typeof computeBounds>,
+  zoom: number,
+  viewLeft: number,
+  viewTop: number,
 ): string {
-  const drawW = IMAGE_WIDTH - PADDING * 2
-  const drawH = IMAGE_HEIGHT - PADDING * 2
-
-  const latRange = bounds.maxLat - bounds.minLat || 0.001
-  const lngRange = bounds.maxLng - bounds.minLng || 0.001
-
-  const scaleX = drawW / lngRange
-  const scaleY = drawH / latRange
-  const scale = Math.min(scaleX, scaleY)
-
-  const projectedW = lngRange * scale
-  const projectedH = latRange * scale
-  const offsetX = PADDING + (drawW - projectedW) / 2
-  const offsetY = PADDING + (drawH - projectedH) / 2
-
   return points
     .map((p) => {
-      const x = offsetX + (p.lng - bounds.minLng) * scale
-      const y = offsetY + (bounds.maxLat - p.lat) * scale
+      const x = lngToWorldX(p.lng, zoom) - viewLeft
+      const y = latToWorldY(p.lat, zoom) - viewTop
       return `${x.toFixed(1)},${y.toFixed(1)}`
     })
     .join(' ')
@@ -63,12 +127,13 @@ export function generatePreviewImageResponse(
   }
 
   const bounds = computeBounds(points)
-  const polylinePoints = projectPoints(points, bounds)
+  const zoom = fitZoom(bounds)
+  const { tiles, viewLeft, viewTop } = computeTilesAndViewport(bounds, zoom)
+  const polylinePoints = projectPointsToScreen(points, zoom, viewLeft, viewTop)
 
-  const startPoint = polylinePoints.split(' ')[0]
-  const endPoint = polylinePoints.split(' ').at(-1)
-  const [sx, sy] = (startPoint ?? '0,0').split(',').map(Number)
-  const [ex, ey] = (endPoint ?? '0,0').split(',').map(Number)
+  const allParts = polylinePoints.split(' ')
+  const [sx, sy] = (allParts[0] ?? '0,0').split(',').map(Number)
+  const [ex, ey] = (allParts.at(-1) ?? '0,0').split(',').map(Number)
 
   return new ImageResponse(
     (
@@ -76,18 +141,31 @@ export function generatePreviewImageResponse(
         style={{
           width: IMAGE_WIDTH,
           height: IMAGE_HEIGHT,
-          background: 'linear-gradient(135deg, #fafaf8 0%, #f0ede4 100%)',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+          background: '#e8e4d8',
         }}
       >
+        {tiles.map((tile) => (
+          <img
+            key={`${tile.x}-${tile.y}`}
+            src={`${TILE_URL}/${zoom}/${tile.x}/${tile.y}.png`}
+            width={TILE_SIZE}
+            height={TILE_SIZE}
+            style={{
+              position: 'absolute',
+              left: tile.screenX,
+              top: tile.screenY,
+            }}
+          />
+        ))}
         <svg
           width={IMAGE_WIDTH}
           height={IMAGE_HEIGHT}
           viewBox={`0 0 ${IMAGE_WIDTH} ${IMAGE_HEIGHT}`}
+          style={{ position: 'absolute', top: 0, left: 0 }}
         >
-          {/* Route outline (white) */}
           <polyline
             points={polylinePoints}
             fill="none"
@@ -96,7 +174,6 @@ export function generatePreviewImageResponse(
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          {/* Route line (orange) */}
           <polyline
             points={polylinePoints}
             fill="none"
@@ -105,10 +182,8 @@ export function generatePreviewImageResponse(
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          {/* Start marker */}
-          <circle cx={sx} cy={sy} r="6" fill="#FC4C02" stroke="white" strokeWidth="2" />
-          {/* End marker */}
-          <circle cx={ex} cy={ey} r="6" fill="#3B82F6" stroke="white" strokeWidth="2" />
+          <circle cx={sx} cy={sy} r="6" fill="#FC4C02" stroke="white" strokeWidth="2.5" />
+          <circle cx={ex} cy={ey} r="6" fill="#3B82F6" stroke="white" strokeWidth="2.5" />
         </svg>
       </div>
     ),

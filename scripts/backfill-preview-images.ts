@@ -30,19 +30,26 @@ async function main() {
 
   const supabase = createClient(url, serviceKey)
 
-  const { data: courses, error } = await supabase
+  const force = process.argv.includes('--force')
+
+  let query = supabase
     .from('courses')
     .select('id, route_preview_points')
-    .is('preview_image_url', null)
     .not('route_preview_points', 'is', null)
     .order('created_at', { ascending: false })
+
+  if (!force) {
+    query = query.is('preview_image_url', null)
+  }
+
+  const { data: courses, error } = await query
 
   if (error) {
     console.error('Failed to fetch courses:', error.message)
     process.exit(1)
   }
 
-  console.log(`Found ${courses.length} courses without preview images`)
+  console.log(`Found ${courses.length} courses ${force ? '(force regenerate)' : 'without preview images'}`)
 
   let success = 0
   let failed = 0
