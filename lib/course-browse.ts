@@ -22,7 +22,7 @@ import type {
 } from '@/types/course'
 
 const COURSE_BROWSE_FIELDS = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, created_by, uploader_name, uploader_emoji, route_preview_points, surface_type, preview_image_url'
-const COURSE_BROWSE_FIELDS_FALLBACK = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, created_by, route_preview_points, surface_type, preview_image_url'
+const COURSE_BROWSE_FIELDS_FALLBACK = 'id, title, difficulty, distance_km, elevation_gain_m, theme, tags, created_by, route_preview_points, surface_type'
 type CourseBrowseRow = {
   id: string
   title: string
@@ -156,7 +156,7 @@ export async function fetchBrowseCourses(rawParams: URLSearchParams | Record<str
     error: browseResult.error ? { message: browseResult.error.message } : null,
   }
 
-  if (coursesError && /(uploader_name|uploader_emoji)/i.test(coursesError.message)) {
+  if (coursesError && /(uploader_name|uploader_emoji|preview_image_url)/i.test(coursesError.message)) {
     const fallbackBase = supabase
       .from('courses')
       .select(COURSE_BROWSE_FIELDS_FALLBACK)
