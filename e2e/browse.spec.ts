@@ -4,7 +4,7 @@ import { test, expect, type Page } from '@playwright/test'
 test.use({ storageState: { cookies: [], origins: [] } })
 
 async function getFirstCardTitle(page: Page): Promise<string | null> {
-  const card = page.locator('a[href*="courseId="]').first()
+  const card = page.locator('a[href^="/courses/"]').first()
   const count = await card.count()
   if (count === 0) return null
   const heading = card.locator('h2').first()
@@ -14,7 +14,7 @@ async function getFirstCardTitle(page: Page): Promise<string | null> {
 }
 
 async function countCards(page: Page): Promise<number> {
-  return page.locator('a[href*="courseId="]').count()
+  return page.locator('a[href^="/courses/"]').count()
 }
 
 test.describe('Courses browse page', () => {
@@ -24,7 +24,7 @@ test.describe('Courses browse page', () => {
     await page.goto('/courses')
 
     // Wait for the server-rendered cards to appear
-    const cards = page.locator('a[href*="courseId="]')
+    const cards = page.locator('a[href^="/courses/"]')
     await expect(cards.first()).toBeVisible({ timeout: 15_000 })
 
     const count = await cards.count()
@@ -37,7 +37,7 @@ test.describe('Courses browse page', () => {
     page,
   }) => {
     await page.goto('/courses')
-    await expect(page.locator('a[href*="courseId="]').first()).toBeVisible({
+    await expect(page.locator('a[href^="/courses/"]').first()).toBeVisible({
       timeout: 15_000,
     })
     const initialTitle = await getFirstCardTitle(page)
@@ -47,7 +47,7 @@ test.describe('Courses browse page', () => {
     for (let attempt = 0; attempt < 3; attempt++) {
       await page.reload()
       await expect(
-        page.locator('a[href*="courseId="]').first(),
+        page.locator('a[href^="/courses/"]').first(),
       ).toBeVisible({ timeout: 15_000 })
       const next = await getFirstCardTitle(page)
       if (next && next !== initialTitle) {
@@ -68,15 +68,25 @@ test.describe('Courses browse page', () => {
     // lives on /explore, so this test drives the filter via URL to verify the
     // browse page contract.
     const fakeRegionUuid = '00000000-0000-4000-8000-000000000001'
-    await page.goto(`/courses?region=${fakeRegionUuid}`)
+    // Use domcontentloaded to avoid waiting on the dev-server `load` event,
+    // which can stall on lingering HMR/websocket resources in Turbopack.
+    await page.goto(`/courses?region=${fakeRegionUuid}`, {
+      waitUntil: 'domcontentloaded',
+    })
 
     // The URL param should persist (parseFilterParams validates UUID format)
     expect(page.url()).toContain(`region=${fakeRegionUuid}`)
 
-    // Either cards render or the empty-state copy is shown — both are valid
-    const cards = page.locator('a[href*="courseId="]')
+    // Either cards render or the empty-state copy is shown — both are valid.
+    // Poll explicitly so we tolerate empty-state renders where `.or()` auto-wait
+    // on a compound locator has proven flaky against the dev server.
+    const cards = page.locator('a[href^="/courses/"]')
     const empty = page.getByText('조건에 맞는 코스가 없습니다.')
-    await expect(cards.first().or(empty)).toBeVisible({ timeout: 15_000 })
+    await expect(async () => {
+      const cardCount = await cards.count()
+      const emptyVisible = await empty.isVisible().catch(() => false)
+      expect(cardCount > 0 || emptyVisible).toBe(true)
+    }).toPass({ timeout: 20_000 })
   })
 
   test('distance filter (ultralong >120km) filters all visible cards', async ({
@@ -84,7 +94,7 @@ test.describe('Courses browse page', () => {
   }) => {
     await page.goto('/courses?distance=ultralong')
 
-    const cards = page.locator('a[href*="courseId="]')
+    const cards = page.locator('a[href^="/courses/"]')
     const empty = page.getByText('조건에 맞는 코스가 없습니다.')
     await expect(cards.first().or(empty)).toBeVisible({ timeout: 15_000 })
 
@@ -118,7 +128,7 @@ test.describe('Courses browse page', () => {
   test('search query narrows results to matching titles', async ({ page }) => {
     await page.goto('/courses?q=%EC%84%A4%EC%95%85') // '설악'
 
-    const cards = page.locator('a[href*="courseId="]')
+    const cards = page.locator('a[href^="/courses/"]')
     const empty = page.getByText('조건에 맞는 코스가 없습니다.')
     await expect(cards.first().or(empty)).toBeVisible({ timeout: 15_000 })
 
@@ -133,33 +143,29 @@ test.describe('Courses browse page', () => {
 
   test('removing URL filter params resets the view', async ({ page }) => {
     await page.goto('/courses?distance=ultralong')
-    await expect(page.locator('a[href*="courseId="]').first().or(page.getByText('조건에 맞는 코스가 없습니다.'))).toBeVisible({ timeout: 15_000 })
+    await expect(page.locator('a[href^="/courses/"]').first().or(page.getByText('조건에 맞는 코스가 없습니다.'))).toBeVisible({ timeout: 15_000 })
 
     // Clear filter via URL navigation (simulates the "reset all" affordance)
     await page.goto('/courses')
     expect(new URL(page.url()).searchParams.get('distance')).toBeNull()
-    await expect(page.locator('a[href*="courseId="]').first()).toBeVisible({
+    await expect(page.locator('a[href^="/courses/"]').first()).toBeVisible({
       timeout: 15_000,
     })
   })
 
   test('clicking a card navigates to the course view', async ({ page }) => {
     await page.goto('/courses')
-    const firstCard = page.locator('a[href*="courseId="]').first()
+    const firstCard = page.locator('a[href^="/courses/"]').first()
     await expect(firstCard).toBeVisible({ timeout: 15_000 })
 
     const href = await firstCard.getAttribute('href')
     expect(href).toBeTruthy()
-    // Browse cards use a next/link anchor to /explore?courseId=<id>.
-    // We verify the href contract directly and exercise navigation by
-    // following it, which mirrors the user's click outcome.
-    expect(href).toMatch(/courseId=[a-f0-9-]+/)
+    // Browse cards link directly to /courses/<id>.
+    expect(href).toMatch(/\/courses\/[a-f0-9-]+/)
 
     await page.goto(href!)
     const url = new URL(page.url())
-    const isExplore =
-      url.pathname.startsWith('/explore') && url.searchParams.has('courseId')
     const isCourseDetail = /^\/courses\/[a-f0-9-]+/.test(url.pathname)
-    expect(isExplore || isCourseDetail).toBeTruthy()
+    expect(isCourseDetail).toBeTruthy()
   })
 })

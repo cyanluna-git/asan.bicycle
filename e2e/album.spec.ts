@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Locator, type Page } from '@playwright/test'
 import path from 'node:path'
 import fs from 'node:fs'
 
@@ -123,6 +123,28 @@ async function openAlbumTab(page: Page): Promise<void> {
   await albumTab.click()
 }
 
+// Opens the full CourseAlbumSurface sheet (contains CourseAlbumUploadForm with
+// caption textarea and "앨범 사진 업로드" button). Used for authenticated flows.
+async function openAlbumSurface(page: Page): Promise<void> {
+  await openAlbumTab(page)
+  // "앨범 보기" button in the album tab triggers the sheet.
+  const viewAlbumButton = page.getByRole('button', { name: /앨범 보기/ }).first()
+  await viewAlbumButton.waitFor({ state: 'visible', timeout: 10_000 })
+  await viewAlbumButton.click()
+  // Wait for CourseAlbumUploadForm's caption textarea to confirm the sheet is open.
+  await albumSheet(page)
+    .locator('textarea[id^="course-album-caption-"]')
+    .waitFor({ state: 'visible', timeout: 10_000 })
+}
+
+// Desktop renders CourseAlbumSurface inside <aside className="hidden md:flex ...">
+// which carries an implicit role="complementary". Scoping all album queries to
+// this sheet disambiguates from the inline album upload button rendered inside
+// the course detail panel (which also exposes its own file input + gallery).
+function albumSheet(page: Page): Locator {
+  return page.getByRole('complementary').filter({ hasText: 'Ride Album' })
+}
+
 test.describe('Course album — unauthenticated', () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
@@ -179,22 +201,23 @@ test.describe('Course album — authenticated flow', () => {
   test('upload with GPS EXIF → gallery renders, caption persists, API reports lat/lng', async ({
     page,
   }) => {
-    await openAlbumTab(page)
+    await openAlbumSurface(page)
+    const sheet = albumSheet(page)
 
-    // Upload form is rendered inline for authenticated users.
-    const fileInput = page.locator('input[type="file"][accept^="image/"]').first()
+    // CourseAlbumUploadForm is rendered inside the album sheet for authenticated users.
+    const fileInput = sheet.locator('input[type="file"][accept^="image/"]')
     await fileInput.setInputFiles(FIXTURE_PHOTO_WITH_GPS)
 
     const captionText = '설악 업힐 정상 컷 — E2E 테스트'
-    const captionTextarea = page.locator('textarea[id^="course-album-caption-"]').first()
+    const captionTextarea = sheet.locator('textarea[id^="course-album-caption-"]')
     await captionTextarea.fill(captionText)
     await expect(captionTextarea).toHaveValue(captionText)
 
-    await page.getByRole('button', { name: /^앨범 사진 업로드$/ }).click()
+    await sheet.getByRole('button', { name: /^앨범 사진 업로드$/ }).click()
 
     // Success banner from CourseAlbumUploadForm.
     await expect(
-      page.getByText('앨범 사진이 업로드되었습니다.'),
+      sheet.getByText('앨범 사진이 업로드되었습니다.'),
     ).toBeVisible({ timeout: 30_000 })
 
     // Verify end-to-end via the public album API — newest photo must carry
@@ -221,30 +244,31 @@ test.describe('Course album — authenticated flow', () => {
     expect(typeof justUploaded!.lng).toBe('number')
     uploadedPhotoIds.push(justUploaded!.id)
 
-    // Open the full album surface (sheet) to confirm gallery rendering + caption text.
-    await page.getByRole('button', { name: /^앨범 보기$/ }).click()
-    await expect(page.getByText(captionText).first()).toBeVisible({ timeout: 10_000 })
+    // Confirm caption text is visible in the already-open album sheet.
+    await expect(sheet.getByText(captionText).first()).toBeVisible({ timeout: 10_000 })
   })
 
   test('upload without GPS EXIF is rejected with Korean error message', async ({
     page,
   }) => {
-    await openAlbumTab(page)
+    await openAlbumSurface(page)
+    const sheet = albumSheet(page)
 
-    const fileInput = page.locator('input[type="file"][accept^="image/"]').first()
+    const fileInput = sheet.locator('input[type="file"][accept^="image/"]')
     await fileInput.setInputFiles(FIXTURE_PHOTO_NO_GPS)
 
-    await page.getByRole('button', { name: /^앨범 사진 업로드$/ }).click()
+    await sheet.getByRole('button', { name: /^앨범 사진 업로드$/ }).click()
 
     await expect(
-      page.getByText('GPS 위치 메타데이터가 있는 사진만 업로드할 수 있습니다.'),
+      sheet.getByText('GPS 위치 메타데이터가 있는 사진만 업로드할 수 있습니다.'),
     ).toBeVisible({ timeout: 15_000 })
   })
 
   test('caption textarea enforces maxLength=180', async ({ page }) => {
-    await openAlbumTab(page)
+    await openAlbumSurface(page)
+    const sheet = albumSheet(page)
 
-    const captionTextarea = page.locator('textarea[id^="course-album-caption-"]').first()
+    const captionTextarea = sheet.locator('textarea[id^="course-album-caption-"]')
     await expect(captionTextarea).toHaveAttribute('maxLength', '180')
 
     // Typing > 180 chars must be clipped by the DOM attribute.
@@ -256,17 +280,18 @@ test.describe('Course album — authenticated flow', () => {
   })
 
   test('delete button removes photo from album gallery', async ({ page }) => {
-    await openAlbumTab(page)
+    await openAlbumSurface(page)
+    const sheet = albumSheet(page)
 
     // Upload a fresh photo via the UI so ownership matches the test user.
-    const fileInput = page.locator('input[type="file"][accept^="image/"]').first()
+    const fileInput = sheet.locator('input[type="file"][accept^="image/"]')
     await fileInput.setInputFiles(FIXTURE_PHOTO_WITH_GPS)
     const caption = `삭제 테스트 ${Date.now()}`
-    const captionTextarea = page.locator('textarea[id^="course-album-caption-"]').first()
+    const captionTextarea = sheet.locator('textarea[id^="course-album-caption-"]')
     await captionTextarea.fill(caption)
-    await page.getByRole('button', { name: /^앨범 사진 업로드$/ }).click()
+    await sheet.getByRole('button', { name: /^앨범 사진 업로드$/ }).click()
     await expect(
-      page.getByText('앨범 사진이 업로드되었습니다.'),
+      sheet.getByText('앨범 사진이 업로드되었습니다.'),
     ).toBeVisible({ timeout: 30_000 })
 
     // Look up the new photo via API to obtain its id for cleanup bookkeeping.
@@ -280,17 +305,16 @@ test.describe('Course album — authenticated flow', () => {
     expect(target, 'uploaded photo must appear via album GET').toBeDefined()
     uploadedPhotoIds.push(target!.id)
 
-    // Open full album surface and click the delete button for the matching card.
-    await page.getByRole('button', { name: /^앨범 보기$/ }).click()
-    const captionLocator = page.getByText(caption).first()
+    // The album sheet is already open; find and click the delete button.
+    const captionLocator = sheet.getByText(caption).first()
     await expect(captionLocator).toBeVisible({ timeout: 10_000 })
 
-    const deleteButton = page.getByRole('button', { name: '앨범 사진 삭제' }).first()
+    const deleteButton = sheet.getByRole('button', { name: '앨범 사진 삭제' }).first()
     await expect(deleteButton).toBeVisible({ timeout: 5_000 })
     await deleteButton.click()
 
     // Caption text for that photo should disappear from the gallery.
-    await expect(page.getByText(caption)).toHaveCount(0, { timeout: 10_000 })
+    await expect(sheet.getByText(caption)).toHaveCount(0, { timeout: 10_000 })
 
     // Since we deleted through UI, drop from the cleanup list to avoid a 404.
     const idx = uploadedPhotoIds.indexOf(target!.id)
@@ -315,12 +339,13 @@ test.describe('Course album — authenticated flow', () => {
       await route.continue()
     })
 
-    await openAlbumTab(page)
+    await openAlbumSurface(page)
+    const sheet = albumSheet(page)
 
-    const fileInput = page.locator('input[type="file"][accept^="image/"]').first()
+    const fileInput = sheet.locator('input[type="file"][accept^="image/"]')
     await fileInput.setInputFiles(FIXTURE_PHOTO_WITH_GPS)
-    await page.getByRole('button', { name: /^앨범 사진 업로드$/ }).click()
+    await sheet.getByRole('button', { name: /^앨범 사진 업로드$/ }).click()
 
-    await expect(page.getByText(quotaMessage)).toBeVisible({ timeout: 15_000 })
+    await expect(sheet.getByText(quotaMessage)).toBeVisible({ timeout: 15_000 })
   })
 })
