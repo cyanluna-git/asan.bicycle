@@ -83,7 +83,7 @@ export default async function CoursesBrowsePage({
             ) : (
               <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
                 {courses.map((course) => {
-                  const href = `/explore?courseId=${course.id}${baseQueryString ? `&${baseQueryString}` : ''}&returnTo=${encodeURIComponent(`/courses${baseQueryString ? `?${baseQueryString}` : ''}`)}`
+                  const href = `/courses/${course.id}`
 
                   return (
                     <BrowseCourseCard

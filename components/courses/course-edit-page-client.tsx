@@ -556,7 +556,7 @@ export function CourseEditPageClient({
         ) : null}
         <div className="flex gap-2">
           <Button asChild variant="outline">
-            <Link href={`/explore?courseId=${course.id}&returnTo=${encodeURIComponent(`/courses?focus=${course.id}`)}`}>코스 상세로 이동</Link>
+            <Link href={`/courses/${course.id}`}>코스 상세로 이동</Link>
           </Button>
           <Button asChild>
             <Link href="/my-courses">내 코스</Link>
@@ -576,7 +576,7 @@ export function CourseEditPageClient({
           </p>
         </div>
         <Button asChild variant="outline">
-          <Link href={`/explore?courseId=${course.id}&returnTo=${encodeURIComponent(`/courses?focus=${course.id}`)}`}>상세 보기</Link>
+          <Link href={`/courses/${course.id}`}>상세 보기</Link>
         </Button>
       </div>
 

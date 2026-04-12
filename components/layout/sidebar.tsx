@@ -138,10 +138,12 @@ function FilterSkeleton() {
   )
 }
 
+const COURSE_LIST_SKELETON_ITEMS = [0, 1, 2]
+
 function CourseListSkeleton() {
   return (
     <div className="flex flex-col gap-2">
-      {Array.from({ length: 3 }).map((_, i) => (
+      {COURSE_LIST_SKELETON_ITEMS.map((i) => (
         <div key={i} className="h-[72px] rounded-lg border bg-muted/50 animate-pulse" />
       ))}
     </div>

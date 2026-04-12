@@ -17,7 +17,7 @@ vi.mock('@/lib/supabase-server', () => ({
 }))
 
 import { createAnonServerClient } from '@/lib/supabase-server'
-import { featureCards, regionButtons } from '@/app/page'
+import { featureCards } from '@/app/page'
 import { tabs } from '@/components/layout/bottom-nav'
 
 // ---------------------------------------------------------------------------
@@ -61,28 +61,12 @@ describe('featureCards', () => {
 })
 
 // ---------------------------------------------------------------------------
-// regionButtons — map preview region list
-// ---------------------------------------------------------------------------
-
-describe('regionButtons', () => {
-  it('includes major Korean regions', () => {
-    expect(regionButtons).toContain('강원')
-    expect(regionButtons).toContain('경기')
-    expect(regionButtons).toContain('제주')
-  })
-
-  it('has at least 6 regions', () => {
-    expect(regionButtons.length).toBeGreaterThanOrEqual(6)
-  })
-})
-
-// ---------------------------------------------------------------------------
 // tabs — mobile bottom navigation
 // ---------------------------------------------------------------------------
 
 describe('BottomNav tabs', () => {
-  it('has exactly 3 tabs', () => {
-    expect(tabs).toHaveLength(3)
+  it('has exactly 2 tabs', () => {
+    expect(tabs).toHaveLength(2)
   })
 
   it('each tab has a label and a valid href', () => {
@@ -92,10 +76,10 @@ describe('BottomNav tabs', () => {
     }
   })
 
-  it('includes explore and courses tabs', () => {
+  it('includes courses and my-courses tabs', () => {
     const hrefs = tabs.map((t) => t.href)
-    expect(hrefs).toContain('/explore')
     expect(hrefs).toContain('/courses')
+    expect(hrefs).toContain('/my-courses')
   })
 })
 

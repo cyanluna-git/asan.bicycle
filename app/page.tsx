@@ -58,13 +58,6 @@ export const featureCards = [
   },
 ] as const
 
-export const regionButtons = [
-  '강원', '경기', '경상남도', '경상북도',
-  '전라남도', '전라북도', '충청남도', '충청북도',
-  '서울', '제주',
-] as const
-
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -183,78 +176,6 @@ export default async function LandingPage() {
       </section>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Map Preview Section                                                 */}
-      {/* ------------------------------------------------------------------ */}
-      <section className="bg-stitch-surface-container-low px-6 py-16 md:px-12 lg:px-20 lg:py-24">
-        <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-2 lg:items-center">
-
-          {/* Left — text + region buttons */}
-          <div>
-            <h2 className="font-headline mb-3 text-3xl font-bold text-stitch-on-surface md:text-4xl">
-              내 동네 코스
-              <br />
-              바로 찾기
-            </h2>
-            <p className="mb-8 text-base text-stitch-on-surface-variant">
-              지역을 선택하면 해당 지역의 추천 코스를 바로 볼 수 있어요.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {regionButtons.map((region) => (
-                <Link
-                  key={region}
-                  href="/explore"
-                  className="rounded-full border border-stitch-outline/30 bg-stitch-surface px-4 py-1.5 text-sm font-medium text-stitch-on-surface-variant transition hover:bg-primary hover:text-white hover:border-primary"
-                >
-                  {region}
-                </Link>
-              ))}
-            </div>
-            <Link
-              href="/explore"
-              className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
-            >
-              전체 지도로 보기
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-
-          {/* Right — Korea map with SVG silhouette */}
-          <Link
-            href="/explore"
-            className="group relative overflow-hidden rounded-2xl block"
-            style={{ aspectRatio: '4/3' }}
-          >
-            {/* Dark green base */}
-            <div className="absolute inset-0 bg-[#0c1e12]" />
-            {/* Korea map silhouette */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/maps/sido.svg"
-              alt="한국 지역 지도"
-              className="absolute inset-0 h-full w-full object-contain py-6 px-2"
-              style={{ filter: 'brightness(0) invert(1)', opacity: 0.12 }}
-            />
-            {/* Radial green glow */}
-            <div
-              className="absolute inset-0"
-              style={{ background: 'radial-gradient(circle at 55% 50%, rgba(58,107,74,0.65) 0%, transparent 62%)' }}
-            />
-            {/* Hover reveal overlay */}
-            <div className="absolute inset-0 bg-[#3a6b4a]/0 transition-colors duration-300 group-hover:bg-[#3a6b4a]/10" />
-            {/* Center label */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="rounded-2xl border border-white/20 bg-black/35 px-6 py-4 text-center backdrop-blur-sm transition group-hover:border-white/30 group-hover:bg-black/45">
-                <MapPinned className="mx-auto mb-2 h-8 w-8 text-[#8FE36A]" />
-                <p className="text-sm font-semibold text-white">지역 선택 후 탐색</p>
-                <p className="mt-1 text-xs text-white/60">카카오맵 기반 인터랙티브 지도</p>
-              </div>
-            </div>
-          </Link>
-
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------------ */}
       {/* Recommended Courses Section                                         */}
       {/* ------------------------------------------------------------------ */}
       <section className="bg-stitch-surface px-6 py-16 md:px-12 lg:px-20 lg:py-24">
@@ -342,7 +263,7 @@ export default async function LandingPage() {
             전국 자전거 코스가 기다립니다
           </p>
           <Link
-            href="/explore"
+            href="/courses"
             className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-bold text-primary transition hover:bg-white/90"
           >
             시작하기

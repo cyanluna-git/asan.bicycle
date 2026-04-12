@@ -27,7 +27,6 @@ export function Footer() {
                 { label: '코스 찾기', href: '/courses' },
                 { label: '코스 올리기', href: '/upload' },
                 { label: '내 코스', href: '/my-courses' },
-                { label: '지도 탐색', href: '/explore' },
               ].map(({ label, href }) => (
                 <Link
                   key={href}

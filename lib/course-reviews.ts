@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { resolveProfileEmoji } from '@/lib/profile'
 import { createServiceRoleClient } from '@/lib/supabase-server'
@@ -9,7 +10,7 @@ type ReviewWithAuthor = {
   author_emoji?: string | null
 }
 
-async function getReviewAuthorByUserId(userId: string) {
+const getReviewAuthorByUserId = cache(async function getReviewAuthorByUserId(userId: string) {
   const supabase = createServiceRoleClient()
 
   if (!supabase) {
@@ -32,7 +33,7 @@ async function getReviewAuthorByUserId(userId: string) {
     name: getUploaderDisplayName(user),
     emoji: resolveProfileEmoji(user),
   }
-}
+})
 
 export async function hydrateCourseReviews<T extends ReviewWithAuthor>(reviews: T[]) {
   const missingUserIds = [...new Set(

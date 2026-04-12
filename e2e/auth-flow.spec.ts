@@ -38,7 +38,7 @@ test.describe('Auth flow — unauthenticated', () => {
       page.getByRole('heading', { name: '로그인이 필요합니다' }),
     ).toBeVisible()
     await expect(
-      page.getByRole('button', { name: /Google로 로그인/ }),
+      page.getByRole('button', { name: /Google로 시작하기/ }),
     ).toBeVisible()
 
     // The GPX dropzone copy must NOT be present for anonymous visitors.
@@ -61,7 +61,7 @@ test.describe('Auth flow — unauthenticated', () => {
       await expect(
         page.getByRole('heading', { name: '내 코스' }),
       ).toBeVisible({ timeout: 15_000 })
-      const loginButton = page.getByRole('button', { name: /Google로 로그인/ })
+      const loginButton = page.getByRole('button', { name: /Google로 시작하기/ })
       await expect(loginButton).toBeVisible()
     } else {
       // Redirected away — acceptable (e.g. to /courses). Just assert the new

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { CourseMetadataForm } from '@/components/upload/course-metadata-form'
 import { CourseRoutePreviewMap } from '@/components/upload/course-route-preview-map'
 import { UphillEditor } from '@/components/upload/uphill-editor'
-import { signInWithGoogle } from '@/lib/auth'
+import { LoginSection } from '@/components/auth/login-section'
 import {
   buildMetadataHistoryEntry,
   buildStartPointOptions,
@@ -428,21 +428,11 @@ export default function UploadPage() {
 
   if (!user) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 pt-16">
-        <Upload className="h-12 w-12 text-muted-foreground" />
-        <h1 className="text-xl font-bold">로그인이 필요합니다</h1>
-        <p className="max-w-md text-center text-sm text-muted-foreground">
-          코스를 업로드하려면 먼저 로그인해주세요.
-          Supabase Auth를 통해 이메일 또는 소셜 로그인이 가능합니다.
-        </p>
-        <Button
-          onClick={async () => {
-            await signInWithGoogle()
-          }}
-        >
-          Google로 로그인
-        </Button>
-      </div>
+      <LoginSection
+        icon={Upload}
+        title="로그인이 필요합니다"
+        description="코스를 업로드하려면 먼저 로그인해주세요."
+      />
     )
   }
 

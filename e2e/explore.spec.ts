@@ -10,9 +10,9 @@ const SEORAK_COURSE_ID = 'a3c49cb0-c25d-4437-8b41-c167b800e00d'
 
 const KAKAO_AVAILABLE = process.env.KAKAO_MAP_AVAILABLE === 'true'
 
-test.describe('Explore page — map and detail panel', () => {
-  test('/explore mounts the Kakao map container', async ({ page }) => {
-    const response = await page.goto('/explore')
+test.describe('Course detail page — map and detail panel', () => {
+  test('course detail page mounts the Kakao map container', async ({ page }) => {
+    const response = await page.goto(`/courses/${SEORAK_COURSE_ID}`)
     expect(response, 'navigation response should not be null').not.toBeNull()
     expect(response!.status()).toBeLessThan(400)
 
@@ -23,10 +23,10 @@ test.describe('Explore page — map and detail panel', () => {
     await expect(mapSurface).toBeVisible({ timeout: 15_000 })
   })
 
-  test('selecting a course via ?courseId populates the detail panel', async ({
+  test('course detail panel renders distance and elevation metrics', async ({
     page,
   }) => {
-    await page.goto(`/explore?courseId=${SEORAK_COURSE_ID}`)
+    await page.goto(`/courses/${SEORAK_COURSE_ID}`)
 
     // CourseDetailPanel renders "거리" / "획득고도" SummaryMetric labels and a
     // km-suffixed value. The server hydrates this content so it does not
@@ -44,10 +44,10 @@ test.describe('Explore page — map and detail panel', () => {
     })
   })
 
-  test('SlopeLegend is not rendered anywhere on the explore surface', async ({
+  test('SlopeLegend is not rendered anywhere on the course detail surface', async ({
     page,
   }) => {
-    await page.goto(`/explore?courseId=${SEORAK_COURSE_ID}`)
+    await page.goto(`/courses/${SEORAK_COURSE_ID}`)
 
     // Wait for the panel to be ready so we can assert on the steady-state DOM.
     await expect(page.getByText('거리', { exact: true }).first()).toBeVisible({
@@ -82,7 +82,7 @@ test.describe('Explore page — map and detail panel', () => {
       'Kakao Maps SDK not available in this environment — set KAKAO_MAP_AVAILABLE=true to run.',
     )
 
-    await page.goto('/explore')
+    await page.goto(`/courses/${SEORAK_COURSE_ID}`)
     const mapSurface = page.locator('[data-map-interaction-surface="true"]')
     await expect(mapSurface).toBeVisible({ timeout: 15_000 })
 

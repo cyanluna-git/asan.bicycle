@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase-server'
+import { createAnonServerClient, createServiceRoleClient } from '@/lib/supabase-server'
 import type { RouteGeoJSON } from '@/types/course'
+
+// ── GET /api/famous-uphills ───────────────────────────────────────────────────
+// Returns all famous uphills. Used primarily for test verification.
+
+export async function GET(_req: NextRequest) {
+  const db = createAnonServerClient()
+  const { data, error } = await db
+    .from('famous_uphills')
+    .select('id, name, distance_m, elevation_gain_m, avg_grade, climb_category')
+    .order('name')
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json(data ?? [])
+}
 
 // ── Geo helpers ──────────────────────────────────────────────────────────────
 

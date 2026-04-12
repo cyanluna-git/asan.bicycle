@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { ChevronUp, Maximize2, Minimize2 } from 'lucide-react'
 import { CourseAlbumSurface } from '@/components/courses/course-album-surface'
 import { CourseReviewsSurface } from '@/components/courses/course-reviews-surface'
@@ -39,6 +39,126 @@ import type { User } from '@supabase/supabase-js'
 
 type ExploreSurfaceKind = 'review' | 'album'
 
+// ---------------------------------------------------------------------------
+// Domain reducers — group related state to avoid 15+ individual useState calls
+// ---------------------------------------------------------------------------
+
+type WindState = {
+  direction: number | null
+  speed: number | null
+  segmentsOverride: WindSegment[] | null
+  overlays: WindMapOverlay[]
+  weatherPoints: WeatherMapPoint[]
+}
+const WIND_INITIAL: WindState = {
+  direction: null, speed: null, segmentsOverride: null, overlays: [], weatherPoints: [],
+}
+type WindAction =
+  | { type: 'SET_DATA'; direction: number | null; speed: number | null }
+  | { type: 'SET_SEGMENTS'; segments: WindSegment[] | null }
+  | { type: 'SET_OVERLAYS'; overlays: WindMapOverlay[] }
+  | { type: 'SET_WEATHER_POINTS'; points: WeatherMapPoint[] }
+  | { type: 'RESET' }
+function windReducer(state: WindState, action: WindAction): WindState {
+  switch (action.type) {
+    case 'SET_DATA': return { ...state, direction: action.direction, speed: action.speed }
+    case 'SET_SEGMENTS': return { ...state, segmentsOverride: action.segments }
+    case 'SET_OVERLAYS': return { ...state, overlays: action.overlays }
+    case 'SET_WEATHER_POINTS': return { ...state, weatherPoints: action.points }
+    case 'RESET': return WIND_INITIAL
+  }
+}
+
+type AlbumState = {
+  photos: CourseAlbumPhoto[]
+  previewPhotos: CourseAlbumPhoto[]
+  loading: boolean
+  error: string | null
+  reloadToken: number
+  selectedId: string | null
+}
+const ALBUM_INITIAL: AlbumState = {
+  photos: [], previewPhotos: [], loading: false, error: null, reloadToken: 0, selectedId: null,
+}
+type AlbumAction =
+  | { type: 'SET_PHOTOS'; photos: CourseAlbumPhoto[] }
+  | { type: 'SET_PREVIEW_PHOTOS'; photos: CourseAlbumPhoto[] }
+  | { type: 'SET_LOADING'; loading: boolean }
+  | { type: 'SET_ERROR'; error: string | null }
+  | { type: 'INCREMENT_RELOAD' }
+  | { type: 'SET_SELECTED_ID'; id: string | null }
+  | { type: 'PREPEND_PHOTO'; photo: CourseAlbumPhoto }
+  | { type: 'DELETE_PHOTO'; photoId: string }
+  | { type: 'RESET' }
+function albumReducer(state: AlbumState, action: AlbumAction): AlbumState {
+  switch (action.type) {
+    case 'SET_PHOTOS': return { ...state, photos: action.photos }
+    case 'SET_PREVIEW_PHOTOS': return { ...state, previewPhotos: action.photos }
+    case 'SET_LOADING': return { ...state, loading: action.loading }
+    case 'SET_ERROR': return { ...state, error: action.error }
+    case 'INCREMENT_RELOAD': return { ...state, reloadToken: state.reloadToken + 1 }
+    case 'SET_SELECTED_ID': return { ...state, selectedId: action.id }
+    case 'PREPEND_PHOTO': return {
+      ...state,
+      photos: [action.photo, ...state.photos],
+      previewPhotos: [action.photo, ...state.previewPhotos].slice(0, 4),
+    }
+    case 'DELETE_PHOTO': return {
+      ...state,
+      photos: state.photos.filter((p) => p.id !== action.photoId),
+      selectedId: state.selectedId === action.photoId ? null : state.selectedId,
+    }
+    case 'RESET': return ALBUM_INITIAL
+  }
+}
+
+type MapUIState = { isFullscreen: boolean; isCourseSheetOpen: boolean }
+const MAP_UI_INITIAL: MapUIState = { isFullscreen: false, isCourseSheetOpen: false }
+type MapUIAction =
+  | { type: 'SET_FULLSCREEN'; value: boolean }
+  | { type: 'SET_SHEET_OPEN'; value: boolean }
+  | { type: 'OPEN_FULLSCREEN' }
+  | { type: 'OPEN_COURSE_SHEET' }
+  | { type: 'HANDLE_SHEET_CHANGE'; open: boolean }
+  | { type: 'RESET' }
+function mapUIReducer(state: MapUIState, action: MapUIAction): MapUIState {
+  switch (action.type) {
+    case 'SET_FULLSCREEN': return { ...state, isFullscreen: action.value }
+    case 'SET_SHEET_OPEN': return { ...state, isCourseSheetOpen: action.value }
+    case 'OPEN_FULLSCREEN': return { isFullscreen: true, isCourseSheetOpen: false }
+    case 'OPEN_COURSE_SHEET': return { isFullscreen: false, isCourseSheetOpen: true }
+    case 'HANDLE_SHEET_CHANGE': return {
+      isCourseSheetOpen: action.open,
+      isFullscreen: action.open ? false : state.isFullscreen,
+    }
+    case 'RESET': return MAP_UI_INITIAL
+  }
+}
+
+type SurfaceState = {
+  kind: ExploreSurfaceKind | null
+  source: ReviewSurfaceSource
+  shouldReopen: boolean
+}
+const SURFACE_INITIAL: SurfaceState = { kind: null, source: null, shouldReopen: false }
+type SurfaceAction =
+  | { type: 'OPEN'; kind: ExploreSurfaceKind; source: Exclude<ReviewSurfaceSource, null> }
+  | { type: 'CLOSE' }
+  | { type: 'CLOSE_WITH_REOPEN' }
+  | { type: 'CLEAR_REOPEN' }
+  | { type: 'RESET' }
+function surfaceReducer(state: SurfaceState, action: SurfaceAction): SurfaceState {
+  switch (action.type) {
+    case 'OPEN': return { kind: action.kind, source: action.source, shouldReopen: false }
+    case 'CLOSE': return { ...state, kind: null, source: null }
+    case 'CLOSE_WITH_REOPEN': return { kind: null, source: null, shouldReopen: true }
+    case 'CLEAR_REOPEN': return { ...state, shouldReopen: false }
+    case 'RESET': return SURFACE_INITIAL
+  }
+}
+
+// ---------------------------------------------------------------------------
+
 const MIN_SIDEBAR_WIDTH = 280
 const MAX_SIDEBAR_WIDTH = 520
 
@@ -72,29 +192,17 @@ export function ExploreShell({
   reviewStats,
 }: ExploreShellProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const lastSurfaceTriggerIdRef = useRef<string | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [localPois, setLocalPois] = useState<PoiMapItem[]>(pois)
   const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null)
   const [hoveredRoutePoint, setHoveredRoutePoint] = useState<RouteHoverPoint | null>(null)
-  const [windDirection, setWindDirection] = useState<number | null>(null)
-  const [windSpeed, setWindSpeed] = useState<number | null>(null)
-  const [windSegmentsOverride, setWindSegmentsOverride] = useState<WindSegment[] | null>(null)
-  const [windOverlays, setWindOverlays] = useState<WindMapOverlay[]>([])
-  const [weatherPoints, setWeatherPoints] = useState<WeatherMapPoint[]>([])
-  const [albumPhotos, setAlbumPhotos] = useState<CourseAlbumPhoto[]>([])
-  const [albumPreviewPhotos, setAlbumPreviewPhotos] = useState<CourseAlbumPhoto[]>([])
-  const [albumLoading, setAlbumLoading] = useState(false)
-  const [albumError, setAlbumError] = useState<string | null>(null)
-  const [albumReloadToken, setAlbumReloadToken] = useState(0)
-  const [selectedAlbumPhotoId, setSelectedAlbumPhotoId] = useState<string | null>(null)
-  const [isCourseSheetOpen, setIsCourseSheetOpen] = useState(false)
-  const [isMapFullscreen, setIsMapFullscreen] = useState(false)
-  const [activeSurfaceKind, setActiveSurfaceKind] = useState<ExploreSurfaceKind | null>(null)
-  const [surfaceSource, setSurfaceSource] = useState<ReviewSurfaceSource>(null)
-  const [shouldReopenCourseSheet, setShouldReopenCourseSheet] = useState(false)
   const [sidebarWidth, setSidebarWidth] = useState(320)
   const [isResizingSidebar, setIsResizingSidebar] = useState(false)
-  const lastSurfaceTriggerIdRef = useRef<string | null>(null)
+  const [wind, dispatchWind] = useReducer(windReducer, WIND_INITIAL)
+  const [album, dispatchAlbum] = useReducer(albumReducer, ALBUM_INITIAL)
+  const [mapUI, dispatchMapUI] = useReducer(mapUIReducer, MAP_UI_INITIAL)
+  const [surface, dispatchSurface] = useReducer(surfaceReducer, SURFACE_INITIAL)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -113,22 +221,10 @@ export function ExploreShell({
   useEffect(() => {
     setSelectedPoiId(null)
     setHoveredRoutePoint(null)
-    setWindDirection(null)
-    setWindSpeed(null)
-    setWindSegmentsOverride(null)
-    setWindOverlays([])
-    setWeatherPoints([])
-    setAlbumPreviewPhotos([])
-    setAlbumPhotos([])
-    setAlbumLoading(false)
-    setAlbumError(null)
-    setAlbumReloadToken(0)
-    setSelectedAlbumPhotoId(null)
-    setIsCourseSheetOpen(false)
-    setIsMapFullscreen(false)
-    setActiveSurfaceKind(null)
-    setSurfaceSource(null)
-    setShouldReopenCourseSheet(false)
+    dispatchWind({ type: 'RESET' })
+    dispatchAlbum({ type: 'RESET' })
+    dispatchMapUI({ type: 'RESET' })
+    dispatchSurface({ type: 'RESET' })
     lastSurfaceTriggerIdRef.current = null
   }, [selectedCourseId])
 
@@ -143,10 +239,10 @@ export function ExploreShell({
   }, [localPois, selectedPoiId])
 
   useEffect(() => {
-    if (selectedAlbumPhotoId && !albumPhotos.some((photo) => photo.id === selectedAlbumPhotoId)) {
-      setSelectedAlbumPhotoId(null)
+    if (album.selectedId && !album.photos.some((photo) => photo.id === album.selectedId)) {
+      dispatchAlbum({ type: 'SET_SELECTED_ID', id: null })
     }
-  }, [albumPhotos, selectedAlbumPhotoId])
+  }, [album.photos, album.selectedId])
 
   useEffect(() => {
     if (!selectedCourse) {
@@ -164,7 +260,7 @@ export function ExploreShell({
         const payload = await response.json().catch(() => ({}))
 
         if (response.ok && Array.isArray(payload.photos)) {
-          setAlbumPreviewPhotos(payload.photos)
+          dispatchAlbum({ type: 'SET_PREVIEW_PHOTOS', photos: payload.photos })
         }
       } catch (loadError) {
         if ((loadError as Error).name === 'AbortError') {
@@ -187,8 +283,8 @@ export function ExploreShell({
     const courseId = selectedCourse.id
 
     async function loadAlbum() {
-      setAlbumLoading(true)
-      setAlbumError(null)
+      dispatchAlbum({ type: 'SET_LOADING', loading: true })
+      dispatchAlbum({ type: 'SET_ERROR', error: null })
 
       try {
         const response = await fetch(`/api/courses/${courseId}/album`, {
@@ -204,16 +300,16 @@ export function ExploreShell({
           )
         }
 
-        setAlbumPhotos(Array.isArray(payload.photos) ? payload.photos : [])
+        dispatchAlbum({ type: 'SET_PHOTOS', photos: Array.isArray(payload.photos) ? payload.photos : [] })
       } catch (loadError) {
         if ((loadError as Error).name === 'AbortError') {
           return
         }
 
-        setAlbumError(loadError instanceof Error ? loadError.message : '코스 앨범을 불러오지 못했습니다.')
+        dispatchAlbum({ type: 'SET_ERROR', error: loadError instanceof Error ? loadError.message : '코스 앨범을 불러오지 못했습니다.' })
       } finally {
         if (!controller.signal.aborted) {
-          setAlbumLoading(false)
+          dispatchAlbum({ type: 'SET_LOADING', loading: false })
         }
       }
     }
@@ -221,7 +317,7 @@ export function ExploreShell({
     void loadAlbum()
 
     return () => controller.abort()
-  }, [albumReloadToken, selectedCourse])
+  }, [album.reloadToken, selectedCourse])
 
   const canEditSelectedCourse = selectedCourse
     ? canEditCourse({
@@ -241,43 +337,41 @@ export function ExploreShell({
   )
 
   const safeAlbumPhotos = useMemo(
-    () => filterSafeAlbumPhotos({ albumPhotos, selectedCourseId }),
-    [albumPhotos, selectedCourseId],
+    () => filterSafeAlbumPhotos({ albumPhotos: album.photos, selectedCourseId }),
+    [album.photos, selectedCourseId],
   )
 
   const handleWindDataChange = useCallback(
     (dir: number | null, spd: number | null) => {
-      setWindDirection(dir)
-      setWindSpeed(spd)
+      dispatchWind({ type: 'SET_DATA', direction: dir, speed: spd })
     },
     [],
   )
 
   const handleWindSegmentsChange = useCallback(
     (segments: WindSegment[] | null) => {
-      setWindSegmentsOverride(segments)
+      dispatchWind({ type: 'SET_SEGMENTS', segments })
     },
     [],
   )
 
   const handleWindMapOverlaysChange = useCallback(
     (overlays: WindMapOverlay[]) => {
-      setWindOverlays(overlays)
+      dispatchWind({ type: 'SET_OVERLAYS', overlays })
     },
     [],
   )
 
   const handleWeatherMapPointsChange = useCallback(
     (points: WeatherMapPoint[]) => {
-      setWeatherPoints(points)
+      dispatchWind({ type: 'SET_WEATHER_POINTS', points })
     },
     [],
   )
 
   const handleInlineAlbumPhotoUploaded = useCallback(
     (photo: CourseAlbumPhoto) => {
-      setAlbumPreviewPhotos((prev) => [photo, ...prev].slice(0, 4))
-      setAlbumPhotos((prev) => [photo, ...prev])
+      dispatchAlbum({ type: 'PREPEND_PHOTO', photo })
     },
     [],
   )
@@ -289,22 +383,22 @@ export function ExploreShell({
 
   const canShowMapFullscreen = canEnterMapFullscreen({
     hasSelectedCourse: Boolean(selectedCourse),
-    activeSurfaceKind,
+    activeSurfaceKind: surface.kind,
   })
 
   useEffect(() => {
-    if (!isMapFullscreen) {
+    if (!mapUI.isFullscreen) {
       return
     }
 
     if (shouldExitMapFullscreen({
       hasSelectedCourse: Boolean(selectedCourse),
-      activeSurfaceKind,
-      isCourseSheetOpen,
+      activeSurfaceKind: surface.kind,
+      isCourseSheetOpen: mapUI.isCourseSheetOpen,
     })) {
-      setIsMapFullscreen(false)
+      dispatchMapUI({ type: 'SET_FULLSCREEN', value: false })
     }
-  }, [activeSurfaceKind, isCourseSheetOpen, isMapFullscreen, selectedCourse])
+  }, [surface.kind, mapUI.isCourseSheetOpen, mapUI.isFullscreen, selectedCourse])
 
   const restoreFocusToSurfaceTrigger = () => {
     const triggerId = lastSurfaceTriggerIdRef.current
@@ -329,57 +423,48 @@ export function ExploreShell({
     source: Exclude<ReviewSurfaceSource, null>
     triggerEl?: HTMLButtonElement | null
   }) => {
-    setSurfaceSource(source)
     lastSurfaceTriggerIdRef.current = triggerEl?.id ?? null
-    setActiveSurfaceKind(kind)
+    dispatchSurface({ type: 'OPEN', kind, source })
   }
 
   const handleOpenMapFullscreen = () => {
-    setIsCourseSheetOpen(false)
-    setIsMapFullscreen(true)
+    dispatchMapUI({ type: 'OPEN_FULLSCREEN' })
   }
 
   const handleOpenCourseSheet = () => {
-    setIsMapFullscreen(false)
-    setIsCourseSheetOpen(true)
+    dispatchMapUI({ type: 'OPEN_COURSE_SHEET' })
   }
 
   const handleCourseSheetOpenChange = (open: boolean) => {
-    setIsCourseSheetOpen(open)
-    if (open) {
-      setIsMapFullscreen(false)
-    }
+    dispatchMapUI({ type: 'HANDLE_SHEET_CHANGE', open })
   }
 
   const handleCloseSurface = () => {
     const shouldRestore = shouldRestoreCourseSheet({
-      source: surfaceSource,
+      source: surface.source,
       hasSelectedCourse: Boolean(selectedCourse),
     })
 
-    setActiveSurfaceKind(null)
-    setSurfaceSource(null)
-
     if (shouldRestore) {
-      setShouldReopenCourseSheet(true)
+      dispatchSurface({ type: 'CLOSE_WITH_REOPEN' })
       return
     }
 
+    dispatchSurface({ type: 'CLOSE' })
     restoreFocusToSurfaceTrigger()
   }
 
   useEffect(() => {
-    if (activeSurfaceKind || !shouldReopenCourseSheet) {
+    if (surface.kind || !surface.shouldReopen) {
       return
     }
 
     window.requestAnimationFrame(() => {
-      setIsMapFullscreen(false)
-      setIsCourseSheetOpen(true)
-      setShouldReopenCourseSheet(false)
+      dispatchMapUI({ type: 'OPEN_COURSE_SHEET' })
+      dispatchSurface({ type: 'CLEAR_REOPEN' })
       restoreFocusToSurfaceTrigger()
     })
-  }, [activeSurfaceKind, shouldReopenCourseSheet])
+  }, [surface.kind, surface.shouldReopen])
 
   useEffect(() => {
     if (!isResizingSidebar) {
@@ -430,7 +515,7 @@ export function ExploreShell({
         canEditSelectedCourse={canEditSelectedCourse}
         reviews={reviews}
         reviewStats={reviewStats}
-        albumPreviewPhotos={albumPreviewPhotos}
+        albumPreviewPhotos={album.previewPhotos}
         user={user}
         onOpenReviews={(triggerEl) =>
           openSurface({ kind: 'review', source: 'sidebar', triggerEl })
@@ -470,13 +555,13 @@ export function ExploreShell({
             selectedPoiId={selectedPoiId}
             onSelectPoi={setSelectedPoiId}
             albumPhotos={safeAlbumPhotos}
-            selectedAlbumPhotoId={selectedAlbumPhotoId}
-            onSelectAlbumPhoto={setSelectedAlbumPhotoId}
+            selectedAlbumPhotoId={album.selectedId}
+            onSelectAlbumPhoto={(id) => dispatchAlbum({ type: 'SET_SELECTED_ID', id })}
             hoveredRoutePoint={hoveredRoutePoint}
-            windOverlays={windOverlays}
-            weatherPoints={weatherPoints}
+            windOverlays={wind.overlays}
+            weatherPoints={wind.weatherPoints}
           />
-          {selectedCourse && canShowMapFullscreen && !isMapFullscreen ? (
+          {selectedCourse && canShowMapFullscreen && !mapUI.isFullscreen ? (
             <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-end px-4 pt-4 md:hidden">
               <Button
                 type="button"
@@ -490,7 +575,7 @@ export function ExploreShell({
               </Button>
             </div>
           ) : null}
-          {selectedCourse && isMapFullscreen ? (
+          {selectedCourse && mapUI.isFullscreen ? (
             <>
               <div className="pointer-events-none absolute inset-x-0 top-0 z-30 h-24 bg-gradient-to-b from-black/35 to-transparent md:hidden" />
               <div className="absolute inset-x-0 top-4 z-40 flex items-start justify-between px-4 md:hidden">
@@ -502,7 +587,7 @@ export function ExploreShell({
                   variant="secondary"
                   size="icon-sm"
                   className="rounded-full bg-background/92 shadow-lg backdrop-blur"
-                  onClick={() => setIsMapFullscreen(false)}
+                  onClick={() => dispatchMapUI({ type: 'SET_FULLSCREEN', value: false })}
                   aria-label="지도 전체화면 해제"
                 >
                   <Minimize2 className="h-4 w-4" />
@@ -535,10 +620,10 @@ export function ExploreShell({
             canEditSelectedCourse={canEditSelectedCourse}
             reviews={reviews}
             reviewStats={reviewStats}
-            albumPreviewPhotos={albumPreviewPhotos}
+            albumPreviewPhotos={album.previewPhotos}
             user={user}
-            open={isCourseSheetOpen}
-            showTrigger={!isMapFullscreen}
+            open={mapUI.isCourseSheetOpen}
+            showTrigger={!mapUI.isFullscreen}
             onOpenChange={handleCourseSheetOpenChange}
             onOpenReviews={(triggerEl) =>
               openSurface({ kind: 'review', source: 'bottom-sheet', triggerEl })
@@ -553,21 +638,17 @@ export function ExploreShell({
             onWindMapOverlaysChange={handleWindMapOverlaysChange}
             onWeatherMapPointsChange={handleWeatherMapPointsChange}
           />
-          {selectedCourse && surfaceSource === 'bottom-sheet' && activeSurfaceKind ? (
+          {selectedCourse && surface.source === 'bottom-sheet' && surface.kind ? (
             <Drawer
-              open={Boolean(activeSurfaceKind)}
+              open={Boolean(surface.kind)}
               onOpenChange={(nextOpen) => {
-                if (nextOpen) {
-                  if (activeSurfaceKind) {
-                    setActiveSurfaceKind(activeSurfaceKind)
-                  }
-                  return
+                if (!nextOpen) {
+                  handleCloseSurface()
                 }
-                handleCloseSurface()
               }}
             >
               <DrawerContent className="md:hidden data-[vaul-drawer-direction=bottom]:mt-0 data-[vaul-drawer-direction=bottom]:max-h-[100dvh] data-[vaul-drawer-direction=bottom]:rounded-none">
-                {activeSurfaceKind === 'review' ? (
+                {surface.kind === 'review' ? (
                   <CourseReviewsSurface
                     courseId={selectedCourse.id}
                     courseTitle={selectedCourse.title}
@@ -585,19 +666,16 @@ export function ExploreShell({
                     currentUserId={user?.id ?? null}
                     isAdmin={isAdminUser(user)}
                     photos={safeAlbumPhotos}
-                    isLoading={albumLoading}
-                    error={albumError}
-                    selectedPhotoId={selectedAlbumPhotoId}
-                    onRetry={() => setAlbumReloadToken((value) => value + 1)}
+                    isLoading={album.loading}
+                    error={album.error}
+                    selectedPhotoId={album.selectedId}
+                    onRetry={() => dispatchAlbum({ type: 'INCREMENT_RELOAD' })}
                     onUploaded={(photo) => {
-                      setAlbumPhotos((prev) => [photo, ...prev])
-                      setSelectedAlbumPhotoId(photo.id)
+                      dispatchAlbum({ type: 'PREPEND_PHOTO', photo })
+                      dispatchAlbum({ type: 'SET_SELECTED_ID', id: photo.id })
                     }}
-                    onSelectPhoto={setSelectedAlbumPhotoId}
-                    onDeletedPhoto={(photoId) => {
-                      setAlbumPhotos((prev) => prev.filter((photo) => photo.id !== photoId))
-                      setSelectedAlbumPhotoId((prev) => (prev === photoId ? null : prev))
-                    }}
+                    onSelectPhoto={(id) => dispatchAlbum({ type: 'SET_SELECTED_ID', id })}
+                    onDeletedPhoto={(photoId) => dispatchAlbum({ type: 'DELETE_PHOTO', photoId })}
                     onClose={handleCloseSurface}
                     className="h-[100dvh]"
                   />
@@ -606,24 +684,24 @@ export function ExploreShell({
             </Drawer>
           ) : null}
         </div>
-        {selectedCourse && !isMapFullscreen && (
+        {selectedCourse && !mapUI.isFullscreen && (
           <ElevationPanel
             routeGeoJSON={selectedCourse.route_geojson}
             routeRenderMetadata={selectedCourse.route_render_metadata ?? null}
             uphillSegments={uphillSegments}
             pois={localPois}
-            albumPhotos={albumPreviewPhotos}
+            albumPhotos={album.previewPhotos}
             courseTitle={selectedCourse.title}
-            windDirection={windDirection}
-            windSpeed={windSpeed}
-            windSegmentsOverride={windSegmentsOverride}
+            windDirection={wind.direction}
+            windSpeed={wind.speed}
+            windSegmentsOverride={wind.segmentsOverride}
             onHoverPointChange={setHoveredRoutePoint}
           />
         )}
       </main>
-      {selectedCourse && activeSurfaceKind && surfaceSource !== 'bottom-sheet' ? (
+      {selectedCourse && surface.kind && surface.source !== 'bottom-sheet' ? (
         <aside className="hidden md:flex w-[360px] border-l bg-background">
-          {activeSurfaceKind === 'review' ? (
+          {surface.kind === 'review' ? (
             <CourseReviewsSurface
               courseId={selectedCourse.id}
               courseTitle={selectedCourse.title}
@@ -640,19 +718,16 @@ export function ExploreShell({
               currentUserId={user?.id ?? null}
               isAdmin={isAdminUser(user)}
               photos={safeAlbumPhotos}
-              isLoading={albumLoading}
-              error={albumError}
-              selectedPhotoId={selectedAlbumPhotoId}
-              onRetry={() => setAlbumReloadToken((value) => value + 1)}
+              isLoading={album.loading}
+              error={album.error}
+              selectedPhotoId={album.selectedId}
+              onRetry={() => dispatchAlbum({ type: 'INCREMENT_RELOAD' })}
               onUploaded={(photo) => {
-                setAlbumPhotos((prev) => [photo, ...prev])
-                setSelectedAlbumPhotoId(photo.id)
+                dispatchAlbum({ type: 'PREPEND_PHOTO', photo })
+                dispatchAlbum({ type: 'SET_SELECTED_ID', id: photo.id })
               }}
-              onSelectPhoto={setSelectedAlbumPhotoId}
-              onDeletedPhoto={(photoId) => {
-                setAlbumPhotos((prev) => prev.filter((photo) => photo.id !== photoId))
-                setSelectedAlbumPhotoId((prev) => (prev === photoId ? null : prev))
-              }}
+              onSelectPhoto={(id) => dispatchAlbum({ type: 'SET_SELECTED_ID', id })}
+              onDeletedPhoto={(photoId) => dispatchAlbum({ type: 'DELETE_PHOTO', photoId })}
               onClose={handleCloseSurface}
             />
           )}

@@ -72,7 +72,7 @@ test.describe('Upload page — unauthenticated', () => {
       page.getByRole('heading', { name: '로그인이 필요합니다' }),
     ).toBeVisible()
     await expect(
-      page.getByRole('button', { name: /Google로 로그인/ }),
+      page.getByRole('button', { name: /Google로 시작하기/ }),
     ).toBeVisible()
 
     // Upload UI (dropzone copy) must NOT be rendered

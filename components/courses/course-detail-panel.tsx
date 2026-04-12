@@ -10,7 +10,7 @@ import { WeatherSection, getDefaultSpeed } from '@/components/courses/weather-se
 import { Button } from '@/components/ui/button'
 import { CoursePoiAddPanel } from '@/components/courses/course-poi-add-panel'
 import { CourseShareButton } from '@/components/courses/course-share-button'
-import { signInWithGoogle } from '@/lib/auth'
+import { signInWithGoogle, signInWithKakao } from '@/lib/auth'
 import { difficultyLabel, difficultyVariant } from '@/lib/difficulty'
 import {
   getPoiCategoryTabs,
@@ -160,16 +160,15 @@ export function CourseDetailPanel({
   const compactDescription = summarizeText(course.description, 120)
   const shareDescription = compactDescription
     || `${course.distance_km}km · 획득고도 ${course.elevation_gain_m.toLocaleString('ko-KR')}m`
-  const renderMetadata = React.useMemo(
-    () => normalizeRouteRenderMetadata(course.route_render_metadata),
-    [course.route_render_metadata],
-  )
-  const uphillMetricsById = React.useMemo(
-    () => renderMetadata?.hoverProfile
-      ? getUphillMetricsMapFromProfile(renderMetadata.hoverProfile, uphillSegments)
-      : getUphillMetricsMap(course.route_geojson ?? null, uphillSegments),
-    [course.route_geojson, renderMetadata, uphillSegments],
-  )
+  const { renderMetadata, uphillMetricsById } = React.useMemo(() => {
+    const metadata = normalizeRouteRenderMetadata(course.route_render_metadata)
+    return {
+      renderMetadata: metadata,
+      uphillMetricsById: metadata?.hoverProfile
+        ? getUphillMetricsMapFromProfile(metadata.hoverProfile, uphillSegments)
+        : getUphillMetricsMap(course.route_geojson ?? null, uphillSegments),
+    }
+  }, [course.route_render_metadata, course.route_geojson, uphillSegments])
 
   const startCoords = React.useMemo<{ lat: number; lng: number } | null>(() => {
     const pts = course.route_preview_points
@@ -839,18 +838,23 @@ function ReviewPreviewCard({ review }: { review: CourseReview }) {
 
 function InlineLoginPrompt() {
   return (
-    <div className="mt-3">
+    <div className="mt-3 flex flex-col gap-2">
+      <button
+        type="button"
+        className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-[#FEE500] text-xs font-semibold text-[#191919] transition-colors hover:bg-[#FDD800]"
+        onClick={() => { void signInWithKakao() }}
+      >
+        카카오로 시작하기
+      </button>
       <Button
         type="button"
         variant="outline"
         size="sm"
         className="h-10 w-full rounded-full"
-        onClick={async () => {
-          await signInWithGoogle()
-        }}
+        onClick={() => { void signInWithGoogle() }}
       >
         <LogIn className="mr-1.5 h-3.5 w-3.5" />
-        후기 쓰기
+        Google로 시작하기
       </Button>
     </div>
   )
@@ -1022,18 +1026,26 @@ function InlineReviewForm({
 
 function InlineAlbumLoginPrompt() {
   return (
-    <div className="mt-3">
+    <div className="mt-3 flex flex-col gap-2">
+      <p className="text-xs text-muted-foreground">
+        라이딩 사진을 올리려면 로그인이 필요합니다.
+      </p>
+      <button
+        type="button"
+        className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-[#FEE500] text-xs font-semibold text-[#191919] transition-colors hover:bg-[#FDD800]"
+        onClick={() => { void signInWithKakao() }}
+      >
+        카카오로 시작하기
+      </button>
       <Button
         type="button"
         variant="outline"
         size="sm"
         className="h-10 w-full rounded-full"
-        onClick={async () => {
-          await signInWithGoogle()
-        }}
+        onClick={() => { void signInWithGoogle() }}
       >
         <LogIn className="mr-1.5 h-3.5 w-3.5" />
-        사진 추가
+        Google로 시작하기
       </Button>
     </div>
   )

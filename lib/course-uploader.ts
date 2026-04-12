@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { resolveProfileEmoji } from '@/lib/profile'
 import { createServiceRoleClient } from '@/lib/supabase-server'
@@ -9,7 +10,7 @@ type CourseWithUploader = {
   uploader_emoji?: string | null
 }
 
-async function getProfileIdentityByUserId(userId: string) {
+const getProfileIdentityByUserId = cache(async function getProfileIdentityByUserId(userId: string) {
   const supabase = createServiceRoleClient()
 
   if (!supabase) {
@@ -32,7 +33,7 @@ async function getProfileIdentityByUserId(userId: string) {
     name: getUploaderDisplayName(user),
     emoji: resolveProfileEmoji(user),
   }
-}
+})
 
 export async function hydrateUploaderNames<T extends CourseWithUploader>(courses: T[]) {
   const missingOwnerIds = [...new Set(

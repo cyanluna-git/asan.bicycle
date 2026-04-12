@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Loader2, LogIn, MapPinned, Pencil } from 'lucide-react'
+import { Loader2, MapPinned, Pencil } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { signInWithGoogle } from '@/lib/auth'
+import { LoginSection } from '@/components/auth/login-section'
 import { difficultyLabel, difficultyVariant } from '@/lib/difficulty'
 import { supabase } from '@/lib/supabase'
 import type { CourseListItem } from '@/types/course'
@@ -108,21 +108,11 @@ export function MyCoursesPageClient() {
 
   if (!user) {
     return (
-      <div className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center gap-4 px-4 pt-16 text-center">
-        <MapPinned className="h-12 w-12 text-muted-foreground" />
-        <h1 className="text-2xl font-bold">내 코스</h1>
-        <p className="text-sm text-muted-foreground">
-          내가 등록한 코스를 보거나 수정하려면 로그인이 필요합니다.
-        </p>
-        <Button
-          onClick={async () => {
-            await signInWithGoogle()
-          }}
-        >
-          <LogIn className="mr-2 h-4 w-4" />
-          Google로 로그인
-        </Button>
-      </div>
+      <LoginSection
+        icon={MapPinned}
+        title="내 코스"
+        description="내가 등록한 코스를 보거나 수정하려면 로그인이 필요합니다."
+      />
     )
   }
 
@@ -193,7 +183,7 @@ export function MyCoursesPageClient() {
 
               <div className="mt-5 flex gap-2">
                 <Button asChild variant="outline" className="flex-1">
-                  <Link href={`/explore?courseId=${course.id}&returnTo=${encodeURIComponent('/my-courses')}`}>상세 보기</Link>
+                  <Link href={`/courses/${course.id}`}>상세 보기</Link>
                 </Button>
                 <Button asChild className="flex-1">
                   <Link href={`/courses/${course.id}/edit`}>

@@ -229,30 +229,57 @@ export async function loadExplorePageData({
       }
     : null
 
-  const { data: uphillRaw } = selectedCourseId
-    ? await supabase
-      .from('uphill_segments')
-      .select('id, course_id, name, start_km, end_km, created_at')
-      .eq('course_id', selectedCourseId)
-      .order('start_km')
-    : { data: [] }
-
-  const manualUphillSegments: UphillSegment[] = (uphillRaw ?? []) as UphillSegment[]
-
-  // Read pre-computed chart positions from course_uphills (populated at upload/rematch time)
-  const { data: famousUphillsRaw } = selectedCourseId
-    ? await supabase
-      .from('course_uphills')
-      .select('chart_start_km, chart_end_km, famous_uphills(id, name, avg_grade, climb_category, distance_m)')
-      .eq('course_id', selectedCourseId)
-    : { data: [] }
-
   type CourseUphillRow = {
     chart_start_km: number | null
     chart_end_km: number | null
     famous_uphills: FamousUphill | null
   }
 
+  // Run all 5 course-detail sub-queries in parallel (previously sequential awaits)
+  const [
+    { data: uphillRaw },
+    { data: famousUphillsRaw },
+    { data: reviewStatsRaw },
+    { data: reviewRowsRaw },
+    { data: poisRaw },
+  ] = selectedCourseId
+    ? await Promise.all([
+        supabase
+          .from('uphill_segments')
+          .select('id, course_id, name, start_km, end_km, created_at')
+          .eq('course_id', selectedCourseId)
+          .order('start_km'),
+        supabase
+          .from('course_uphills')
+          .select('chart_start_km, chart_end_km, famous_uphills(id, name, avg_grade, climb_category, distance_m)')
+          .eq('course_id', selectedCourseId),
+        supabase
+          .from('course_review_stats')
+          .select('course_id, review_count, avg_rating')
+          .eq('course_id', selectedCourseId)
+          .maybeSingle(),
+        supabase
+          .from('course_reviews_public')
+          .select('id, course_id, user_id, rating, content, ridden_at, perceived_difficulty, condition_note, created_at, updated_at, author_name, author_emoji')
+          .eq('course_id', selectedCourseId)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('pois_with_coords')
+          .select('id, course_id, name, category, description, photo_url, lat, lng')
+          .eq('course_id', selectedCourseId)
+          .order('category'),
+      ])
+    : [
+        { data: [] },
+        { data: [] },
+        { data: null },
+        { data: [] },
+        { data: [] },
+      ]
+
+  const manualUphillSegments: UphillSegment[] = (uphillRaw ?? []) as UphillSegment[]
+
+  // Read pre-computed chart positions from course_uphills (populated at upload/rematch time)
   const uphillRows = ((famousUphillsRaw ?? []) as unknown as CourseUphillRow[])
 
   const famousUphills: FamousUphill[] = uphillRows
@@ -272,22 +299,6 @@ export async function loadExplorePageData({
       created_at: '',
     }]
   })
-
-  const { data: reviewStatsRaw } = selectedCourseId
-    ? await supabase
-      .from('course_review_stats')
-      .select('course_id, review_count, avg_rating')
-      .eq('course_id', selectedCourseId)
-      .maybeSingle()
-    : { data: null }
-
-  const { data: reviewRowsRaw } = selectedCourseId
-    ? await supabase
-      .from('course_reviews_public')
-      .select('id, course_id, user_id, rating, content, ridden_at, perceived_difficulty, condition_note, created_at, updated_at, author_name, author_emoji')
-      .eq('course_id', selectedCourseId)
-      .order('created_at', { ascending: false })
-    : { data: [] }
 
   const reviewRows = await hydrateCourseReviews(
     ((reviewRowsRaw ?? []) as unknown) as CourseReviewRow[],
@@ -309,14 +320,6 @@ export async function loadExplorePageData({
             : Number(reviewStatsRaw.avg_rating),
       }
     : null
-
-  const { data: poisRaw } = selectedCourseId
-    ? await supabase
-      .from('pois_with_coords')
-      .select('id, course_id, name, category, description, photo_url, lat, lng')
-      .eq('course_id', selectedCourseId)
-      .order('category')
-    : { data: [] }
 
   const pois: PoiMapItem[] = (poisRaw ?? []) as PoiMapItem[]
 
