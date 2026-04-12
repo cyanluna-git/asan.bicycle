@@ -68,7 +68,6 @@ export type Database = {
           download_count: number
           surface_type: 'road' | 'gravel' | 'mtb' | null
           source_url: string | null
-          preview_image_url: string | null
         }
         Insert: {
           id?: string
@@ -97,7 +96,6 @@ export type Database = {
           download_count?: number
           surface_type?: 'road' | 'gravel' | 'mtb' | null
           source_url?: string | null
-          preview_image_url?: string | null
         }
         Update: {
           id?: string
@@ -126,7 +124,6 @@ export type Database = {
           download_count?: number
           surface_type?: 'road' | 'gravel' | 'mtb' | null
           source_url?: string | null
-          preview_image_url?: string | null
         }
         Relationships: [
           {

@@ -49,7 +49,6 @@ export type CourseBrowseItem = CourseListItem & {
   review_author_name: string | null
   review_author_emoji: string | null
   route_preview: RoutePreviewPoint[]
-  preview_image_url: string | null
 }
 
 export type CourseDetail = Pick<
