@@ -57,3 +57,6 @@ __pycache__/
 *.pyc
 .venv/
 .pytest_cache/
+
+# Design scratch (AI-generated icon candidates, etc.)
+/scratch/
