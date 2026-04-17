@@ -84,19 +84,11 @@ function buildCoursesQuery(
     query = query.eq('start_point_id', filters.startPoint)
   }
 
-  if (filters.difficulty.length > 0) {
-    query = query.in('difficulty', filters.difficulty)
-  }
-
   if (filters.distance) {
     if (filters.distance === 'short') query = query.lte('distance_km', 50)
     else if (filters.distance === 'medium') query = query.lte('distance_km', 80)
     else if (filters.distance === 'long') query = query.lte('distance_km', 120)
     else if (filters.distance === 'ultralong') query = query.gt('distance_km', 120)
-  }
-
-  if (filters.themes.length > 0) {
-    query = query.in('theme', filters.themes)
   }
 
   if (filters.regionId) {
@@ -119,18 +111,12 @@ export async function loadExplorePageData({
 
   const [
     startPointsResult,
-    themesResult,
     coursesResult,
   ] = await Promise.all([
     supabase
       .from('start_points')
       .select('id, name')
       .order('name'),
-    supabase
-      .from('courses')
-      .select('theme')
-      .not('theme', 'is', null)
-      .order('theme'),
     buildCoursesQuery(filters, COURSE_LIST_FIELDS_WITH_UPLOADER),
   ])
 
@@ -138,14 +124,6 @@ export async function loadExplorePageData({
     id: sp.id,
     name: sp.name,
   }))
-
-  const themeList = [
-    ...new Set(
-      (themesResult.data ?? [])
-        .map((c) => c.theme)
-        .filter((t): t is string => t != null && t.length > 0),
-    ),
-  ]
 
   let { data: courses, error: coursesError } = coursesResult
   if (coursesError && /(uploader_name|uploader_emoji)/i.test(coursesError.message)) {
@@ -332,7 +310,6 @@ export async function loadExplorePageData({
     courses: courseList,
     routeQueryString,
     startPoints: startPointList,
-    themes: themeList,
     hasActiveFilters,
     selectedCourseId,
     selectedCourse,

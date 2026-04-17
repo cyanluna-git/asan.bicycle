@@ -73,19 +73,11 @@ export function applyCourseFilters<T>(query: T, rawParams: URLSearchParams | Rec
     nextQuery = nextQuery.eq('region_id', filters.regionId)
   }
 
-  if (filters.difficulty.length > 0) {
-    nextQuery = nextQuery.in('difficulty', filters.difficulty)
-  }
-
   if (filters.distance) {
     if (filters.distance === 'short') nextQuery = nextQuery.lte('distance_km', 50)
     else if (filters.distance === 'medium') nextQuery = nextQuery.lte('distance_km', 80)
     else if (filters.distance === 'long') nextQuery = nextQuery.lte('distance_km', 120)
     else if (filters.distance === 'ultralong') nextQuery = nextQuery.gt('distance_km', 120)
-  }
-
-  if (filters.themes.length > 0) {
-    nextQuery = nextQuery.in('theme', filters.themes)
   }
 
   const searchQuery = getSearchQuery(rawParams)

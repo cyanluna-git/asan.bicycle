@@ -1,5 +1,3 @@
-import type { Enums } from '@/types/database'
-
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -8,9 +6,7 @@ export type DistancePreset = 'short' | 'medium' | 'long' | 'ultralong'
 
 export interface CourseFilterState {
   startPoint: string | null
-  difficulty: Enums<'course_difficulty'>[]
   distance: DistancePreset | null
-  themes: string[]
   regionId: string | null
 }
 
@@ -28,16 +24,6 @@ export const DISTANCE_PRESETS: Record<
   ultralong: { label: '초장거리', max: null },
 }
 
-export const DIFFICULTY_OPTIONS: {
-  value: Enums<'course_difficulty'>
-  label: string
-}[] = [
-  { value: 'easy', label: '초급' },
-  { value: 'moderate', label: '중급' },
-  { value: 'hard', label: '상급' },
-]
-
-const VALID_DIFFICULTIES = new Set<string>(['easy', 'moderate', 'hard'])
 const VALID_DISTANCES = new Set<string>(['short', 'medium', 'long', 'ultralong'])
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -68,26 +54,12 @@ export function parseFilterParams(
       ? rawStartPoint
       : null
 
-  // difficulty — comma-separated, validate each
-  const rawDifficulty = get('difficulty')
-  const difficulty = rawDifficulty
-    ? (rawDifficulty
-        .split(',')
-        .filter((d) => VALID_DIFFICULTIES.has(d)) as Enums<'course_difficulty'>[])
-    : []
-
   // distance — single value
   const rawDistance = get('distance')
   const distance =
     rawDistance && VALID_DISTANCES.has(rawDistance)
       ? (rawDistance as DistancePreset)
       : null
-
-  // theme — comma-separated
-  const rawTheme = get('theme')
-  const themes = rawTheme
-    ? rawTheme.split(',').filter((t) => t.length > 0)
-    : []
 
   // regionId — validate UUID format
   const rawRegionId = get('region')
@@ -96,7 +68,7 @@ export function parseFilterParams(
       ? rawRegionId
       : null
 
-  return { startPoint, difficulty, distance, themes, regionId }
+  return { startPoint, distance, regionId }
 }
 
 /**
@@ -107,10 +79,7 @@ export function buildFilterQuery(state: CourseFilterState): string {
   const params = new URLSearchParams()
 
   if (state.startPoint) params.set('startPoint', state.startPoint)
-  if (state.difficulty.length > 0)
-    params.set('difficulty', state.difficulty.join(','))
   if (state.distance) params.set('distance', state.distance)
-  if (state.themes.length > 0) params.set('theme', state.themes.join(','))
   if (state.regionId) params.set('region', state.regionId)
 
   return params.toString()
@@ -122,9 +91,7 @@ export function buildFilterQuery(state: CourseFilterState): string {
 export function countActiveFilters(state: CourseFilterState): number {
   let count = 0
   if (state.startPoint) count++
-  if (state.difficulty.length > 0) count++
   if (state.distance) count++
-  if (state.themes.length > 0) count++
   if (state.regionId) count++
   return count
 }
@@ -133,5 +100,5 @@ export function countActiveFilters(state: CourseFilterState): number {
  * Returns the default (empty) filter state.
  */
 export function defaultFilterState(): CourseFilterState {
-  return { startPoint: null, difficulty: [], distance: null, themes: [], regionId: null }
+  return { startPoint: null, distance: null, regionId: null }
 }

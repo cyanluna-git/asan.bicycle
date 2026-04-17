@@ -33,10 +33,9 @@ describe('parseFilterParams — region', () => {
 
   it('should parse region alongside other filters', () => {
     const params = new URLSearchParams(
-      'difficulty=easy,moderate&distance=medium&region=550e8400-e29b-41d4-a716-446655440000',
+      'distance=medium&region=550e8400-e29b-41d4-a716-446655440000',
     )
     const state = parseFilterParams(params)
-    expect(state.difficulty).toEqual(['easy', 'moderate'])
     expect(state.distance).toBe('medium')
     expect(state.regionId).toBe('550e8400-e29b-41d4-a716-446655440000')
   })
@@ -81,7 +80,7 @@ describe('countActiveFilters — region', () => {
   it('should count region alongside other filters', () => {
     const state = {
       ...defaultFilterState(),
-      difficulty: ['easy' as const],
+      distance: 'medium' as const,
       regionId: '550e8400-e29b-41d4-a716-446655440000',
     }
     expect(countActiveFilters(state)).toBe(2)

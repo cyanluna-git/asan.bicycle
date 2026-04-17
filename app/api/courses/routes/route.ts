@@ -26,19 +26,11 @@ function buildCourseRoutesQuery(
     query = query.eq('start_point_id', filters.startPoint)
   }
 
-  if (filters.difficulty.length > 0) {
-    query = query.in('difficulty', filters.difficulty)
-  }
-
   if (filters.distance) {
     if (filters.distance === 'short') query = query.lte('distance_km', 50)
     else if (filters.distance === 'medium') query = query.lte('distance_km', 80)
     else if (filters.distance === 'long') query = query.lte('distance_km', 120)
     else if (filters.distance === 'ultralong') query = query.gt('distance_km', 120)
-  }
-
-  if (filters.themes.length > 0) {
-    query = query.in('theme', filters.themes)
   }
 
   if (filters.regionId) {

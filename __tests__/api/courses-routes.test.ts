@@ -27,7 +27,6 @@ type RoutesResponse = {
 
 type DbCourse = {
   id: string
-  difficulty: 'easy' | 'moderate' | 'hard'
   distance_km: number
   region_id: string | null
 }
@@ -55,7 +54,7 @@ async function fetchCoursesByIds(ids: string[]): Promise<DbCourse[]> {
   const db = createServiceRoleClient()!
   const { data, error } = await db
     .from('courses')
-    .select('id, difficulty, distance_km, region_id')
+    .select('id, distance_km, region_id')
     .in('id', ids)
   expect(error).toBeNull()
   return (data ?? []) as DbCourse[]
@@ -90,26 +89,6 @@ describeIfDb('GET /api/courses/routes filter combinations', () => {
       expect(typeof sample.id).toBe('string')
       expect(sample).toHaveProperty('route_preview_points')
       expect(Array.isArray(sample.route_preview_points)).toBe(true)
-    }
-  })
-
-  // -------------------------------------------------------------------------
-  // difficulty
-  // -------------------------------------------------------------------------
-
-  it('difficulty=hard returns only hard courses', async () => {
-    const body = await callRoutes('?difficulty=hard')
-    const dbRows = await fetchCoursesByIds(body.routes.map((r) => r.id))
-    for (const row of dbRows) {
-      expect(row.difficulty).toBe('hard')
-    }
-  })
-
-  it('difficulty=easy,moderate returns only easy or moderate courses', async () => {
-    const body = await callRoutes('?difficulty=easy,moderate')
-    const dbRows = await fetchCoursesByIds(body.routes.map((r) => r.id))
-    for (const row of dbRows) {
-      expect(['easy', 'moderate']).toContain(row.difficulty)
     }
   })
 
@@ -149,19 +128,6 @@ describeIfDb('GET /api/courses/routes filter combinations', () => {
     const dbRows = await fetchCoursesByIds(body.routes.map((r) => r.id))
     for (const row of dbRows) {
       expect(row.region_id).toBe(gangwonRegionId)
-    }
-  })
-
-  // -------------------------------------------------------------------------
-  // composite
-  // -------------------------------------------------------------------------
-
-  it('difficulty=hard&distance=long applies both filters with AND', async () => {
-    const body = await callRoutes('?difficulty=hard&distance=long')
-    const dbRows = await fetchCoursesByIds(body.routes.map((r) => r.id))
-    for (const row of dbRows) {
-      expect(row.difficulty).toBe('hard')
-      expect(row.distance_km).toBeLessThanOrEqual(120)
     }
   })
 
