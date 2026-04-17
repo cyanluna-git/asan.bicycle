@@ -166,7 +166,6 @@ interface ExploreShellProps {
   courses: CourseListItem[]
   routeQueryString: string
   startPoints: { id: string; name: string }[]
-  themes: string[]
   hasActiveFilters: boolean
   selectedCourseId: string | null
   selectedCourse: CourseDetail | null
@@ -181,7 +180,6 @@ export function ExploreShell({
   courses,
   routeQueryString,
   startPoints,
-  themes,
   hasActiveFilters,
   selectedCourseId,
   selectedCourse,
@@ -504,7 +502,6 @@ export function ExploreShell({
       <Sidebar
         courses={courses}
         startPoints={startPoints}
-        themes={themes}
         hasActiveFilters={hasActiveFilters}
         selectedCourse={selectedCourse}
         pois={localPois}
@@ -609,7 +606,6 @@ export function ExploreShell({
           <BottomSheet
             courses={courses}
             startPoints={startPoints}
-            themes={themes}
             hasActiveFilters={hasActiveFilters}
             selectedCourse={selectedCourse}
             pois={localPois}

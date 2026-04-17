@@ -20,24 +20,15 @@ export default async function CoursesBrowsePage({
     .filter(Boolean)
     .join('&')
 
-  const [courses, startPointsResult, themesResult] = await Promise.all([
+  const [courses, startPointsResult] = await Promise.all([
     fetchBrowseCourses(params),
     supabase.from('start_points').select('id, name').order('name'),
-    supabase.from('courses').select('theme').not('theme', 'is', null).order('theme'),
   ])
 
   const startPoints = (startPointsResult.data ?? []).map((item) => ({
     id: item.id,
     name: item.name,
   }))
-
-  const themes = [
-    ...new Set(
-      (themesResult.data ?? [])
-        .map((item) => item.theme)
-        .filter((theme): theme is string => Boolean(theme && theme.length > 0)),
-    ),
-  ]
 
   const activeFilterCount = countActiveFilters(filters) + (searchQuery ? 1 : 0)
 
@@ -48,7 +39,6 @@ export default async function CoursesBrowsePage({
           <MobileBrowseControls
             courseCount={courses.length}
             startPoints={startPoints}
-            themes={themes}
           />
         </Suspense>
 
@@ -67,7 +57,7 @@ export default async function CoursesBrowsePage({
           <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
             <div className="hidden rounded-[28px] border border-black/8 bg-white/90 p-4 shadow-sm lg:block">
               <Suspense fallback={null}>
-                <CourseFilter startPoints={startPoints} themes={themes} />
+                <CourseFilter startPoints={startPoints} />
               </Suspense>
             </div>
           </aside>

@@ -18,13 +18,11 @@ import { countActiveFilters, parseFilterParams } from '@/lib/filter'
 interface MobileBrowseControlsProps {
   courseCount: number
   startPoints: { id: string; name: string }[]
-  themes: string[]
 }
 
 export function MobileBrowseControls({
   courseCount,
   startPoints,
-  themes,
 }: MobileBrowseControlsProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -45,9 +43,7 @@ export function MobileBrowseControls({
   const summaryChips = [
     searchQuery ? `검색: ${searchQuery}` : null,
     startPointName,
-    filters.difficulty.length > 0 ? `난이도 ${filters.difficulty.length}` : null,
     filters.distance ? '거리' : null,
-    filters.themes.length > 0 ? `테마 ${filters.themes.length}` : null,
   ].filter(Boolean) as string[]
 
   const applySearch = () => {
@@ -146,7 +142,6 @@ export function MobileBrowseControls({
               </div>
               <CourseFilter
                 startPoints={startPoints}
-                themes={themes}
                 mode="drawer"
                 showHeading={false}
                 onApplied={() => setOpen(false)}

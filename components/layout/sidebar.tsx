@@ -17,7 +17,6 @@ import type { User } from '@supabase/supabase-js'
 interface SidebarProps {
   courses: CourseListItem[]
   startPoints: { id: string; name: string }[]
-  themes: string[]
   hasActiveFilters: boolean
   selectedCourse?: CourseDetail | null
   pois?: PoiMapItem[]
@@ -44,7 +43,6 @@ interface SidebarProps {
 export function Sidebar({
   courses,
   startPoints,
-  themes,
   hasActiveFilters,
   selectedCourse,
   pois,
@@ -103,7 +101,7 @@ export function Sidebar({
           <>
             {/* Filter section */}
             <Suspense fallback={<FilterSkeleton />}>
-              <CourseFilter startPoints={startPoints} themes={themes} />
+              <CourseFilter startPoints={startPoints} />
             </Suspense>
 
             {/* Course list */}

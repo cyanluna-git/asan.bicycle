@@ -5,22 +5,18 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import {
   type CourseFilterState,
   type DistancePreset,
-  DIFFICULTY_OPTIONS,
   DISTANCE_PRESETS,
   countActiveFilters,
   defaultFilterState,
   parseFilterParams,
 } from '@/lib/filter'
-import type { Enums } from '@/types/database'
 
 interface CourseFilterProps {
   startPoints: { id: string; name: string }[]
-  themes: string[]
   mode?: 'default' | 'drawer'
   showHeading?: boolean
   className?: string
@@ -29,7 +25,6 @@ interface CourseFilterProps {
 
 export function CourseFilter({
   startPoints,
-  themes,
   mode = 'default',
   showHeading = true,
   className,
@@ -59,14 +54,8 @@ export function CourseFilter({
       if (nextState.startPoint) params.set('startPoint', nextState.startPoint)
       else params.delete('startPoint')
 
-      if (nextState.difficulty.length > 0) params.set('difficulty', nextState.difficulty.join(','))
-      else params.delete('difficulty')
-
       if (nextState.distance) params.set('distance', nextState.distance)
       else params.delete('distance')
-
-      if (nextState.themes.length > 0) params.set('theme', nextState.themes.join(','))
-      else params.delete('theme')
 
       const qs = params.toString()
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
@@ -91,20 +80,8 @@ export function CourseFilter({
     applyFilters(next)
   }
 
-  const handleRemoveDifficulty = () => {
-    const next = { ...state, difficulty: [] }
-    setState(next)
-    applyFilters(next)
-  }
-
   const handleRemoveDistance = () => {
     const next = { ...state, distance: null }
-    setState(next)
-    applyFilters(next)
-  }
-
-  const handleRemoveThemes = () => {
-    const next = { ...state, themes: [] }
     setState(next)
     applyFilters(next)
   }
@@ -115,20 +92,6 @@ export function CourseFilter({
     setState((prev) => ({ ...prev, startPoint: value || null }))
   }
 
-  // ---- difficulty ----
-
-  const toggleDifficulty = (value: Enums<'course_difficulty'>) => {
-    setState((prev) => {
-      const has = prev.difficulty.includes(value)
-      return {
-        ...prev,
-        difficulty: has
-          ? prev.difficulty.filter((d) => d !== value)
-          : [...prev.difficulty, value],
-      }
-    })
-  }
-
   // ---- distance ----
 
   const toggleDistance = (preset: DistancePreset) => {
@@ -136,20 +99,6 @@ export function CourseFilter({
       ...prev,
       distance: prev.distance === preset ? null : preset,
     }))
-  }
-
-  // ---- theme ----
-
-  const toggleTheme = (theme: string) => {
-    setState((prev) => {
-      const has = prev.themes.includes(theme)
-      return {
-        ...prev,
-        themes: has
-          ? prev.themes.filter((t) => t !== theme)
-          : [...prev.themes, theme],
-      }
-    })
   }
 
   // ---- active filter labels for X buttons ----
@@ -207,42 +156,12 @@ export function CourseFilter({
               </button>
             </Badge>
           )}
-          {state.difficulty.length > 0 && (
-            <Badge variant="secondary" className="gap-1 pr-1">
-              난이도:{' '}
-              {state.difficulty
-                .map(
-                  (d) =>
-                    DIFFICULTY_OPTIONS.find((o) => o.value === d)?.label ?? d,
-                )
-                .join('/')}
-              <button
-                type="button"
-                onClick={handleRemoveDifficulty}
-                className="hover:text-foreground"
-              >
-                <X className="size-3" />
-              </button>
-            </Badge>
-          )}
           {state.distance && (
             <Badge variant="secondary" className="gap-1 pr-1">
               {DISTANCE_PRESETS[state.distance].label}
               <button
                 type="button"
                 onClick={handleRemoveDistance}
-                className="hover:text-foreground"
-              >
-                <X className="size-3" />
-              </button>
-            </Badge>
-          )}
-          {state.themes.length > 0 && (
-            <Badge variant="secondary" className="gap-1 pr-1">
-              테마: {state.themes.join('/')}
-              <button
-                type="button"
-                onClick={handleRemoveThemes}
                 className="hover:text-foreground"
               >
                 <X className="size-3" />
@@ -278,31 +197,6 @@ export function CourseFilter({
           </select>
         </div>
 
-        {/* Difficulty Checkboxes */}
-        <div>
-          <label className="text-xs text-muted-foreground">난이도</label>
-          <div className="mt-1.5 flex flex-col gap-2">
-            {DIFFICULTY_OPTIONS.map((opt) => (
-              <div
-                key={opt.value}
-                className={mode === 'drawer' ? 'flex items-center gap-2 rounded-xl border border-black/6 bg-white px-3 py-2' : 'flex items-center gap-2'}
-              >
-                <Checkbox
-                  id={`difficulty-${opt.value}`}
-                  checked={state.difficulty.includes(opt.value)}
-                  onCheckedChange={() => toggleDifficulty(opt.value)}
-                />
-                <Label
-                  htmlFor={`difficulty-${opt.value}`}
-                  className="text-sm font-normal cursor-pointer"
-                >
-                  {opt.label}
-                </Label>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Distance Preset Buttons */}
         <div>
           <label className="text-xs text-muted-foreground">거리</label>
@@ -326,33 +220,6 @@ export function CourseFilter({
             ))}
           </div>
         </div>
-
-        {/* Theme Checkboxes */}
-        {themes.length > 0 && (
-          <div>
-            <label className="text-xs text-muted-foreground">테마</label>
-            <div className="mt-1.5 flex flex-col gap-2">
-              {themes.map((theme) => (
-                <div
-                  key={theme}
-                  className={mode === 'drawer' ? 'flex items-center gap-2 rounded-xl border border-black/6 bg-white px-3 py-2' : 'flex items-center gap-2'}
-                >
-                  <Checkbox
-                    id={`theme-${theme}`}
-                    checked={state.themes.includes(theme)}
-                    onCheckedChange={() => toggleTheme(theme)}
-                  />
-                  <Label
-                    htmlFor={`theme-${theme}`}
-                    className="text-sm font-normal cursor-pointer"
-                  >
-                    {theme}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Apply Button */}
         <Button
