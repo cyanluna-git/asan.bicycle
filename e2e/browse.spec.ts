@@ -89,6 +89,48 @@ test.describe('Courses browse page', () => {
     }).toPass({ timeout: 20_000 })
   })
 
+  test('filter panel shows only 출발기점 and 거리 sections', async ({ page }) => {
+    await page.goto('/courses')
+    await expect(page.locator('a[href^="/courses/"]').first()).toBeVisible({
+      timeout: 15_000,
+    })
+
+    // 거리 섹션 레이블 존재
+    await expect(
+      page.locator('label', { hasText: /^거리$/ }).first(),
+    ).toBeVisible()
+
+    // 출발 기점 레이블 존재
+    await expect(
+      page.locator('label', { hasText: /^출발 기점$/ }).first(),
+    ).toBeVisible()
+
+    // 테마·난이도 섹션 없음
+    await expect(page.locator('label', { hasText: /^테마$/ })).toHaveCount(0)
+    await expect(page.locator('label', { hasText: /^난이도$/ })).toHaveCount(0)
+  })
+
+  test('legacy theme/difficulty URL params are silently ignored', async ({
+    page,
+  }) => {
+    await page.goto('/courses?theme=MTB&difficulty=easy', {
+      waitUntil: 'domcontentloaded',
+    })
+
+    // 페이지 정상 렌더 — 카드 또는 빈 상태
+    const cards = page.locator('a[href^="/courses/"]')
+    const empty = page.getByText('조건에 맞는 코스가 없습니다.')
+    await expect(async () => {
+      const cardCount = await cards.count()
+      const emptyVisible = await empty.isVisible().catch(() => false)
+      expect(cardCount > 0 || emptyVisible).toBe(true)
+    }).toPass({ timeout: 20_000 })
+
+    // 테마·난이도 섹션이 렌더되지 않음
+    await expect(page.locator('label', { hasText: /^테마$/ })).toHaveCount(0)
+    await expect(page.locator('label', { hasText: /^난이도$/ })).toHaveCount(0)
+  })
+
   test('distance filter (ultralong >120km) filters all visible cards', async ({
     page,
   }) => {
